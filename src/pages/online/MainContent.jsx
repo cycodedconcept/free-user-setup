@@ -1,6 +1,6 @@
 import React from "react";
 import ManageStore from "./ManageStore";
-import SetupStore from "./SetupStore";
+import SetupStoreMain from "./SetupStoreMain";
 import AllInvoices from "../invoice/AllInvoices";
 // import ManageBookings from "../Bookings/ManageBookings"
 // import Calendar from "../Bookings/Calendar";
@@ -65,8 +65,8 @@ const MainContent = ({ activeTab, setActiveTab }) => {
         {activeTab === "manage-online-store-manage-store" && (
           <ManageStore setActiveTab={setActiveTab} />
         )}
-        {activeTab === "manage-online-store-set-up-store" && (
-          <SetupStore setActiveTab={setActiveTab} />
+        {activeTab === "online-store" && (
+          <SetupStoreMain setActiveTab={setActiveTab} />
         )}
         {activeTab === "manage-online-store-payment-methods" && (
           <Payment setActiveTab={setActiveTab} />

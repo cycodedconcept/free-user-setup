@@ -1,6 +1,5 @@
 import React from 'react'
 import ManageStore from "./ManageStore";
-import SetupStore from "./SetupStore";
 
 const MaincontentItem = ({ activeTab, setActiveTab }) => {
   const noPaddingTabs = ["crm-ai-assistant"];

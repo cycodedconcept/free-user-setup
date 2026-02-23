@@ -1,24 +1,113 @@
 import React, {useState, useEffect} from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { getMyOnlineStore, getStorePreview } from '../../slice/onlineStoreSlice';
+import { useNavigate } from 'react-router-dom';
 import { FaMapMarkerAlt, FaBox  } from 'react-icons/fa';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPen, faExternalLinkAlt, faDotCircle } from '@fortawesome/free-solid-svg-icons';
+import { faPen, faExternalLinkAlt, faDotCircle, faEllipsisV } from '@fortawesome/free-solid-svg-icons';
+import { Smc } from '../../assets';
 import styles from "../../styles.module.css";
 import Button from "../../components/ui/Button"
 
 const ViewStore = () => {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   let token = localStorage.getItem("token");
   let getId = localStorage.getItem("itemId");
   const [seeStore, setSeeStore] = useState(true);
+  const [change, setChange] = useState('Services');
   const { loading, error, success, myStore, previewDetails } = useSelector((state) => state.store);
 
   useEffect(() => {
     if (token) {
       dispatch(getMyOnlineStore({ token, id: getId || '7'}));
+      dispatch(getStorePreview({ token }));
     }
   }, [token, dispatch])
+
+  const formatDuration = (minutes) => {
+    if (minutes < 60) return `${minutes} mins`;
+    const hours = minutes / 60;
+    return `${hours % 1 === 0 ? hours : hours.toFixed(1)} hrs`;
+  };
+
+  const itemService = [
+    { id: 'Services', label: 'Services' },
+    { id: 'Shop', label: 'Shop' }
+  ];
+
+  const gotoStore = () => {
+    navigate('/store')
+  }
+
+  const renderContent = () => {
+      switch(change) {
+        case 'Services':
+          return <div className="p-3">
+            {previewDetails?.data?.service_collections?.items?.length > 0 ? (
+              <div>
+                {previewDetails?.data?.service_collections?.items.map((collection) => (
+                  collection.StoreCollectionServices?.length > 0 ? (
+                    collection.StoreCollectionServices.map((serve) => (
+                      <div key={serve.id} className="d-flex justify-content-between px-3 py-2 rounded-pill mb-2" style={{background: '#78716C', color: '#fff'}}>
+                        <div className="mt-1">
+                          <img src={Smc} alt="" style={{width: '20px'}} />
+                        </div>
+                        <div style={{width: '70%'}}>
+                          <small className="d-block" style={{fontSize: '12px'}}>
+                            {serve.StoreService?.service_title} ({formatDuration(serve.StoreService?.duration_minutes ?? 0)}) - ₦{Number(serve.StoreService?.price ?? 0).toLocaleString()}
+                          </small>
+                        </div>
+                        <div className="mt-1">
+                          <FontAwesomeIcon icon={faEllipsisV} />
+                        </div>
+                      </div>
+                    ))
+                  ) : null
+                ))}
+              </div>
+            ) : (
+              <p className="text-center text-muted">No Services available</p>
+            )}
+          </div>;
+        case 'Shop':
+          return <>
+                {previewDetails?.data?.product_collections?.items && previewDetails?.data?.product_collections.items.length > 0 ? (
+                    <div className="p-3">
+                    {previewDetails?.data?.product_collections.items.map((collection) => (
+                        <div key={collection.id} className="mb-5">
+                        <p className="mb-3 mx">{collection.collection_name}</p>
+                        <div style={{background: '#78716C'}} className='p-3 rounded-3'>
+                            <div className="row g-3">
+                            {collection.StoreCollectionProducts?.length > 0 ? (
+                             collection.StoreCollectionProducts.map((item) => (
+                                <div className="col-md-4 col-sm-6 mb-3" key={item.id}>
+                                <div className="product-item">
+                                    <div className="pro-img" style={{overflow: 'hidden'}}>
+                                    <img src={item.Product?.image_url} alt="" className='w-100 rounded-3' style={{height: '100%', objectFit: 'cover'}}/>
+                                    </div>
+                                </div>
+                                </div>
+                            ))
+                            ) : (
+                            <p className="text-muted">No products in this collection</p>
+                            )}
+                        </div>
+                        <p className="mt-3" style={{fontSize: '12px', color: '#d0c8c8'}}>
+                            {collection.StoreCollectionProducts?.length || 0} products
+                        </p>
+                        </div>
+                        </div>
+                    ))}
+                    </div>
+                ) : (
+                    <p className="text-center text-muted">No Collections available</p>
+                )}
+                </>
+        default:
+          return null;
+      }
+    };
 
 
   return (
@@ -49,8 +138,8 @@ const ViewStore = () => {
                 <div className="col-md-4">
                     <div className="card shadow-sm border-light pb-4">
                         <div className="card-body px-3 py-2 d-flex justify-content-between align-items-start">
-                            <p className="mb-0">{myStore.onlineStore.store_name}</p>
-                            <span className="badge rounded-pill text-primary bg-light">{myStore.onlineStore.is_published === false ? 'In Active' : 'Active'}</span>
+                            <p className="mb-0">{myStore?.onlineStore?.store_name}</p>
+                            <span className="badge rounded-pill text-primary bg-light">{myStore?.onlineStore?.is_published === false ? 'In Active' : 'Active'}</span>
                         </div>
                         <hr className="my-2"/>
                         <p className="mb-2 px-3 text-muted small">
@@ -61,7 +150,7 @@ const ViewStore = () => {
                             <strong>{}</strong> Items
                         </p>
                         <div className="px-3">
-                            <button className="btn btn-primary w-100" style={{fontSize: '13px'}}>Manage Online Store</button>
+                            <button className="btn btn-primary w-100" style={{fontSize: '13px'}} onClick={gotoStore}>Manage Online Store</button>
                         </div>
                     </div>
                 </div>
@@ -107,7 +196,7 @@ const ViewStore = () => {
                     <h5 className="my text-dark">Your Store</h5>
                     <p>Store Description Here...</p>
                 </div>
-                {/* <div className="container" style={{ maxWidth: '400px' }}>
+                <div className="container" style={{ maxWidth: '400px' }}>
                         <div className="text-center" role="tablist">
                             {itemService.map((tab, index) => (
                             <button
@@ -135,7 +224,7 @@ const ViewStore = () => {
                         <div>
                             {renderContent()}
                         </div>
-                    </div> */}
+                    </div>
             </div>
             </div>
                 </>

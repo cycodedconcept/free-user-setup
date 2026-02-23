@@ -43,17 +43,29 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
 
   const sidebarButtons = [
     {
-      label: "Home",
-      key: "home",
+      label: "Dashboard",
+      key: "dashboard",
       icon: faHome,
+      visible: true,
+    },
+    {
+      label: "Products",
+      key: "products",
+      icon: faBoxes,
+      visible: true,
+    },
+    {
+      label: "Online Store",
+      key: "online-store",
+      icon: faStore,
       visible: true,
     },
     {
       label: "Inventory",
       key: "inventory",
       icon: faBoxes,
-      visible: true,
-      hasSubmenu: true,
+      visible: false,
+      hasSubmenu: false,
       submenu: [
         { label: "Products", key: "products" },
         { label: "Category", key: "category" },
@@ -66,8 +78,8 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
       label: "Manage Online Store",
       key: "manage-online-store",
       icon: faStore,
-      visible: true,
-      hasSubmenu: true,
+      visible: false,
+      hasSubmenu: false,
       submenu: [
         { label: "Manage Store", key: "manage-store" },
         { label: "Set Up Store", key: "set-up-store" },

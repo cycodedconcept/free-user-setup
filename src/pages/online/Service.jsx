@@ -1652,8 +1652,8 @@ useEffect(() => {
                                                             </div>
 
                                                             <div className={`position-absolute ${styles.sid}`}>
-                                                                <FontAwesomeIcon icon={faEllipsisV} className='me-1' style={{color: '#78716C'}}/>
-                                                                <FontAwesomeIcon icon={faEllipsisV} style={{color: '#78716C'}}/>
+                                                                <FontAwesomeIcon icon={faEllipsisV} className='me-1 w-auto' style={{color: '#78716C'}}/>
+                                                                <FontAwesomeIcon icon={faEllipsisV} style={{color: '#78716C'}} className='w-auto'/>
                                                             </div>
                                                         </div>
 

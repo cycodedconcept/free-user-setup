@@ -30,7 +30,18 @@ const Button = ({
       backgroundColor: 'transparent',
       color: '#1C1917',
       border: 'none'
+    },
+    greenButton: {
+      backgroundColor: '#0EC049',
+      color: '#FFF',
+      border: 'none'
+    },
+    blueButton: {
+      backgroundColor: '#0273F9',
+      color: '#FFF',
+      border: 'none'
     }
+    
   };
 
   const sizes = {

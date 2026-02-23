@@ -144,6 +144,10 @@
   border: 2px solid #0EC049;
 }
 
+.primaryColor {
+  border: 2px solid #0273F9;
+}
+
 .setBtn {
   background: #DEEDFF;
   color: #7D8FA6;

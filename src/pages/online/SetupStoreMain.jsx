@@ -12,74 +12,73 @@ import Collection from './Collection';
 import ViewStore from './ViewStore';
 import styles from "../../styles.module.css";
 import Swal from 'sweetalert2';
+import Button from '../../components/ui/Button';
 
+const SetupStoreMain = () => {
+    const dispatch = useDispatch();
+    let token = localStorage.getItem("token");
+    let getId = localStorage.getItem("itemId");
+    const [add, setAdd] = useState(true);
+    const [isAllowed, setIsAllowed] = useState(true);
+    const [selectedCountry, setSelectedCountry] = useState('Nigeria');
+    const [selectedStates, setSelectedStates] = useState(['Lagos']);
+    const [ms, setMs] = useState(true)
+    const [hasCollections, setHasCollections] = useState(false);
+    const primaryColor = "#0273F9";
+    const { loading, error, success, allStore, collectionProduct, collections } = useSelector((state) => state.store);
 
-
-const SetupStore = () => {
-  const dispatch = useDispatch();
-  let token = localStorage.getItem("token");
-  let getId = localStorage.getItem("itemId");
-  const [add, setAdd] = useState(true);
-  const [isAllowed, setIsAllowed] = useState(true);
-  const [selectedCountry, setSelectedCountry] = useState('Nigeria');
-  const [selectedStates, setSelectedStates] = useState(['Lagos']);
-  const [ms, setMs] = useState(true)
-  const [hasCollections, setHasCollections] = useState(false);
-  const primaryColor = "#0273F9";
-  const { loading, error, success, allStore, collectionProduct, collections } = useSelector((state) => state.store);
-
-  // Sync country with links state
-  useEffect(() => {
+    // Sync country with links state
+    useEffect(() => {
     setLinks(prev => ({ ...prev, country: selectedCountry }));
-  }, [selectedCountry]);
+    }, [selectedCountry]);
 
-  // Sync states with links state
-  useEffect(() => {
+    // Sync states with links state
+    useEffect(() => {
     setLinks(prev => ({ ...prev, state: selectedStates.join(', ') }));
-  }, [selectedStates]);
-  const [isStateDropdownOpen, setIsStateDropdownOpen] = useState(false);
-  const { countryItem } = useSelector((state) => state.country);
-  const [avail, setAvail] = useState(true);
-  const [front, setFront] = useState(true);
-  const [vog, setVog] = useState(true);
-  const [per, setPer] = useState(true);
-  const [proCol, setProCol] = useState(true);
-  const [itemData, setItemData] = useState(true);
-  const [activeTab, setActiveTab] = useState('Services');  
-  const [change, setChange] = useState('Services');
-  const [productItem, setProductItem] = useState([]);
-  const [collectionProducts, setCollectionProducts] = useState({})
+    }, [selectedStates]);
+    const [isStateDropdownOpen, setIsStateDropdownOpen] = useState(false);
+    const { countryItem } = useSelector((state) => state.country);
+    const [avail, setAvail] = useState(true);
+    const [front, setFront] = useState(true);
+    const [vog, setVog] = useState(true);
+    const [per, setPer] = useState(true);
+    const [proCol, setProCol] = useState(true);
+    const [itemData, setItemData] = useState(true);
+    const [activeTab, setActiveTab] = useState('Services');  
+    const [change, setChange] = useState('Services');
+    const [productItem, setProductItem] = useState([]);
+    const [collectionProducts, setCollectionProducts] = useState({})
 
-  const [online, setOnline] = useState({
+    const [online, setOnline] = useState({
     username: '',
     store_name: '',
     store_description: ''
-  })
+    })
 
-  const [links, setLinks] = useState({
+    const [links, setLinks] = useState({
     show_location: 0,
     country: '',
     state: '',
     is_location_based: 1,
     allow_delivery_datetime: 1,
     social_links: []
-  })
+    })
 
-  useEffect(() => {
+    useEffect(() => {
     const itemValue = JSON.parse(localStorage.getItem('products')) || [];
     setProductItem(itemValue.slice(0, 4));
-  }, [])
+    }, [])
 
-  const readHasCollections = () => {
+    const readHasCollections = () => {
     const raw = localStorage.getItem('allcollections');
     return raw !== null && raw !== 'null' && raw !== 'undefined';
-  };
+    };
 
-  useEffect(() => {
+    useEffect(() => {
     setHasCollections(readHasCollections());
-  }, [collections]);
+    }, [collections]);
 
-  const handleChange = (e) => {
+    const handleChange = (e) => {
     const { name, value, type, checked, dataset } = e.target;
 
     if (dataset.form === "setUpStore") {
@@ -91,16 +90,16 @@ const SetupStore = () => {
         console.log(`Updating ${name}:`, newValue);
         setLinks(prev => ({ ...prev, [name]: newValue}))
     }
-  };
+    };
 
-useEffect(() => {
+    useEffect(() => {
     if (token) {
         dispatch(getAllServices({ token, id: getId || '7'}))
         dispatch(getCollectionForProduct({ token, id: getId || '7'}));
     }
-}, [token, dispatch])
+    }, [token, dispatch])
 
-const fetchCollectionProducts = async (collectionId) => {
+    const fetchCollectionProducts = async (collectionId) => {
     try {
         const response = await dispatch(productImageForCollection({token, id: collectionId})).unwrap();
         setCollectionProducts(prev => ({
@@ -110,9 +109,9 @@ const fetchCollectionProducts = async (collectionId) => {
     } catch (error) {
         console.error('Error fetching collection products:', error);
     }
-}
+    }
 
-useEffect(() => {
+    useEffect(() => {
     if (collectionProduct?.data?.collections && collectionProduct.data.collections.length > 0) {
         collectionProduct.data.collections.forEach(collection => {
             if (!collectionProducts[collection.id]) {
@@ -120,42 +119,71 @@ useEffect(() => {
             }
         });
     }
-}, [collectionProduct])
+    }, [collectionProduct])
 
-   const itemService = [
+    const itemService = [
     { id: 'Services', label: 'Services' },
     { id: 'Shop', label: 'Shop' }
-  ];
+    ];
 
-  const renderContent = () => {
+    const handleActiveTabChange = (tabName) => {
+    setActiveTab(tabName);
+
+    if (tabName === 'Product') {
+        setProCol(false);
+        setItemData(true);
+        setChange('Shop');
+    } else if (tabName === 'Services') {
+        setProCol(true);
+        setChange('Services');
+    } else if (tabName === 'Collection') {
+        setProCol(false);
+        setItemData(false);
+        setChange('Shop');
+    }
+    };
+
+    const topTabs = [
+    { id: 'services', label: 'My Services', target: 'Services' },
+    { id: 'shop', label: 'My Shop', target: 'Collection' },
+    { id: 'customize', label: 'Customize Store', target: 'Appearance' }
+    ];
+
+    const isTopTabActive = (tabId) => {
+    if (tabId === 'services') return activeTab === 'Services';
+    if (tabId === 'shop') return activeTab === 'Product' || activeTab === 'Collection';
+    return activeTab === 'Appearance';
+    };
+
+    const renderContent = () => {
     switch(change) {
-      case 'Services':
+        case 'Services':
         return <div className="p-3">
-          {allStore.data?.services && allStore.data.services.length > 0 ? (
+            {allStore.data?.services && allStore.data.services.length > 0 ? (
             <div>
-              {allStore.data.services.map((service) => (
+                {allStore.data.services.map((service) => (
                 <div key={service.id} className="d-flex justify-content-between px-3 py-2 rounded-pill mb-2" style={{background: '#78716C', color: '#fff'}}>
-                  <div className="mt-1">
+                    <div className="mt-1">
                     <img src={Smc} alt="" style={{width: '20px'}} />
-                  </div>
-                  <div style={{width: '70%'}}>
+                    </div>
+                    <div style={{width: '70%'}}>
                     <small className="d-block" style={{fontSize: '12px'}}>{service.service_title} ({formatDuration(service.duration_minutes)}) - ₦{Number(service.price).toLocaleString()}</small>
-                  </div>
-                  <div className="mt-1">
+                    </div>
+                    <div className="mt-1">
                     <FontAwesomeIcon icon={faEllipsisV} />
-                  </div>
+                    </div>
                 </div>
-              ))}
+                ))}
             </div>
-          ) : (
+            ) : (
             <p className="text-center text-muted">No Services available</p>
-          )}
+            )}
         </div>;
-      case 'Shop':
+        case 'Shop':
         return <>
-               {itemData ? (
+                {itemData ? (
                 <>
-                  <div className="p-3 row">
+                    <div className="p-3 row">
                     {loading ? (
                         <div className="d-flex justify-content-center py-5">
                         <div className="spinner-border text-primary" />
@@ -170,7 +198,7 @@ useEffect(() => {
                                 </div>
                                 <div className="prod-body text-start p-3 rounded-bottom-3" style={{background: '#78716C'}}>
                                     <small className="d-block" style={{color: '#f6f1f1'}}>{product.name}</small>
-                                    <small className="d-block" style={{color: '#CAC9C7'}}>{product.description.slice(0, 10)}...</small>
+                                    <small className="d-block" style={{color: '#CAC9C7'}}>{product.description?.slice(0, 10)}...</small>
                                     <small className='d-block mt-3' style={{color: '#fff'}}>₦{Number(product.price).toLocaleString()}</small>
                                 </div>
                             </div>
@@ -182,61 +210,61 @@ useEffect(() => {
                 </>
                 ) : (
                 <>
-                  {collectionProduct?.data?.collections && collectionProduct.data.collections.length > 0 ? (
+                    {collectionProduct?.data?.collections && collectionProduct.data.collections.length > 0 ? (
                     <div className="p-3">
-                      {collectionProduct.data.collections.map((collection) => (
+                        {collectionProduct.data.collections.map((collection) => (
                         <div key={collection.id} className="mb-5">
-                          <p className="mb-3 mx">{collection.collection_name}</p>
-                          <div style={{background: '#78716C'}} className='p-3 rounded-3'>
+                            <p className="mb-3 mx">{collection.collection_name}</p>
+                            <div style={{background: '#78716C'}} className='p-3 rounded-3'>
                             <div className="row g-3">
                             {collectionProducts[collection.id] && collectionProducts[collection.id].length > 0 ? (
-                              collectionProducts[collection.id].slice(0, 3).map((item) => (
+                                collectionProducts[collection.id].slice(0, 3).map((item) => (
                                 <div className="col-md-4 col-sm-6 mb-3" key={item.id}>
-                                  <div className="product-item">
+                                    <div className="product-item">
                                     <div className="pro-img" style={{overflow: 'hidden'}}>
-                                      <img src={item.Product?.image_url} alt="" className='w-100 rounded-3' style={{height: '100%', objectFit: 'cover'}}/>
+                                        <img src={item.Product?.image_url} alt="" className='w-100 rounded-3' style={{height: '100%', objectFit: 'cover'}}/>
                                     </div>
-                                  </div>
+                                    </div>
                                 </div>
-                              ))
+                                ))
                             ) : (
-                              <p className="text-muted">Loading products...</p>
+                                <p className="text-muted">Loading products...</p>
                             )}
-                          </div>
-                          <p className="mt-3" style={{fontSize: '12px', color: '#d0c8c8'}}>
+                            </div>
+                            <p className="mt-3" style={{fontSize: '12px', color: '#d0c8c8'}}>
                             {collectionProducts[collection.id]?.length || 0} products
-                          </p>
-                          </div>
+                            </p>
+                            </div>
                         </div>
-                      ))}
+                        ))}
                     </div>
-                  ) : (
+                    ) : (
                     <p className="text-center text-muted">No Collections available</p>
-                  )}
+                    )}
                 </>
             )}
         </>
         
-      default:
+        default:
         return null;
     }
-  };
+    };
 
-  const tabs = [
+    const tabs = [
     { name: 'Services', icon: faLink },
     { name: 'Appearance', icon: faStore },
     { name: 'Product', icon: faCube },
     { name: 'Collection', icon: faDatabase },
-  ];
+    ];
 
 
-  useEffect(() => {
+    useEffect(() => {
     dispatch(getCountries());
-  }, [dispatch]);
+    }, [dispatch]);
 
-  const countries = countryItem.data || [];
+    const countries = countryItem.data || [];
 
-  const nigerianStates = [
+    const nigerianStates = [
     'All States',
     'Abia',
     'Abuja',
@@ -275,115 +303,115 @@ useEffect(() => {
     'Taraba',
     'Yobe',
     'Zamfara'
-  ];
+    ];
 
-  const handleStateToggle = (state) => {
+    const handleStateToggle = (state) => {
     if (state === 'All States') {
-      if (selectedStates.includes('All States')) {
+        if (selectedStates.includes('All States')) {
         setSelectedStates([]);
-      } else {
+        } else {
         setSelectedStates(['All States']);
-      }
+        }
     } else {
-      if (selectedStates.includes(state)) {
+        if (selectedStates.includes(state)) {
         setSelectedStates(selectedStates.filter(s => s !== state && s !== 'All States'));
-      } else {
+        } else {
         const newStates = selectedStates.filter(s => s !== 'All States');
         setSelectedStates([...newStates, state]);
-      }
+        }
     }
-  };
+    };
 
-  const getCurrentCountryFlag = () => {
+    const getCurrentCountryFlag = () => {
     const country = countries.find((c) => c.name === selectedCountry);
     return country ? country.flag : '🏳️';
-  };
+    };
 
 
-  const [isHidden, setIsHidden] = useState(false);
-  const [socialLinks, setSocialLinks] = useState({
+    const [isHidden, setIsHidden] = useState(false);
+    const [socialLinks, setSocialLinks] = useState({
     website: 'example.com',
     instagram: '',
     facebook: '',
     linkedin: '',
     x: '',
     tiktok: ''
-  });
+    });
 
-  // Sync socialLinks with links.social_links
-  useEffect(() => {
+    // Sync socialLinks with links.social_links
+    useEffect(() => {
     setLinks(prev => ({ 
-      ...prev, 
-      social_links: [{
+        ...prev, 
+        social_links: [{
         facebook: socialLinks.facebook || '',
         linkedin: socialLinks.linkedin || '',
         x: socialLinks.x || socialLinks.twitter || '',
         instagram: socialLinks.instagram || '',
         tiktok: socialLinks.tiktok || ''
-      }]
+        }]
     }));
-  }, [socialLinks]);
+    }, [socialLinks]);
 
-  // Debug log for links state
-//   useEffect(() => {
-//     console.log('Links state updated:', links);
-//   }, [links]);
+    // Debug log for links state
+    //   useEffect(() => {
+    //     console.log('Links state updated:', links);
+    //   }, [links]);
 
-  const handleInputChange = (platform, value) => {
+    const handleInputChange = (platform, value) => {
     setSocialLinks(prev => ({
-      ...prev,
-      [platform]: value
+        ...prev,
+        [platform]: value
     }));
-  };
+    };
 
-  const removeSocialLink = (platform) => {
+    const removeSocialLink = (platform) => {
     setSocialLinks(prev => ({
-      ...prev,
-      [platform]: ''
+        ...prev,
+        [platform]: ''
     }));
-  };
+    };
 
-  // Social media platform configurations
-  const socialPlatforms = [
+    // Social media platform configurations
+    const socialPlatforms = [
     { 
-      name: 'facebook', 
-      icon: F, 
-      placeholder: 'Facebook URL or username',
-      color: '#1877f2'
+        name: 'facebook', 
+        icon: F, 
+        placeholder: 'Facebook URL or username',
+        color: '#1877f2'
     },
     { 
-      name: 'twitter', 
-      icon: X, 
-      placeholder: 'Twitter URL or username',
-      color: '#1da1f2'
+        name: 'twitter', 
+        icon: X, 
+        placeholder: 'Twitter URL or username',
+        color: '#1da1f2'
     },
     { 
-      name: 'linkedin', 
-      icon: In, 
-      placeholder: 'LinkedIn URL or username',
-      color: '#0077b5'
+        name: 'linkedin', 
+        icon: In, 
+        placeholder: 'LinkedIn URL or username',
+        color: '#0077b5'
     },
     { 
-      name: 'instagram', 
-      icon: In2, 
-      placeholder: 'Instagram URL or username',
-      color: '#e4405f'
+        name: 'instagram', 
+        icon: In2, 
+        placeholder: 'Instagram URL or username',
+        color: '#e4405f'
     }
-  ];
+    ];
 
-  useEffect(() => {
+    useEffect(() => {
     const itemValue = JSON.parse(localStorage.getItem('services')) || [];
     setFront(itemValue.length === 0);
-  }, []);
+    }, []);
 
 
-  const formatDuration = (minutes) => {
+    const formatDuration = (minutes) => {
     if (minutes < 60) return `${minutes} mins`;
     const hours = minutes / 60;
     return `${hours % 1 === 0 ? hours : hours.toFixed(1)} hrs`;
-  };
+    };
 
-  const saveContent = (e) => {
+    const saveContent = (e) => {
     e.preventDefault();
 
     const { username, store_name, store_description } = online;
@@ -400,9 +428,9 @@ useEffect(() => {
 
     dispatch(createOnlineStore({token, ...online}))
     setFront(false)
-  }
+    }
 
-  useEffect(() => {
+    useEffect(() => {
     if (success) {
         Swal.fire({
             icon: "success",
@@ -429,14 +457,14 @@ useEffect(() => {
             dispatch(resetStatus());
         });
     }
-  }, [success, error, dispatch])
+    }, [success, error, dispatch])
 
 
-  const addLinks = (e) => {
+    const addLinks = (e) => {
     e.preventDefault();
 
     const { show_location, country, state, is_location_based, allow_delivery_datetime, social_links } = links;
-    
+
     if (!show_location || !country || !state || !is_location_based || !allow_delivery_datetime || !social_links) {
         Swal.fire({
             icon: "info",
@@ -448,9 +476,9 @@ useEffect(() => {
     }
 
     dispatch(updateStoreLinks({token, id: getId || '7', ...links}))
-  }
+    }
 
-  useEffect(() => {
+    useEffect(() => {
     if (success) {
         Swal.fire({
             icon: "success",
@@ -481,41 +509,38 @@ useEffect(() => {
             dispatch(resetStatus());
         });
     }
-  }, [success, error, dispatch])
-
-
+   }, [success, error, dispatch])
   return (
     <>
       {ms ? (
         <>
           <div className="d-flex justify-content-between">
-            <div className={`${styles['set-btn']} d-flex align-items-center justify-content-center`} style={{background: "linear-gradient(to right, #0273F9BF, #014493BD)", borderRadius: '28px', width: '58%'}}>
-                <p className='text-light mt-3 me-3'><b>Try Pro for free</b></p>
-                <button className={styles['try-btn']}><img src={Flash} alt="" className='mx-2'/>Upgrade</button>
+            <div className="d-flex gap-4 border-bottom" style={{borderBottom: '1px solid #EEEEEE'}}>
+                {topTabs.map((tab) => (
+                    <button
+                        key={tab.id}
+                        type="button"
+                        onClick={() => handleActiveTabChange(tab.target)}
+                        className="bg-transparent pb-2"
+                        style={{
+                            border: "none",
+                            color: isTopTabActive(tab.id) ? '#1C1917' : '#78716C',
+                            fontWeight: isTopTabActive(tab.id) ? 600 : 400,
+                            borderBottom: isTopTabActive(tab.id) ? `2px solid ${primaryColor}` : '2px solid transparent'
+                        }}
+                    >
+                        {tab.label}
+                    </button>
+                ))}
             </div>
-            <div className='text-end'>
-                <button
-                  className={`${styles['si-btn']} px-5 py-3`}
-                  onClick={() => setMs(false)}
-                  disabled={!hasCollections}
-                  style={
-                    !hasCollections
-                      ? {
-                          background: 'transparent',
-                          border: `1px solid ${primaryColor}`,
-                          color: primaryColor,
-                          cursor: 'not-allowed'
-                        }
-                      : undefined
-                  }
-                >
-                  Create My Store Link
-                </button>
+            <div className='d-flex gap-2 flex-nowrap'>
+                <Button variant='greenButton' size='md' className='flex-grow-1 text-nowrap'>Publish Store</Button>
+                <Button variant='blueButton' size='md' className='flex-grow-1 text-nowrap'>Save Changes</Button>
             </div>
           </div>
         <div className="row">
-            <div className="col-sm-12 col-md-12 col-lg-7 mt-5">
-                <h5 className="text-center mt-3 mb-5">StoreFront Setup</h5>
+            <div className="col-sm-12 col-md-12 col-lg-7">
+                {/* <h5 className="text-center mt-3 mb-5">StoreFront Setup</h5> */}
                 {front ? (
                     <>
                       {add ? (
@@ -1127,7 +1152,7 @@ useEffect(() => {
                 ) : (
                 <>
                   <div>
-                    <div className={`d-flex justify-content-between p-3 m-0`} style={{background: '#EAF4FF', borderRadius: '10px', border: '1px solid #0273F9'}}>
+                    {/* <div className={`d-flex justify-content-between p-3 m-0`} style={{background: '#EAF4FF', borderRadius: '10px', border: '1px solid #0273F9'}}>
                         <p className='m-0'><span style={{color: '#78716C'}}>mycroshop</span>/username</p>
                         <p style={{color: '#0273F9'}} className='m-0'>Share Link <FontAwesomeIcon icon={faExternalLinkAlt} /></p>
                     </div>
@@ -1139,19 +1164,7 @@ useEffect(() => {
                             activeTab === tab.name ? 'text-primary border-bottom border-primary border-3' : 'text-muted'
                             }`}
                             onClick={() => {
-                                setActiveTab(tab.name);
-                                if (tab.name === 'Product') {
-                                    setProCol(false);
-                                    setItemData(true);
-                                    setChange('Shop');
-                                } else if (tab.name === 'Services') {
-                                    setProCol(true);
-                                    setChange('Services');
-                                } else if (tab.name === 'Collection') {
-                                    setProCol(false);
-                                    setItemData(false);
-                                    setChange('Shop');
-                                }
+                                handleActiveTabChange(tab.name);
                             }}
                         >
                             <div className="d-flex flex-column align-items-center">
@@ -1164,14 +1177,13 @@ useEffect(() => {
                             </div>
                         </button>
                         ))}
-                    </div>
+                    </div> */}
 
                     <div className="mt-4">
                         {activeTab === 'Services' && <Service setPer={setPer} setVog={setVog}/>}
                         {activeTab === 'Appearance' && <Appearance />}
                         {activeTab === 'Product' && <Product setProCol={setProCol}/>}
                         {activeTab === 'Collection' && <Collection setItemData={setItemData}/>}
-                        {/* {activeTab === 'Share' && <ShareComponent />} */}
                     </div>
 
                   </div>
@@ -1306,4 +1318,4 @@ useEffect(() => {
   )
 }
 
-export default SetupStore
+export default SetupStoreMain

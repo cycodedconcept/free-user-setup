@@ -39,11 +39,17 @@ const sidebarButtons = [
       ]
     },
     {
+      label: "Online Store",
+      key: "online-store",
+      icon: faStore,
+      visible: true,
+    },
+    {
       label: "Manage Online Store",
       key: "manage-online-store",
       icon: faStore,
-      visible: true,
-      hasSubmenu: true,
+      visible: false,
+      hasSubmenu: false,
       submenu: [
         { label: "Manage Store", key: "manage-store" },
         { label: "Set Up Store", key: "set-up-store" },
