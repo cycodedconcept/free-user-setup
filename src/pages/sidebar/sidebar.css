@@ -1,0 +1,65 @@
+.sidebar {
+  height: 100vh;
+  width: 250px;
+}
+
+.btn-light {
+  background-color: #eef4ff;
+}
+
+/* Chevron icon animation */
+.sidebar-chevron {
+  transition: transform 0.3s ease-in-out;
+  transform-origin: center;
+}
+
+.sidebar-chevron.chevron-open {
+  transform: rotate(180deg);
+}
+
+/* CSS Grid dropdown animation - smooth and reliable */
+.sidebar-dropdown-grid {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.35s ease-in-out, opacity 0.3s ease-in-out;
+  opacity: 0;
+}
+
+.sidebar-dropdown-grid.dropdown-open {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+
+.sidebar-dropdown-grid .dropdown-content {
+  overflow: hidden;
+  min-height: 0;
+  transition: transform 0.3s ease-in-out;
+}
+
+.sidebar-dropdown-grid:not(.dropdown-open) .dropdown-content {
+  transform: translateY(-8px);
+}
+
+.sidebar-dropdown-grid.dropdown-open .dropdown-content {
+  transform: translateY(0);
+}
+
+/* Dropdown item styling and hover effects */
+.sidebar-dropdown-item {
+  transition: all 0.2s ease-in-out;
+  width: 100%;
+  padding-left: 0.75rem !important;
+  text-align: start !important;
+}
+
+.sidebar-dropdown-item:hover,
+.sidebar-dropdown-item.active {
+  color: #0273f9 !important;
+  border-left-color: #0273f9 !important;
+}
+
+.sidebar-dropdown-item.active {
+  background-color: rgba(2, 115, 249, 0.08) !important;
+}
+
+

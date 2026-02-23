@@ -1,0 +1,753 @@
+.activeTab {
+  background: white;
+  color: #0273f9 !important; /* Bootstrap primary blue */
+  font-weight: 600 !important;
+  border-radius: 12px;
+  padding: 8px 20px;
+  box-shadow: 0px 2px 5px rgba(0,0,0,0.1);
+  border: 1px solid #eee !important;
+  font-size: 13px !important;
+}
+
+.inactiveTab {
+  background: transparent;
+  color: #78716C; /* Bootstrap muted gray */
+  font-weight: 300 !important;
+  border: none;
+  padding: 8px 20px;
+  font-size: 13px !important;
+}
+
+.input-item {
+    background: #FBFDFF;
+    outline: none !important;
+    box-shadow: none !important;
+    border: 1px solid #EEEEEE;
+    border-radius: 13px;
+    padding: 13px;
+    font-size: 13px;
+}
+
+.input-item:focus {
+    border: 1px solid #eee !important;
+}
+.input-item::placeholder {
+    color: #78716c;
+    font-size: 12px;
+}
+
+.searchBox {
+  position: relative;
+  /* width: 280px; */
+}
+
+.searchInput {
+  border-radius: 12px;
+  padding-right: 40px; /* space for icon */
+  box-shadow: none;
+  border: 1px solid #ddd;
+}
+
+.searchInput:focus {
+  border-color: #0273f9;
+  box-shadow: 0 0 0 0.2rem rgba(2, 115, 249, 0.2);
+}
+
+.searchIcon {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #6c757d;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.Active, .inProgress, .jBtn, .vBtn, .pbtn, .pr-btn, .stockDe, .paid, .pending, .online, .physical, .shopBtn {
+  color: #0273F9;
+  background: #E9F3FF;
+  outline: none;
+  border: 0;
+  box-shadow: none;
+  font-size: 12px;
+}
+
+.shopBtn {
+  background: #fafafa;
+  border-bottom: 1px solid #0273F9;
+}
+
+.status-btn {
+  padding: 4px 12px;
+  border: none;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: default;
+  font-weight: 600;
+}
+
+.paid, .delivered {
+  color: #0EC049;
+  background: #E9FFF0
+}
+
+.shipped {
+  color: #0273F9;
+  background: #E9E9FF
+}
+
+.processing {
+  color: #7A0091;
+  background: #FFE9FE
+}
+
+.cancelled {
+  color: #DC2626;
+  background: #FFE6E6;
+}
+
+.pending {
+  color: #DE8807;
+  background: #FFF6D4;
+}
+
+.physical {
+  color: #7A0091;
+  background: #FCEAFF
+}
+
+.online {
+  color: #0273F9;
+  background: #EAF4FF;
+}
+
+.schedule {
+  color: #0273F9;
+  background-color: #E4E4FF;
+}
+.in-stock, .highValue {
+  background-color: #E9FFF0;
+  color: #0EC049;
+}
+
+.highValue {
+  border: 1px solid #0EC049
+}
+
+.low-stock, .inactive {
+  background-color: #FFE9E9;
+  color: #DC2626;
+}
+
+.stockDe {
+  color: #945900;
+  background: #FFF5E6;
+}
+
+.repeatBuyer {
+  color: #7A0091;
+  background: #FBE4FF;
+}
+
+.stockIn {
+  background-color: #0EC049 !important;
+}
+
+.stockOut {
+  background-color: #DC2626 !important;
+}
+
+.urgent {
+  color: red;
+  font-weight: bold;
+}
+
+.rep {
+  color: orange;
+  font-weight: 600;
+}
+
+.ship {
+  color: green;
+  font-weight: 600;
+}
+
+.default {
+  color: gray;
+}
+
+.variants-container {
+  background-color: #EAF4FF;
+  border-radius: 16px;
+  border: 1px solid #eee;
+}
+
+.mari {
+  background-color: transparent !important;
+}
+
+.mari thead,
+.mari tbody,
+.mari tr,
+.mari td,
+.mari th {
+  background-color: transparent !important;
+}
+
+.pbtn {
+  background: #CAE8FA;
+  color: #92B4C8;
+  padding: 13px 30px;
+}
+
+.payBtn {
+  background: #EBF4FF;
+  color: #1C1917;
+  font-size: 15px;
+  border: 1px solid #0273F9;
+  padding: 15px;
+}
+
+.pr-btn {
+  background: #0273F9;
+  color: #fff;
+  padding: 13px 30px;
+  font-family: "Micro-bold";
+}
+
+.xbtn {
+  border: 1px solid #eee;
+  background: #fff;
+  font-size: 13px;
+}
+
+.inProgress {
+  color: #DE8807;
+  background: #FFF6D4;
+}
+
+.vBtn, .jBtn {
+  background: #fff;
+  border: 1px solid #E5E7EB;
+  padding: 12px 25px;
+}
+
+.jBtn {
+  background: #0273F9;
+  color: #fff;
+  padding: 12px 25px;
+}
+
+.vBtn:hover {
+  background: #0273F9;
+  color: #fff
+}
+
+.jBtn:hover {
+  background: #fff;
+  color: #0273F9;
+  border: 1px solid #E5E7EB;
+}
+
+.card-sec {
+  height: 500px;
+  position: relative;
+  box-shadow: rgba(149, 157, 165, 0.2) 0px 8px 24px;
+}
+
+.cBot {
+  position: absolute;
+  bottom: 5px;
+  right: 0;
+  left: 0;
+  padding: 10px;
+}
+
+:root{
+  --muted-gray: #8a817a;        /* label text */
+  --heading-blue: #007bff;      /* product name & prices (tweak to match) */
+  --table-border: #e6e4e2;      /* thin table border */
+  --header-bg: #f2f1f0;         /* header row background */
+  --card-bg: #ffffff;
+  --card-border: #e9e7e5;
+}
+
+.productCard {
+  /* background: var(--card-bg); */
+  border-radius: 8px;
+  padding: 30px 28px;
+  box-shadow: none;
+  font-family: "Lato", "Roboto", Arial, sans-serif;
+}
+
+/* Top labels */
+.metaLabel {
+  color: var(--muted-gray);
+  font-size: 14px;
+  margin-bottom: 6px;
+}
+
+/* Product name */
+.productName {
+  color: var(--heading-blue);
+  /* font-size: 26px; */
+  font-weight: 700;
+  text-decoration: none;
+  line-height: 1.1;
+}
+
+/*supplier */
+.supplier {
+  color: #222;
+  /* font-size: 20px; */
+  font-weight: 500;
+  margin-top: 6px;
+}
+
+/* table tweaks */
+.variationTable {
+  border: 1px solid var(--table-border);
+  border-collapse: collapse;
+  width: 100%;
+  margin-top: 14px;
+}
+
+.variationTable thead th {
+  background: var(--header-bg);
+  border-bottom: 1px solid var(--table-border);
+  color: #333;
+  font-size: 13px;
+  padding: 14px 12px;
+  text-align: left;
+  font-weight: 500;
+}
+
+.variationTable tbody td {
+  border-top: 1px solid var(--table-border);
+  padding: 14px 12px;
+  font-size: 12px;
+  vertical-align: middle;
+  color: #1C1917;
+}
+
+/* Make last column price standout */
+.priceLink {
+  color: var(--heading-blue);
+  font-weight: 700;
+  font-size: 12px;
+  text-decoration: none;
+}
+
+/* Description */
+.descriptionLabel {
+  color: var(--muted-gray);
+  /* font-size: 18px; */
+  margin-top: 26px;
+  margin-bottom: 8px;
+}
+
+.descriptionText {
+  font-size: 13px;
+  color: #222;
+  line-height: 1.6;
+}
+
+/* responsive adjustments */
+@media (max-width: 767px) {
+  .productName { font-size: 20px; }
+  .supplier { font-size: 16px; }
+  .variationTable thead th, .variation-table tbody td { font-size: 15px; padding: 10px; }
+}
+
+
+/* container card */
+.membersCard {
+  border-radius: 25px;
+  border: 1px solid #eee;
+  box-shadow: 0 6px 20px rgba(16,24,40,0.04);
+  background: #fff;
+}
+
+/* header */
+.productTitle {
+  color: #0b67e3;
+  font-weight: 600;
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.statusBadge {
+  background: #16a34a;
+  color: white;
+  padding: 6px 10px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  display: inline-block;
+}
+
+/* top info boxes */
+.infoBox {
+  background: #f5fbff;
+  border-radius: 8px;
+  border: 1px solid #eef7fb;
+}
+
+/* pool row */
+.poolRow {
+  background: #fafafa;
+  border-radius: 8px;
+  border: 1px solid #f0f0f0;
+}
+
+/* avatar stack */
+.avatarStack { display:flex; align-items:center; }
+.avatarStack .avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  color: #fff;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  margin-left: -10px;
+  border: 2px solid #fff;
+  font-weight: 600;
+  font-size: 0.9rem;
+  box-shadow: 0 2px 6px rgba(15,23,42,0.04);
+}
+.avatarStack .avatar.more {
+  background: #e6e6e6;
+  color: #333;
+  margin-left: -8px;
+  padding-left: 6px;
+  padding-right: 6px;
+  width: auto;
+  height: 28px;
+  border-radius: 14px;
+  font-weight: 600;
+}
+
+/* member card */
+.memberItem {
+  border-radius: 8px;
+  border: 1px solid #f0f0f0;
+  background: #fff;
+  box-shadow: none;
+  min-height: 88px;
+}
+
+/* avatar in member card */
+.memberAvatar {
+  width: 35px;
+  height: 35px;
+  border-radius: 50%;
+  color: #fff;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  font-weight:700;
+  font-size: 13px;
+  flex-shrink: 0;
+  box-shadow: 0 6px 20px rgba(15,23,42,0.04);
+}
+
+/* pills */
+.pill {
+  background: #f3f5f9;
+  padding: 6px 10px;
+  border-radius: 16px;
+  font-size: 11px;
+  color: #78716C;
+  display:inline-flex;
+  align-items:center;
+}
+.pillUnits {
+  /* background: #eef7ff; */
+  color: #78716C;
+  /* border: 1px solid #e6f0ff; */
+}
+.pillDate {
+  background: #FCEFFF;
+  color: #78716C;
+  /* border: 1px solid rgba(230,200,255,0.6); */
+}
+
+/* small helpers */
+.memberName { font-size: 14px; }
+.memberJoined { font-size: 13px; }
+
+/* responsive adjustments */
+@media (max-width: 576px) {
+  .avatarStack .avatar { width: 30px; height: 30px; margin-left: -8px; }
+  .memberAvatar { width: 40px; height: 40px; }
+}
+
+.badge {
+  background-color: #22c55e; /* green */
+  color: #fff;
+  padding: 5px 12px;
+  border-radius: 50px; /* pill shape */
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.badge svg {
+  background-color: #d1fae5; /* light green background for icon */
+  color: #22c55e;
+  border-radius: 50%;
+  padding: 4px;
+  font-size: 14px;
+}
+
+.table {
+  border: 1px solid #333;
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.table td {
+  padding: 12px 16px;
+  vertical-align: top;
+  font-size: 15px;
+  color: #444;
+}
+
+.table strong {
+  display: block;
+  color: #2e2d2d;
+}
+
+.equalColumns {
+  table-layout: fixed;  /* force equal column widths */
+  width: 100%;          /* full width table */
+}
+
+.cell {
+  color: #78716C !important;
+  font-size: 13px;
+  width: 50%;           /* equal width */
+  vertical-align: top;  /* align text at top */
+}
+
+.timelineIcon {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.timelineLine {
+  position: absolute;
+  top: 22px;   /* just below the icon */
+  left: 9px;   /* align with center of icon */
+  width: 2px;
+  height: 100%;
+  background-color: #16a34a; /* green line */
+}
+
+
+/* for car */
+
+.car-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+}
+
+.seat-section {
+  position: absolute;
+  top: 50%;
+  background: #fff;
+  height: auto;
+  width: 60%;
+}
+.car-image {
+  width: 100%;
+}
+
+.legend {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  font-size: 12px;
+}
+
+.dot {
+  height: 10px;
+  width: 10px;
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: 5px;
+}
+
+.dot.selected { background-color: green;}
+.dot.available { background-color: gray; }
+.dot.sold { background-color: red; }
+
+.seats {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+
+.seat-row {
+  display: flex;
+  gap: 10px;
+}
+
+.seat {
+  width: 35px;
+  height: 35px;
+  border-radius: 8px;
+  border: 2px solid gray;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.seat.available {
+  border-color: gray;
+  color: gray;
+}
+
+.seat.selected {
+  background-color: green;
+  color: white;
+  border: none;
+}
+
+.seat.sold {
+  background-color: red;
+  color: white;
+  border: none;
+  cursor: not-allowed;
+}
+
+.car-track {
+  position: relative;
+  width: 100%;
+  height: 60px;
+  overflow: hidden;
+  
+}
+
+.driver-seat {
+  font-size: 2.5rem;
+  position: absolute;
+  bottom: 10px;
+  animation: moveCarLeft 6s linear infinite;
+}
+
+/* Smooth right → left → reappear loop */
+@keyframes moveCarLeft {
+  0% {
+    right: -80px;            /* Start off-screen right */
+    opacity: 1;
+  }
+  70% {
+    right: 100%;             /* Move smoothly to left edge */
+    opacity: 1;
+  }
+  85% {
+    opacity: 0;              /* Fade out off-screen left */
+    right: 105%;
+  }
+  90% {
+    right: -80px;            /* Instantly jump back to right (hidden) */
+    opacity: 0;
+  }
+  100% {
+    opacity: 0;              /* Fade in smoothly */
+  }
+}
+
+.timeline {
+  position: relative;
+  /* padding-left: 2rem; */
+}
+
+.timeline::before {
+  content: "";
+  position: absolute;
+  left: 39px;
+  top: 0;
+  width: 2px;
+  height: 100%;
+  background: #eee;
+}
+
+.timeline-item {
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 1.5rem;
+  position: relative;
+}
+
+.timeline-icon {
+  position: relative;
+  z-index: 1;
+  background: #fff;
+  border: 2px solid #eee;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.timeline-content {
+  flex: 1;
+  margin-left: 1rem;
+}
+
+.bg-success-subtle {
+  background-color: #e6f4ea !important;
+}
+
+.bg-primary-subtle {
+  background-color: #eaf4ff !important;
+}
+
+.un:hover {
+  color: #0273F9;
+  background: #EAF4FF;
+  cursor: pointer;
+}
+
+.filter-box {
+  animation: fadeIn 0.5s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+
+
+
+
+@media screen and (max-width: 690px) {
+  .car-image {
+    width: 135%;
+  }
+
+  .seat-section {
+    width: 80%;
+  }
+
+  .legend {
+    font-size: 14px;
+  }
+}
+
+
