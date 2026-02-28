@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPlus, faTrash, faEye, faShare, faEnvelope, faArrowLeft } from '@fortawesome/free-solid-svg-icons';
-import { createInvoice, resetStatus } from '../../slice/invoiceSlice';
+import { createInvoice, resetStatus } from '../../../slice/invoiceSlice';
 import Swal from 'sweetalert2';
 
 const CreateInvoice = ({ onBack }) => {

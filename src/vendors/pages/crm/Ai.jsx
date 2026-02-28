@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { F, men } from '../../assets'
+import { F, men } from '../../../assets'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEnvelope, faEnvelopeOpen, faWandMagicSparkles, faPlugCircleBolt, faUsers, faChartBar, faUserFriends, faUserPlus, faSliders, faTimes } from '@fortawesome/free-solid-svg-icons';
 import { faWeixin } from "@fortawesome/free-brands-svg-icons";
-import stylesItem from '../../Tabs.module.css';
-import styles from "../../styles.module.css";
+import stylesItem from '../../../Tabs.module.css';
+import styles from "../../../styles.module.css";
 
 
 const Ai = () => {

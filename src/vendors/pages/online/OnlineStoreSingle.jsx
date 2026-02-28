@@ -1,7 +1,7 @@
 import React, { useState } from "react";
-import Sidebar from "../sidebar/Sidebar";
+import SidebarStore from "../sidebar/SidebarStore";
 import Topbar from "./Topbar";
-import MainContent from "./MainContent";
+import MaincontentItem from "./MaincontentItem";
 import {
   faHome,
   faBoxes,
@@ -14,110 +14,21 @@ import {
   faUserShield,
   faCog,
 } from "@fortawesome/free-solid-svg-icons";
-import styles from "../../styles.module.css";
+import styles from "../../../styles.module.css";
 
 // Updated sidebar buttons to match the new comprehensive sidebar
 const sidebarButtons = [
-    {
-      label: "Home",
-      key: "home",
-      icon: faHome,
-      visible: true,
-    },
-    {
-      label: "Inventory",
-      key: "inventory",
-      icon: faBoxes,
-      visible: true,
-      hasSubmenu: true,
-      submenu: [
-        { label: "Products", key: "products" },
-        { label: "Category", key: "category" },
-        { label: "Sales", key: "sales" },
-        { label: "Stock Audit", key: "stock-audit" },
-        { label: "Activity Log", key: "activity-log" },
-      ]
-    },
-    {
-      label: "Online Store",
-      key: "online-store",
-      icon: faStore,
-      visible: true,
-    },
-    {
-      label: "Manage Online Store",
-      key: "manage-online-store",
-      icon: faStore,
-      visible: false,
-      hasSubmenu: false,
-      submenu: [
-        { label: "Manage Store", key: "manage-store" },
-        { label: "Set Up Store", key: "set-up-store" },
-        { label: "Payment Methods", key: "payment-methods" },
-      ]
-    },
-    {
-      label: "Buying Pool",
-      key: "buying-pool",
-      icon: faHandshake,
-      visible: true,
-    },
-    {
-      label: "Bookings",
-      key: "bookings",
-      icon: faCalendarAlt,
-      visible: true,
-      hasSubmenu: true,
-      submenu: [
-        { label: "Manage Bookings", key: "manage-bookings" },
-        { label: "Calendar", key: "calendar" },
-        { label: "Settings", key: "settings" },
-      ]
-    },
-    {
-      label: "Invoices",
-      key: "invoices",
-      icon: faReceipt,
-      visible: true,
-    },
-    {
-      label: "CRM",
-      key: "crm",
-      icon: faUsers,
-      visible: true,
-      hasSubmenu: true,
-      submenu: [
-        { label: "My Customers", key: "my-customers" },
-        { label: "AI Assistant", key: "ai-assistant" },
-        { label: "Orders", key: "orders" },
-        { label: "Marketing", key: "marketing" },
-        { label: "Birthdays", key: "birthdays" },
-        { label: "Return Audit", key: "return-audit" },
-      ]
-    },
-    {
-      label: "Logistics",
-      key: "logistics",
-      icon: faTruck,
-      visible: true,
-    },
-    {
-      label: "Admin Users",
-      key: "admin-users",
-      icon: faUserShield,
-      visible: true,
-    },
-    {
-      label: "Settings",
-      key: "settings",
-      icon: faCog,
-      visible: true,
-    },
-  ];
+  {
+    label: "Online Store",
+    key: "online-store",
+    icon: faStore,
+    visible: true,
+  }
+];
 
-const OnlineStore = () => {
+const OnlineStoreSingle = () => {
   // Set initial active tab to match the new sidebar structure
-  const [activeTab, setActiveTab] = useState("home");
+  const [activeTab, setActiveTab] = useState("online-store");
 
   // Helper function to get the current page info for topbar
   const getCurrentPageInfo = (activeTab) => {
@@ -212,7 +123,7 @@ const OnlineStore = () => {
         className="sidebar-container bg-light d-none d-lg-block flex-shrink-0"
         style={{ width: "250px", height: "100vh" }}
       >
-        <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
+        <SidebarStore activeTab={activeTab} setActiveTab={setActiveTab} />
       </div>
       <div className="main-container flex-grow-1 d-flex flex-column">
         <div
@@ -227,7 +138,7 @@ const OnlineStore = () => {
         </div>
         <div className="flex-grow-1 position-relative">
           <div className="position-absolute w-100 h-100 overflow-y-auto overflow-x-hidden will-change-transform">
-            <MainContent activeTab={activeTab} setActiveTab={setActiveTab} />
+            <MaincontentItem activeTab={activeTab} setActiveTab={setActiveTab} />
           </div>
         </div>
       </div>
@@ -235,4 +146,4 @@ const OnlineStore = () => {
   );
 };
 
-export default OnlineStore;
+export default OnlineStoreSingle;

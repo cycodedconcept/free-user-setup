@@ -1,7 +1,7 @@
 import React, {useState} from 'react'
-import styles from "../../styles.module.css";
-import stylesItem from '../../Tabs.module.css';
-import { Wu, Wui, Tm } from '../../assets';
+import styles from "../../../styles.module.css";
+import stylesItem from '../../../Tabs.module.css';
+import { Wu, Wui, Tm } from '../../../assets';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEnvelope, faPhone, faEllipsisV, faTimes, faTrash, faEye, faEdit, faChevronLeft, faBold, 
   faItalic, 

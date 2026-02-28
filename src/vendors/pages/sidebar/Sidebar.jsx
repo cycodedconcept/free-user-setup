@@ -15,7 +15,7 @@ import {
   faUserShield,
   faCog,
 } from "@fortawesome/free-solid-svg-icons";
-import { Logo, El } from "../../assets";
+import { Logo, El } from "../../../assets";
 import "./sidebar.css";
 
 const Sidebar = ({ activeTab, setActiveTab }) => {

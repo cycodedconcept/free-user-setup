@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { loginForm, resetStatus } from '../../slice/authSlice'
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Logo, Bg, Gs, G12 } from '../../assets';
 import styles from "../../styles.module.css";
 import Swal from 'sweetalert2';
@@ -54,7 +54,7 @@ const Login = () => {
         confirmButtonColor: "#0273F9",
       }).then(() => {
         dispatch(resetStatus());
-        navigate("/store-set-up");
+        navigate("/vendor/store-set-up");
       });
     }
 
@@ -91,9 +91,9 @@ const Login = () => {
             <small style={{ color: '#78716C' }}>Welcome back! Please log in to continue</small>
             <small className="d-block">
               Don’t have an account?
-              <a href="@" style={{ color: '#0273F9', textDecoration: 'none' }} className="mx-2">
+              <Link to="/vendor" style={{ color: '#0273F9', textDecoration: 'none' }} className="mx-2">
                 Sign up
-              </a>
+              </Link>
             </small>
 
             <form className="mt-4 px-5" onSubmit={handleSubmit}>

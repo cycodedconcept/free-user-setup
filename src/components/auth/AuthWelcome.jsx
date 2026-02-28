@@ -8,7 +8,7 @@ const AuthWelcome = () => {
 
   const gotoLogin = (e) => {
     e.preventDefault()
-    navigate('/login')
+    navigate('/vendor/login')
   }
   return (
     <>
@@ -18,7 +18,7 @@ const AuthWelcome = () => {
                 <img src={Logo} alt="" className='w-50'/>
             </div>
             <div>
-                <Button variant='primary' size='sm'>Sign in</Button>
+                <Button variant='primary' size='sm' onClick={gotoLogin}>Sign in</Button>
             </div>
         </div>
       </div>

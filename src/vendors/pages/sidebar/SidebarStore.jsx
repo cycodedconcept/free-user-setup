@@ -6,7 +6,7 @@ import {
   faChevronRight,
   faStore,
 } from "@fortawesome/free-solid-svg-icons";
-import { Logo, El } from "../../assets";
+import { Logo, El } from "../../../assets";
 import "./sidebar.css";
 
 const SidebarStore = ({ activeTab, setActiveTab }) => {

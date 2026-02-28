@@ -1,5 +1,5 @@
 import React from 'react'
-import { Tiv, Pb2, Tp, Tm, Upi } from '../../assets';
+import { Tiv, Pb2, Tp, Tm, Upi } from '../../../assets';
 
 
 const InvoiceCards = () => {

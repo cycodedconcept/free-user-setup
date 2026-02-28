@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react'
-import stylesItem from '../../Tabs.module.css';
+import stylesItem from '../../../Tabs.module.css';
 import InvoiceCards from './InvoiceCards';
 import { useDispatch, useSelector } from 'react-redux';
-import { getAllInvoice } from '../../slice/invoiceSlice';
+import { getAllInvoice } from '../../../slice/invoiceSlice';
 import Swal from 'sweetalert2';
-import Pagination from '../../components/Pagination';
+import Pagination from '../../../components/Pagination';
 import CreateInvoice from '../crm/CreateInvoice';
 import InvoiceDetails from './InvoiceDetails';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';

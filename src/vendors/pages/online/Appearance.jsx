@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react'
-import { storeUpdateColors, updateStoreImages, resetStatus } from '../../slice/onlineStoreSlice';
+import { storeUpdateColors, updateStoreImages, resetStatus } from '../../../slice/onlineStoreSlice';
 import { useDispatch, useSelector } from 'react-redux';
-import { Ac } from '../../assets'
-import styles from "../../styles.module.css";
+import { Ac } from '../../../assets'
+import styles from "../../../styles.module.css";
 import Swal from 'sweetalert2';
 
 const Appearance = () => {

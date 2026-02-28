@@ -1,14 +1,16 @@
 import React from 'react';
 
-const Button = ({ 
-  children, 
-  type = 'button', 
-  variant = 'primary', 
+const Button = ({
+  children,
+  type = 'button',
+  variant = 'primary',
   size = 'md',
   disabled = false,
   className = '',
   onClick,
-  ...props 
+  style = {},
+  unstyled = false,
+  ...props
 }) => {
   const variants = {
     primary: {
@@ -51,16 +53,19 @@ const Button = ({
     lg: { padding: '14px 28px', fontSize: '14px' }
   };
 
-  const baseStyle = {
-    fontFamily: 'Poppins, Open Sans, sans-serif',
-    fontWeight: 500,
-    borderRadius: '6px',
-    cursor: disabled ? 'not-allowed' : 'pointer',
-    opacity: disabled ? 0.6 : 1,
-    transition: 'opacity 0.2s ease',
-    ...variants[variant],
-    ...sizes[size]
-  };
+  const baseStyle = unstyled
+    ? { ...style }
+    : {
+        fontFamily: 'Poppins, Open Sans, sans-serif',
+        fontWeight: 500,
+        borderRadius: '6px',
+        cursor: disabled ? 'not-allowed' : 'pointer',
+        opacity: disabled ? 0.6 : 1,
+        transition: 'opacity 0.2s ease',
+        ...variants[variant],
+        ...sizes[size],
+        ...style
+      };
 
   return (
     <button

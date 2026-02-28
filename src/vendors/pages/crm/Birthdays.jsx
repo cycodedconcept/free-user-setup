@@ -1,6 +1,6 @@
 import React, {useState} from 'react'
-import styles from "../../styles.module.css";
-import stylesItem from '../../Tabs.module.css';
+import styles from "../../../styles.module.css";
+import stylesItem from '../../../Tabs.module.css';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEllipsisV, faTimes, faCalendar } from '@fortawesome/free-solid-svg-icons';
 // import { birthData } from '../data';

@@ -1,9 +1,9 @@
 import React, {useState, useEffect} from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { createCollection, resetStatus, getCollectionForProduct, productAddedToCollection, productImageForCollection, getAllProductForCollection, addBulkImageProductToCollection, removeProductFromCollection, updateSortOrderPinned, updateCollection, getProductOfSingleCollection, deleteProductCollection } from '../../slice/onlineStoreSlice';
+import { createCollection, resetStatus, getCollectionForProduct, productAddedToCollection, productImageForCollection, getAllProductForCollection, addBulkImageProductToCollection, removeProductFromCollection, updateSortOrderPinned, updateCollection, getProductOfSingleCollection, deleteProductCollection } from '../../../slice/onlineStoreSlice';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTimes, faPen, faPlus, faTableColumns, faThumbtack, faTrashCan, faEllipsisV, faSort } from '@fortawesome/free-solid-svg-icons';
-import styles from "../../styles.module.css";
+import styles from "../../../styles.module.css";
 import Swal from 'sweetalert2';
 
 const Collection = ({setItemData}) => {

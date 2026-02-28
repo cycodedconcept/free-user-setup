@@ -3,11 +3,11 @@ import React, { useState, useEffect, useRef } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTimes, faPen, faTrashCan, faThumbtack, faCaretDown } from '@fortawesome/free-solid-svg-icons';
 import { useDispatch, useSelector } from 'react-redux';
-import { createProduct, getAllProductForCollection, updateProduct, deleteProductFromStore, publishProductToStore, unpublishProductToStore } from '../../slice/onlineStoreSlice';
-import { Ac } from '../../assets';
-import styles from "../../styles.module.css";
+import { createProduct, getAllProductForCollection, updateProduct, deleteProductFromStore, publishProductToStore, unpublishProductToStore } from '../../../slice/onlineStoreSlice';
+import { Ac } from '../../../assets';
+import styles from "../../../styles.module.css";
 import Swal from 'sweetalert2';
-import Pagination from '../../components/Pagination'
+import Pagination from '../../../components/Pagination'
 
 const Product = ({setProCol}) => {
   const dispatch = useDispatch();

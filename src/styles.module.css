@@ -200,6 +200,2233 @@
     padding: 10px 15px;
 }
 
+.customerHomePage {
+  min-height: 100vh;
+  background: #f3eceb;
+  color: #2e2a28;
+  display: flex;
+  justify-content: center;
+}
+
+.customerHomeContent {
+  width: 100%;
+  max-width: 550px;
+  padding: 28px 18px 40px;
+  text-align: center;
+  position: relative;
+}
+
+.customerHomeContentDetail {
+  max-width: 1100px;
+  padding: 24px 20px 40px;
+  text-align: left;
+}
+
+.customerHomeProfile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.customerHomeAvatar {
+  width: 86px;
+  height: 86px;
+  border-radius: 50%;
+  border: 6px solid #f8f2f1;
+  object-fit: cover;
+  box-shadow: 0 8px 16px rgba(46, 42, 40, 0.1);
+}
+
+.customerHomeTitle {
+  font-size: 24px;
+  font-weight: 700;
+  margin: 6px 0 2px;
+}
+
+.customerHomeSubtitle {
+  font-size: 14.5px;
+  line-height: 1.4;
+  /* max-width: 480px; */
+  color: #5c5553;
+  margin: 0 auto;
+}
+
+.customerHomeSegment {
+  display: flex;
+  gap: 6px;
+  background: #ded7d7;
+  padding: 6px;
+  border-radius: 999px;
+  width: 220px;
+  margin: 16px auto 20px;
+}
+
+.customerHomeSegmentButton {
+  flex: 1;
+  border: none;
+  background: transparent;
+  color: #9a9290;
+  padding: 6px 0;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.customerHomeSegmentActive {
+  background: #7b7370;
+  color: #fff;
+  box-shadow: inset 0 0 0 1px #6c6764;
+}
+
+.customerHomeSectionTitle {
+  font-size: 20px;
+  font-weight: 700;
+  margin: 4px 0 16px;
+}
+
+.customerHomeScrollable {
+  max-height: 52vh;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.customerHomeScrollableDetail {
+  max-height: none;
+  overflow: visible;
+  padding-right: 0;
+}
+
+.customerHomeScrollable::-webkit-scrollbar {
+  width: 6px;
+}
+
+.customerHomeScrollable::-webkit-scrollbar-thumb {
+  background: rgba(123, 115, 112, 0.4);
+  border-radius: 999px;
+}
+
+.customerHomeScrollable::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.customerHomeCollections {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.customerHomeCollectionBlock {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  border: none;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  text-align: center;
+}
+
+.customerHomeCollectionCard {
+  width: 100%;
+  background: #7b7370;
+  border-radius: 16px;
+  padding: 14px 16px 16px;
+  box-shadow: 0 12px 22px rgba(46, 42, 40, 0.12);
+}
+
+.customerHomeCollectionImages {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: nowrap;
+}
+
+.customerHomeCollectionImageWrap {
+  background: #ffffff;
+  border-radius: 14px;
+  padding: 6px;
+  width: 100%;
+  max-width: 110px;
+  aspect-ratio: 1 / 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.customerHomeCollectionImage {
+  width: 100%;
+  height: 100%;
+  border-radius: 10px;
+  object-fit: cover;
+}
+
+.customerHomeCollectionCount {
+  margin-top: 10px;
+  color: #f5f0ee;
+  font-weight: 600;
+  font-size: 16px;
+}
+
+.customerHomeCollectionDetail {
+  text-align: left;
+}
+
+.customerHomeDetailHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.customerHomeDetailTitle {
+  font-size: 18px;
+  font-weight: 700;
+  color: #2e2a28;
+}
+
+.customerHomeSearchRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.customerHomeBackButton {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  background: #f7f1f1;
+  color: #4b4442;
+  font-size: 18px;
+  cursor: pointer;
+}
+
+.customerHomeMiniAvatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.customerHomeSearchBar {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #ffffff;
+  border-radius: 999px;
+  padding: 10px 14px;
+  box-shadow: 0 8px 16px rgba(46, 42, 40, 0.08);
+}
+
+.customerHomeSearchIcon {
+  color: #8c8684;
+  font-size: 16px;
+}
+
+.customerHomeSearchInput {
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 14px;
+  width: 100%;
+  color: #3b3432;
+}
+
+.customerHomeSearchInput::placeholder {
+  color: #9f9997;
+}
+
+.customerHomeFilterButton {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  background: #f7f1f1;
+  color: #6b6462;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.customerHomeFilterOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.customerHomeFilterBackdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(40, 36, 35, 0.55);
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+.customerHomeFilterPanel {
+  position: relative;
+  width: min(360px, 82vw);
+  height: 100%;
+  background: #ffffff;
+  padding: 24px 24px 32px;
+  box-shadow: -18px 0 28px rgba(0, 0, 0, 0.18);
+  overflow-y: auto;
+}
+
+.customerHomeFilterHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+
+.customerHomeFilterTitle {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: #2e2a28;
+}
+
+.customerHomeFilterClose {
+  border: none;
+  background: transparent;
+  font-size: 26px;
+  color: #2e2a28;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.customerHomeFilterSection {
+  margin-bottom: 18px;
+}
+
+.customerHomeFilterSectionTitle {
+  margin: 0 0 10px;
+  font-weight: 600;
+  color: #4b4442;
+}
+
+.customerHomeFilterOption {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 8px 0;
+  font-size: 15px;
+  color: #2e2a28;
+}
+
+.customerHomeFilterOption input {
+  width: 18px;
+  height: 18px;
+  border: 1.5px solid #c7c0bf;
+  border-radius: 3px;
+  appearance: none;
+  background: #ffffff;
+  display: inline-grid;
+  place-content: center;
+}
+
+.customerHomeFilterOption input:checked {
+  background: #111111;
+  border-color: #111111;
+}
+
+.customerHomeFilterOption input:checked::after {
+  content: "";
+  width: 8px;
+  height: 5px;
+  border: 2px solid #ffffff;
+  border-top: 0;
+  border-right: 0;
+  transform: rotate(-45deg);
+  margin-top: -1px;
+}
+
+.customerHomeCollectionMeta {
+  text-align: center;
+  margin-bottom: 18px;
+}
+
+.customerHomeCollectionCountMeta {
+  display: block;
+  font-size: 16px;
+  color: #2e2a28;
+  margin-top: 2px;
+}
+
+.customerHomeFeaturedRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.customerHomeFeaturedLabel {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.customerHomePinnedBadge {
+  font-size: 12px;
+  color: #1161ff;
+  background: rgba(17, 97, 255, 0.12);
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-weight: 600;
+}
+
+.customerHomeProductGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  padding-bottom: 12px;
+}
+
+.customerHomeProductCard {
+  background: #ffffff;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 10px 20px rgba(46, 42, 40, 0.08);
+  display: flex;
+  flex-direction: column;
+  border: none;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+}
+
+.customerHomeProductImageWrap {
+  width: 100%;
+  height: 140px;
+  background: #f2ecea;
+}
+
+.customerHomeProductImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.customerHomeProductBody {
+  padding: 12px 12px 14px;
+}
+
+.customerHomeProductTitle {
+  font-size: 14px;
+  font-weight: 700;
+  margin: 0 0 6px;
+  color: #2e2a28;
+}
+
+.customerHomeProductDesc {
+  font-size: 12.5px;
+  color: #7a7472;
+  margin: 0 0 10px;
+}
+
+.customerHomeProductPrice {
+  font-size: 16px;
+  font-weight: 700;
+  color: #2e2a28;
+}
+
+.customerHomeProductDetail {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.customerHomeProductHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.customerHomeProductHeaderTitle {
+  font-size: 18px;
+  font-weight: 600;
+  color: #2e2a28;
+}
+
+.customerHomeCartButton {
+  position: relative;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  background: #f7f1f1;
+  color: #2e2a28;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.customerHomeCartBadge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #e03131;
+  color: #fff;
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.customerHomeProductMain {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.customerHomeProductHero {
+  width: 100%;
+  border-radius: 18px;
+  overflow: hidden;
+  background: #e6d8d2;
+}
+
+.customerHomeProductHero img {
+  width: 100%;
+  height: 320px;
+  object-fit: cover;
+  display: block;
+}
+
+.customerHomeProductInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.customerHomeProductTitleLarge {
+  margin: 0 0 8px;
+  font-size: 22px;
+  font-weight: 700;
+  color: #2e2a28;
+}
+
+.customerHomeProductDescLarge {
+  margin: 0;
+  color: #7a7472;
+  font-size: 15px;
+}
+
+.customerHomeProductPriceLarge {
+  font-size: 20px;
+  font-weight: 700;
+  color: #2e2a28;
+}
+
+.customerHomeDetailDivider {
+  height: 1px;
+  background: #e5dfdd;
+  width: 100%;
+}
+
+.customerHomeDetailGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.customerHomeDetailLabel {
+  font-size: 15px;
+  color: #6b6462;
+}
+
+.customerHomeSizeOptions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.customerHomeSizeOption {
+  border: 1px solid #e2dcda;
+  background: #fff;
+  padding: 10px 18px;
+  border-radius: 10px;
+  font-weight: 600;
+  color: #2e2a28;
+  cursor: pointer;
+}
+
+.customerHomeSizeOptionActive {
+  border-color: #7b7370;
+  box-shadow: 0 0 0 1px #7b7370;
+}
+
+.customerHomeQuantityControl {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid #e2dcda;
+  border-radius: 10px;
+  padding: 6px 12px;
+  background: #fff;
+}
+
+.customerHomeQuantityButton {
+  border: none;
+  background: transparent;
+  font-size: 18px;
+  color: #6b6462;
+  width: 28px;
+  height: 28px;
+  cursor: pointer;
+}
+
+.customerHomeQuantityValue {
+  min-width: 18px;
+  text-align: center;
+  font-weight: 600;
+  color: #2e2a28;
+}
+
+.customerHomeAddToCartButton {
+  margin-top: 10px;
+  border: none;
+  border-radius: 999px;
+  padding: 14px 18px;
+  background: #7b7370;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.customerCheckoutPage {
+  min-height: 100vh;
+  background: #f3eceb;
+  color: #2e2a28;
+  display: flex;
+  justify-content: center;
+}
+
+.customerCheckoutContent {
+  width: 100%;
+  max-width: 1180px;
+  padding: 24px 18px 40px;
+}
+
+.customerCheckoutHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 12px;
+}
+
+.customerCheckoutHeaderSpacer {
+  width: 36px;
+  height: 36px;
+  display: inline-block;
+}
+
+.customerCheckoutBackButton {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  background: #f7f1f1;
+  color: #2e2a28;
+  font-size: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.customerCheckoutTitle {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  text-align: center;
+  flex: 1;
+}
+
+.customerCheckoutIconButton {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  background: #f7f1f1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.customerCheckoutMenuLines {
+  width: 18px;
+  height: 2px;
+  background: #2e2a28;
+  box-shadow: 0 6px 0 #2e2a28, 0 -6px 0 #2e2a28;
+}
+
+.customerCheckoutCartButton {
+  position: relative;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  background: #f7f1f1;
+  color: #2e2a28;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.customerCheckoutCartBadge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #e03131;
+  color: #fff;
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.customerCheckoutCartMeta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 12px 0 18px;
+}
+
+.customerCheckoutCartTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.customerCheckoutCartDivider {
+  color: #b9b2b0;
+}
+
+.customerCheckoutClear {
+  border: none;
+  background: transparent;
+  color: #e03131;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.customerCheckoutItem {
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  gap: 16px;
+  padding: 16px 0 24px;
+  border-bottom: 1px solid #e4dfdd;
+}
+
+.customerCheckoutItemImage {
+  width: 100%;
+  border-radius: 16px;
+  object-fit: cover;
+  height: 160px;
+}
+
+.customerCheckoutItemInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.customerCheckoutItemTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.customerCheckoutItemTitle {
+  margin: 0 0 6px;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.customerCheckoutItemPrice {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.customerCheckoutTrash {
+  border: none;
+  background: transparent;
+  color: #e03131;
+  cursor: pointer;
+}
+
+.customerCheckoutQuantity {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  border: 1px solid #e2dcda;
+  border-radius: 10px;
+  padding: 6px 12px;
+  width: fit-content;
+  background: #fff;
+}
+
+.customerCheckoutQtyButton {
+  border: none;
+  background: transparent;
+  font-size: 18px;
+  color: #6b6462;
+  width: 28px;
+  height: 28px;
+  cursor: pointer;
+}
+
+.customerCheckoutQtyValue {
+  min-width: 18px;
+  text-align: center;
+  font-weight: 600;
+}
+
+.customerCheckoutSizeBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.customerCheckoutLabel {
+  color: #6b6462;
+  font-size: 15px;
+}
+
+.customerCheckoutSizeOptions {
+  display: flex;
+  gap: 12px;
+}
+
+.customerCheckoutSizeOption {
+  border: 1px solid #e2dcda;
+  background: #fff;
+  padding: 10px 18px;
+  border-radius: 10px;
+  font-weight: 600;
+  color: #2e2a28;
+  cursor: pointer;
+}
+
+.customerCheckoutSizeActive {
+  border-color: #7b7370;
+  box-shadow: 0 0 0 1px #7b7370;
+}
+
+.customerCheckoutDelivery {
+  padding: 22px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.customerCheckoutSectionTitle {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.customerCheckoutInputLabel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 15px;
+}
+
+.customerCheckoutInputWrap {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border: 1px solid #e2dcda;
+  border-radius: 14px;
+  padding: 12px 14px;
+  background: #fff;
+}
+
+.customerCheckoutInputWrap input {
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 15px;
+  color: #2e2a28;
+  width: 100%;
+}
+
+.customerCheckoutSelect {
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 15px;
+  color: #2e2a28;
+  width: 100%;
+  appearance: none;
+}
+
+.customerCheckoutTextArea {
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 15px;
+  color: #2e2a28;
+  width: 100%;
+  resize: vertical;
+  min-height: 80px;
+  font-family: inherit;
+}
+
+.customerCheckoutInputWrap input::placeholder {
+  color: #a39d9b;
+}
+
+.customerCheckoutInputIcon {
+  color: #6b6462;
+  display: inline-flex;
+  align-items: center;
+}
+
+.customerCheckoutTotal {
+  background: #f8f1ef;
+  border-radius: 18px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.customerCheckoutTotalRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-weight: 600;
+  font-size: 17px;
+}
+
+.customerCheckoutCta {
+  border: 2px solid #2e65ff;
+  background: #7b7370;
+  color: #fff;
+  padding: 14px 18px;
+  border-radius: 999px;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.customerCheckoutBody {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 24px;
+}
+
+.customerCheckoutLeft {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.customerCheckoutRight {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.customerCheckoutOrderSummary {
+  margin-top: 24px;
+}
+
+.customerCheckoutSummaryCard {
+  margin-top: 12px;
+  background: #ffffff;
+  color: #2e2a28;
+  border-radius: 14px;
+  padding: 16px;
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  gap: 16px;
+}
+
+.customerCheckoutSummaryImage {
+  width: 100%;
+  border-radius: 10px;
+  object-fit: cover;
+  height: 120px;
+}
+
+.customerCheckoutSummaryDetails h3 {
+  margin: 0 0 12px;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.customerCheckoutSummaryMeta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+  margin-bottom: 6px;
+}
+
+.customerCheckoutSummaryTotal {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 16px;
+  font-weight: 600;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #ebe6e4;
+}
+
+.customerCheckoutBilling {
+  margin-top: 24px;
+}
+
+.customerCheckoutBillingForm {
+  display: grid;
+  gap: 16px;
+  margin-top: 12px;
+}
+
+.customerCheckoutBillingForm label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.customerCheckoutBillingForm label span {
+  color: #e03131;
+}
+
+.customerCheckoutBillingForm input {
+  border: 1px solid #e2dcda;
+  border-radius: 14px;
+  padding: 12px 14px;
+  font-size: 15px;
+  outline: none;
+  background: #fff;
+}
+
+.customerCheckoutBillingSummary {
+  margin-top: 24px;
+}
+
+.customerCheckoutBillingRows {
+  margin-top: 12px;
+  background: #ffffff;
+  color: #2e2a28;
+  border-radius: 14px;
+  padding: 16px;
+  display: grid;
+  gap: 10px;
+}
+
+.customerCheckoutBillingRows div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 14px;
+}
+
+.customerCheckoutBillingTotal {
+  font-weight: 600;
+  margin-top: 6px;
+}
+
+.customerCheckoutPayment {
+  margin-top: 24px;
+}
+
+.customerCheckoutPaymentHint {
+  margin: 0 0 16px;
+  color: #6b6462;
+  font-size: 14px;
+}
+
+.customerCheckoutPaymentOptions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.customerCheckoutPaymentOption {
+  border: 1px solid #e2dcda;
+  background: #ffffff;
+  border-radius: 14px;
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  cursor: pointer;
+}
+
+.customerCheckoutPaymentLogo {
+  height: 24px;
+  width: auto;
+  display: block;
+}
+
+.customerCheckoutPaymentActive {
+  border-color: #2e2a28;
+}
+
+.customerCheckoutRadio {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid #2e2a28;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.customerCheckoutPaymentActive .customerCheckoutRadio::after {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #2e2a28;
+}
+
+.customerCheckoutPayButton {
+  width: 100%;
+  border: none;
+  border-radius: 999px;
+  padding: 14px 18px;
+  background: #7b7370;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.customerCheckoutPaymentNote {
+  margin: 12px 0 0;
+  font-size: 12px;
+  color: #7a7472;
+  line-height: 1.4;
+}
+
+@media (min-width: 768px) {
+  .customerCheckoutContent {
+    padding: 32px 32px 48px;
+  }
+
+  .customerCheckoutItem {
+    grid-template-columns: 180px 1fr;
+  }
+
+  .customerCheckoutItemImage {
+    height: 200px;
+  }
+
+  .customerCheckoutBody {
+    grid-template-columns: minmax(0, 1fr) 320px;
+    align-items: start;
+  }
+
+  .customerCheckoutTotal {
+    position: sticky;
+    top: 24px;
+  }
+
+  .customerCheckoutSummaryCard {
+    grid-template-columns: 180px 1fr;
+  }
+
+  .customerCheckoutSummaryImage {
+    height: 140px;
+  }
+
+  .customerCheckoutBillingForm {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 540px) {
+  .customerCheckoutItem {
+    grid-template-columns: 1fr;
+  }
+
+  .customerCheckoutItemImage {
+    height: 220px;
+  }
+
+  .customerCheckoutSummaryCard {
+    grid-template-columns: 1fr;
+  }
+
+  .customerCheckoutSummaryImage {
+    height: 200px;
+  }
+}
+
+.customerHomeServiceList {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.customerHomeServiceCard {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #7b7370;
+  color: #fff;
+  padding: 10px 14px 10px 10px;
+  border-radius: 999px;
+  min-height: 78px;
+  box-shadow: 0 10px 20px rgba(46, 42, 40, 0.12);
+  border: none;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+}
+
+.customerHomeServiceImage {
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 4px solid #f3eceb;
+}
+
+.customerHomeServiceText {
+  flex: 1;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  line-height: 1.2;
+}
+
+.customerHomeServiceTitle {
+  font-size: 15.5px;
+  font-weight: 500;
+}
+
+.customerHomeServiceCta {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.customerHomeServiceMenu {
+  font-size: 20px;
+  color: #ece5e2;
+  padding: 0 4px;
+  letter-spacing: 2px;
+  transform: rotate(90deg);
+  display: inline-block;
+}
+
+.customerHomeServiceOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+}
+
+.customerHomeServiceBackdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(40, 36, 35, 0.55);
+  border: none;
+}
+
+.customerHomeServiceSheet {
+  position: relative;
+  width: min(520px, 100%);
+  background: #ffffff;
+  border-radius: 24px 24px 0 0;
+  padding: 18px 20px 24px;
+  box-shadow: 0 -12px 28px rgba(0, 0, 0, 0.18);
+}
+
+.customerHomeServiceSheetHeader {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  padding: 4px 0 12px;
+}
+
+.customerHomeServiceSheetTitle {
+  font-size: 18px;
+  font-weight: 700;
+  color: #2e2a28;
+}
+
+.customerHomeServiceSheetClose {
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  font-size: 22px;
+  color: #2e2a28;
+  cursor: pointer;
+}
+
+.customerHomeServiceSheetCard {
+  border: 1px solid #ece6e4;
+  border-radius: 18px;
+  padding: 18px;
+  text-align: center;
+  margin: 6px 0 18px;
+}
+
+.customerHomeServiceSheetHeading {
+  margin: 0 0 12px;
+  font-size: 20px;
+  font-weight: 700;
+  color: #2e2a28;
+}
+
+.customerHomeServiceSheetDesc {
+  margin: 0 0 14px;
+  color: #6b6462;
+  font-size: 14px;
+}
+
+.customerHomeServiceSheetTime {
+  margin: 0 0 16px;
+  font-weight: 600;
+  color: #2e2a28;
+}
+
+.customerHomeServiceSheetAction {
+  border: none;
+  border-radius: 999px;
+  padding: 10px 28px;
+  background: #7b7370;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.customerHomeBookingOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+}
+
+.customerHomeBookingBackdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(40, 36, 35, 0.55);
+  border: none;
+}
+
+.customerHomeBookingSheet {
+  position: relative;
+  width: min(520px, 100%);
+  background: #ffffff;
+  border-radius: 24px 24px 0 0;
+  padding: 18px 20px 28px;
+  max-height: 92vh;
+  overflow-y: auto;
+  box-shadow: 0 -12px 28px rgba(0, 0, 0, 0.18);
+}
+
+.customerHomeBookingHeader {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  padding: 4px 0 12px;
+}
+
+.customerHomeBookingTitle {
+  font-size: 18px;
+  font-weight: 700;
+  color: #2e2a28;
+}
+
+.customerHomeBookingClose {
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  font-size: 22px;
+  color: #2e2a28;
+  cursor: pointer;
+}
+
+.customerHomeBookingSection {
+  padding: 12px 0;
+  border-bottom: 1px solid #f1ecea;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.customerHomeBookingSection:last-child {
+  border-bottom: none;
+}
+
+.customerHomeBookingSectionTitle {
+  margin: 0;
+  font-size: 15.5px;
+  font-weight: 700;
+  color: #2e2a28;
+  text-align: left;
+}
+
+.customerHomeBookingCard {
+  border: 1px solid #ece6e4;
+  border-radius: 16px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: #fff;
+}
+
+.customerHomeBookingCardTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-weight: 600;
+}
+
+.customerHomeBookingCardName {
+  font-size: 15px;
+  color: #2e2a28;
+}
+
+.customerHomeBookingDuration {
+  font-size: 13px;
+  color: #6b6462;
+}
+
+.customerHomeBookingCardDesc {
+  margin: 0;
+  font-size: 13px;
+  color: #6b6462;
+}
+
+.customerHomeBookingCardMeta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-weight: 600;
+  color: #2e2a28;
+}
+
+.customerHomeBookingCardTime {
+  font-size: 13px;
+  color: #6b6462;
+}
+
+.customerHomeBookingPrice {
+  font-size: 15px;
+}
+
+.customerHomeBookingInputLabel {
+  /* display: flex; */
+  margin-bottom: 10px;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 14px;
+  color: #2e2a28;
+  text-align: left;
+  align-items: flex-start;
+  width: 100%;
+}
+
+.customerHomeBookingRequired {
+  color: #c33;
+  font-weight: 700;
+  margin-left: 4px;
+}
+
+.customerHomeBookingInputWrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  border: 1px solid #e2dcda;
+  border-radius: 14px;
+  padding: 12px 14px;
+  background: #fff;
+  width: 100%;
+  margin: 10px 0;
+}
+
+.customerHomeBookingInput {
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 15px;
+  color: #2e2a28;
+  width: 100%;
+}
+
+.customerHomeBookingSelect {
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 15px;
+  color: #2e2a28;
+  width: 100%;
+  appearance: none;
+  padding-right: 20px;
+}
+
+.customerHomeBookingInput::placeholder {
+  color: #a39d9b;
+}
+
+.customerHomeBookingSelectIcon {
+  position: absolute;
+  right: 14px;
+  font-size: 12px;
+  color: #7b7370;
+  pointer-events: none;
+}
+
+.customerHomeBookingSplit {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.customerHomeBookingSubtle {
+  margin: 0;
+  font-size: 13px;
+  color: #8b8482;
+  text-align: left;
+}
+
+.customerHomeBookingTotalRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-weight: 600;
+  font-size: 16px;
+  padding: 10px 12px;
+  border: 1px solid #ece6e4;
+  border-radius: 12px;
+  background: #faf7f6;
+}
+
+.customerHomeBookingPaymentOptions {
+  display: flex;
+  gap: 12px;
+}
+
+.customerHomeBookingPaymentButton {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border: 1px solid #e2dcda;
+  border-radius: 14px;
+  padding: 12px 10px;
+  background: #fff;
+  font-weight: 600;
+  color: #2e2a28;
+  cursor: pointer;
+}
+
+.customerHomeBookingPaymentActive {
+  border-color: #2e2a28;
+  box-shadow: 0 0 0 1px #2e2a28;
+}
+
+.customerHomeBookingPaymentDot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1.5px solid #c4bdbb;
+  display: inline-block;
+  position: relative;
+}
+
+.customerHomeBookingPaymentActive .customerHomeBookingPaymentDot::after {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  border-radius: 50%;
+  background: #2e2a28;
+}
+
+.customerHomeBookingPaymentLogo {
+  height: 20px;
+  width: auto;
+  display: block;
+}
+
+.customerHomeBookingSubmit {
+  margin-top: 4px;
+  border: none;
+  border-radius: 999px;
+  padding: 14px 18px;
+  background: #7b7370;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  width: 100%;
+}
+
+.customerHomeBookingFinePrint {
+  margin: 0;
+  font-size: 12px;
+  color: #9b9492;
+  line-height: 1.4;
+}
+
+.customerHomeConfirmOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.customerHomeConfirmBackdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(20, 18, 18, 0.5);
+  border: none;
+}
+
+.customerHomeConfirmCard {
+  position: relative;
+  width: min(780px, 94vw);
+  max-height: 92vh;
+  background: #ffffff;
+  border-radius: 22px;
+  box-shadow: 0 24px 60px rgba(26, 24, 24, 0.2);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.customerHomeConfirmHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 28px 32px 18px;
+}
+
+.customerHomeConfirmEyebrow {
+  margin: 0 0 6px;
+  font-size: 14px;
+  color: #807775;
+}
+
+.customerHomeConfirmTitle {
+  margin: 0;
+  font-size: 30px;
+  font-weight: 700;
+  color: #2e2a28;
+}
+
+.customerHomeConfirmClose {
+  border: none;
+  background: transparent;
+  font-size: 24px;
+  color: #2e2a28;
+  cursor: pointer;
+}
+
+.customerHomeConfirmBanner {
+  background: #eaf3ff;
+  padding: 16px 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-weight: 600;
+  color: #2e2a28;
+}
+
+.customerHomeConfirmId {
+  font-weight: 600;
+  color: #6a6462;
+}
+
+.customerHomeConfirmBody {
+  padding: 26px 32px 30px;
+  overflow-y: auto;
+}
+
+.customerHomeConfirmService {
+  margin: 0 0 6px;
+  font-size: 22px;
+  font-weight: 700;
+  color: #2e2a28;
+}
+
+.customerHomeConfirmStore {
+  margin: 0 0 18px;
+  color: #6a6462;
+  font-size: 15px;
+}
+
+.customerHomeConfirmDetails {
+  display: grid;
+  gap: 18px;
+  padding: 6px 0 18px;
+}
+
+.customerHomeConfirmRow {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.customerHomeConfirmIcon {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid #e0dcda;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #6a6462;
+}
+
+.customerHomeConfirmLabel {
+  display: block;
+  font-weight: 600;
+  color: #2e2a28;
+  margin-bottom: 4px;
+}
+
+.customerHomeConfirmValue {
+  display: block;
+  color: #6a6462;
+  font-size: 15px;
+}
+
+.customerHomeConfirmNote {
+  background: #edf4ff;
+  color: #5e6b7a;
+  padding: 14px 16px;
+  border-radius: 12px;
+  font-size: 14px;
+  line-height: 1.5;
+  margin: 6px 0 22px;
+  text-align: left;
+}
+
+.customerHomeConfirmActions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.customerHomeConfirmPrimary {
+  border: none;
+  border-radius: 999px;
+  padding: 14px 18px;
+  background: #2f66f2;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.customerHomeConfirmGhost {
+  border: 1px solid #e2dcda;
+  border-radius: 999px;
+  padding: 14px 18px;
+  background: #fff;
+  color: #d64545;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.customerHomeConfirmHelp {
+  margin: 18px 0 0;
+  font-size: 14px;
+  color: #7a7370;
+  text-align: center;
+}
+
+.customerHomeCancelOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 95;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.customerHomeCancelBackdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(20, 18, 18, 0.5);
+  border: none;
+}
+
+.customerHomeCancelCard {
+  position: relative;
+  width: min(720px, 94vw);
+  max-height: 92vh;
+  background: #ffffff;
+  border-radius: 22px;
+  box-shadow: 0 24px 60px rgba(26, 24, 24, 0.2);
+  padding: 28px 32px 30px;
+  overflow-y: auto;
+}
+
+.customerHomeCancelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+
+.customerHomeCancelTitle {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 700;
+  color: #2e2a28;
+}
+
+.customerHomeCancelClose {
+  border: none;
+  background: transparent;
+  font-size: 24px;
+  color: #2e2a28;
+  cursor: pointer;
+}
+
+.customerHomeCancelSection {
+  padding: 12px 0;
+  border-top: 1px solid #efeae8;
+}
+
+.customerHomeCancelSectionTitle {
+  margin: 0 0 16px;
+  font-size: 18px;
+  font-weight: 700;
+  color: #2e2a28;
+  text-align: left;
+}
+
+.customerHomeCancelCardBox {
+  border: 1px solid #e6e0de;
+  border-radius: 16px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.customerHomeCancelCardTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.customerHomeCancelService {
+  margin: 0 0 8px;
+  font-size: 18px;
+  font-weight: 700;
+  color: #2e2a28;
+}
+
+.customerHomeCancelDesc {
+  margin: 0;
+  color: #6f6765;
+  font-size: 14px;
+}
+
+.customerHomeCancelDuration {
+  font-size: 14px;
+  color: #7a7370;
+  font-weight: 600;
+}
+
+.customerHomeCancelCardBottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-weight: 600;
+  color: #6a6462;
+}
+
+.customerHomeCancelPrice {
+  font-size: 18px;
+  color: #2e2a28;
+}
+
+.customerHomeCancelReasons {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.customerHomeCancelReason {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 16px;
+  color: #2e2a28;
+  cursor: pointer;
+}
+
+.customerHomeCancelReason input {
+  width: 18px;
+  height: 18px;
+  accent-color: #6a6462;
+}
+
+.customerHomeCancelNote {
+  margin-top: 16px;
+  background: #eaf3ff;
+  color: #6b7380;
+  padding: 14px 16px;
+  border-radius: 12px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.customerHomeCancelSubmit {
+  margin-top: 22px;
+  border: none;
+  border-radius: 999px;
+  padding: 14px 18px;
+  background: #2f66f2;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  width: 100%;
+}
+
+.customerHomeCancelSuccessOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #ffffff;
+}
+
+.customerHomeCancelSuccessCard {
+  width: min(420px, 90vw);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 14px;
+  padding: 32px 20px;
+}
+
+.customerHomeCancelSuccessIcon {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  border: 3px solid #2f8f3a;
+  color: #2f8f3a;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.customerHomeCancelSuccessTitle {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  color: #2e2a28;
+}
+
+.customerHomeCancelSuccessDesc {
+  margin: 0;
+  color: #6f6765;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.customerHomeCancelSuccessActions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  margin-top: 8px;
+}
+
+.customerHomeCancelSuccessPrimary {
+  border: none;
+  border-radius: 999px;
+  padding: 14px 18px;
+  background: #2f66f2;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  width: 100%;
+}
+
+.customerHomeCancelSuccessGhost {
+  border: 1px solid #e6e0de;
+  border-radius: 999px;
+  padding: 14px 18px;
+  background: #fff;
+  color: #2e2a28;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  width: 100%;
+}
+
+@media (max-width: 540px) {
+  .customerHomeBookingSplit {
+    grid-template-columns: 1fr;
+  }
+
+  .customerHomeBookingPaymentOptions {
+    flex-direction: column;
+  }
+
+  .customerHomeConfirmCard {
+    width: 100%;
+    height: 100%;
+    max-height: none;
+    border-radius: 0;
+  }
+
+  .customerHomeConfirmHeader {
+    padding: 22px 20px 14px;
+  }
+
+  .customerHomeConfirmBanner {
+    padding: 14px 20px;
+  }
+
+  .customerHomeConfirmBody {
+    padding: 20px;
+  }
+
+  .customerHomeConfirmTitle {
+    font-size: 24px;
+  }
+
+  .customerHomeCancelCard {
+    width: 100%;
+    height: 100%;
+    max-height: none;
+    border-radius: 0;
+    padding: 22px 20px 24px;
+  }
+
+  .customerHomeCancelTitle {
+    font-size: 24px;
+  }
+
+  .customerHomeCancelSuccessOverlay {
+    align-items: flex-start;
+  }
+
+  .customerHomeCancelSuccessCard {
+    width: 100%;
+    padding-top: 56px;
+  }
+}
+
+.customerHomeShareRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.customerHomeShareButton {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+.customerHomeShareIcon {
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #1c1917;
+  background: #e9e4e2;
+}
+
+.customerHomeShareIcon svg {
+  display: block;
+  width: 24px;
+  height: 24px;
+}
+
+.customerHomeShareLabel {
+  font-size: 12px;
+  color: #5c5553;
+}
+
+.customerHomeShareLink .customerHomeShareIcon {
+  background: #f1f1f1;
+  color: #1c1917;
+}
+
+.customerHomeShareX .customerHomeShareIcon {
+  background: #111111;
+  color: #ffffff;
+}
+
+.customerHomeShareFacebook .customerHomeShareIcon {
+  background: #1877f2;
+  color: #ffffff;
+}
+
+.customerHomeShareWhatsApp .customerHomeShareIcon {
+  background: #25d366;
+  color: #ffffff;
+}
+
+.customerHomeShareLinkedIn .customerHomeShareIcon {
+  background: #4b3cf0;
+  color: #ffffff;
+}
+
+.customerHomeShareFacebook .customerHomeShareIcon svg {
+  width: 22px;
+  height: 22px;
+}
+
+.customerHomeShareLinkedIn .customerHomeShareIcon svg {
+  width: 22px;
+  height: 22px;
+}
+
+.customerHomeFooter {
+  margin-top: 26px;
+  padding: 14px 0 4px;
+}
+
+.customerHomeJoinCta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: #2e2a28;
+  font-weight: 600;
+}
+
+.customerHomeJoinIcon {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #2d7ef8;
+}
+
+@media (min-width: 768px) {
+  .customerHomeContent {
+    padding: 36px 24px 48px;
+  }
+
+  .customerHomeContentDetail {
+    padding: 32px 32px 48px;
+  }
+
+  .customerHomeTitle {
+    font-size: 26px;
+  }
+
+  .customerHomeSectionTitle {
+    font-size: 21px;
+  }
+
+  .customerHomeProductGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .customerHomeProductImageWrap {
+    height: 180px;
+  }
+
+  .customerHomeProductHero img {
+    height: 380px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .customerHomeContentDetail {
+    max-width: 1200px;
+  }
+
+  .customerHomeProductGrid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .customerHomeProductMain {
+    display: grid;
+    grid-template-columns: 1.1fr 1fr;
+    gap: 32px;
+    align-items: start;
+  }
+
+  .customerHomeProductHero img {
+    height: 460px;
+  }
+
+  .customerHomeAddToCartButton {
+    max-width: 360px;
+  }
+}
+
 .m-btn {
     padding: 10px 20px;
 }
@@ -763,5 +2990,3 @@ input:checked + .slider:before {
     height: 50px;
   }
 }
-
-

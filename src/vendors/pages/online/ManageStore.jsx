@@ -1,33 +1,37 @@
-import React, {useState} from 'react'
+import React, {useState, useEffect} from 'react'
 import { FaStore, FaMapMarkerAlt, FaBox  } from 'react-icons/fa';
+import { useDispatch, useSelector } from 'react-redux';
+import { getMyOnlineStore, getStorePreview } from '../../../slice/onlineStoreSlice';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTimes, faAsterisk } from '@fortawesome/free-solid-svg-icons';
 import '../sidebar/sidebar.css';
-import styles from "../../styles.module.css";
+import styles from "../../../styles.module.css";
 import SetupStore from './SetupStore';
+import ViewStore from './ViewStore';
 
 const ManageStore = ({ setActiveTab }) => {
-    const [add, setAdd] = useState(false);
+    const dispatch = useDispatch();
+    let token = localStorage.getItem("token");
+    let getId = localStorage.getItem("itemId");
+    const { myStore } = useSelector((state) => state.store);
+    // const [add, setAdd] = useState(false);
     const [shop, setShop] = useState(true);
     const [onstore, setOnstore] = useState(true);
     const [servicesData, setServicesData] = useState(null);
+    const [vstore, setVstore] = useState(true);
+    const hasStore = Boolean(myStore?.onlineStore);
+    const storeCount = hasStore ? 1 : 0;
+    const itemCount =
+      myStore?.onlineStore?.items_count ??
+      myStore?.onlineStore?.total_items ??
+      0;
 
-    const [stores, setStores] = useState([
-        {
-            id: 1,
-            name: "Chuks Electronic Store",
-            address: "67, Modupe Street - Ikeja, Lagos",
-            items: 0,
-            status: "Active",
-        },
-        {
-            id: 2,
-            name: "Lighting Wharehouse",
-            address: "67, Modupe Street - Ikeja, Lagos",
-            items: 3,
-            status: "Active",
-        },
-    ]);
+    useEffect(() => {
+        if (token) {
+          dispatch(getMyOnlineStore({ token, id: getId || '7'}));
+        //   dispatch(getStorePreview({ token }));
+        }
+    }, [token, dispatch])
 
 
   const hideModal = () => {
@@ -35,7 +39,9 @@ const ManageStore = ({ setActiveTab }) => {
   }
   return (
     <>
-      {onstore ? (
+      {vstore ? (
+        <>
+          {onstore ? (
         <>
           <div className="p-4">
             <div className="d-flex justify-content-between">
@@ -43,68 +49,65 @@ const ManageStore = ({ setActiveTab }) => {
                     <h5 className="mb-1 my text-dark">Manage Your Store</h5>
                     <p className="text-muted">Setup your online store to get started</p>
                 </div>
-                {shop && stores.some(store => store.items > 0) && (
+                {shop && hasStore && (
                     <div>
+                    <button
+                        className={`${styles['onl-btn']} px-3 rounded mx-3`}
+                        onClick={() => setVstore(false)}
+                    >
+                        Preview Store
+                    </button>
                     <button
                         className={`${styles['onl-btn']} px-3 rounded`}
                         onClick={() => setOnstore(false)}
                     >
                         Setup Online Store
                     </button>
+                    
                     </div>
                 )}
 
             </div>
             
 
-            <p className='text-bold'>Available Store<span className='ms-1'>({stores.length})</span></p>
+            <p className='text-bold'>Available Store<span className='ms-1'>({storeCount})</span></p>
             <hr style={{border: '3px solid #EEEEEE'}}/>
 
-            {stores.length === 0 ? (
+            {!hasStore ? (
                 <div style={{background: '#fff', borderRadius: '12px', border: '2px solid #EEEEEE'}} className='p-3'>
                     <div className="rounded p-5 text-center" style={{border: '3px dotted #EEEEEE', background: '#fafafa'}}>
                     <FaStore size={30} className="text-secondary mb-3" />
-                    <p className="mb-1 font-weight-bold" style={{color: '#1C1917'}}>No store available to manage</p>
+                    <p className="mb-1 font-weight-bold" style={{color: '#1C1917'}}>No online store available to manage</p>
                     <small className="text-muted" style={{color: '#78716C'}}>Expand your business with another location</small>
                     <br />
-                    <button className="btn add-btn mt-3 px-4" onClick={() => {setAdd(true)}}>Add Store</button>
+                    <button className={`${styles['onl-btn']} px-3 rounded mt-3`} onClick={() => {setOnstore(false)}}>Setup Online Store</button>
                     </div>
                 </div>
                 ) : (
-                <div className="row g-4">
-                    {stores.map(store => (
-                        <div className="col-md-4" key={store.id}>
-                            <div className="card shadow-sm border-light pb-4">
+                <div className="row">
+                    {myStore && (
+                    <>
+                    <div className="col-md-4">
+                        <div className="card shadow-sm border-light pb-4">
                             <div className="card-body px-3 py-2 d-flex justify-content-between align-items-start">
-                                <p className="mb-0">{store.name}</p>
-                                <span className="badge rounded-pill text-primary bg-light">{store.status}</span>
+                                <p className="mb-0">{myStore?.onlineStore?.store_name}</p>
+                                <span className="badge rounded-pill text-primary bg-light">{myStore?.onlineStore?.is_published === false ? 'In Active' : 'Active'}</span>
                             </div>
                             <hr className="my-2"/>
-                            <p className="mb-2 px-3 text-muted small">
-                                <FaMapMarkerAlt className="me-2"/>
-                                {store.address}
+                            <p className="mb-2 px-3 small">
+                                <FaMapMarkerAlt className="me-2"/> <span className='text-success'>Online</span>
                             </p>
                             <p className="mb-3 px-3 text-muted small">
                                 <FaBox className="me-2"/>
-                                <strong>{store.items}</strong> Items
+                                <strong>{itemCount}</strong> Items
                             </p>
                             <div className="px-3">
-                                <button className="btn btn-primary w-100">Manage Store</button>
-                            </div>
+                                <button className="btn btn-primary w-100" style={{fontSize: '13px'}} onClick={() => setVstore(false)}>View Online Store</button>
                             </div>
                         </div>
-                    ))}
-
-                    <div className="col-md-4 p-3" style={{borderRadius: '12px', background: '#fff'}}>
-                    <div
-                        className="shadow-sm p-4 d-flex flex-column align-items-center justify-content-center text-center"
-                        style={{ height: "100%", border: "1px dotted #EEEEEE", background: '#FAFAFA', borderRadius: '12px' }}
-                    >
-                        <h6 className="mb-2">Add New Store</h6>
-                        <p style={{color: '#78716C', fontSize: '13px'}}>Add business with another location</p>
-                        <button className={`btn ${styles['add-btn']} mt-3 px-4`} onClick={() => {setAdd(true)}}>Add Store</button>
                     </div>
-                    </div>
+                    </>
+                    )}
                 </div>
             )}
 
@@ -113,8 +116,10 @@ const ManageStore = ({ setActiveTab }) => {
        ) : (
         <SetupStore />
        )}
+        </>
+      ) : (<ViewStore initialSeeStore={false} />)}
             
-        {add && (
+        {/* {add && (
             <div className={styles['modal-overlay']} onClick={hideModal}>
             <div className={styles['modal-content2']}>
                 <div className="d-flex justify-content-between align-items-center px-3 py-2">
@@ -176,7 +181,7 @@ const ManageStore = ({ setActiveTab }) => {
                 </div>
             </div>
             </div>
-        )}
+        )} */}
     </>
   )
 }

@@ -1,20 +1,23 @@
 import React, {useState, useEffect} from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { getMyOnlineStore, getStorePreview } from '../../slice/onlineStoreSlice';
+import { getMyOnlineStore, getStorePreview } from '../../../slice/onlineStoreSlice';
 import { useNavigate } from 'react-router-dom';
 import { FaMapMarkerAlt, FaBox  } from 'react-icons/fa';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPen, faExternalLinkAlt, faDotCircle, faEllipsisV } from '@fortawesome/free-solid-svg-icons';
-import { Smc } from '../../assets';
-import styles from "../../styles.module.css";
-import Button from "../../components/ui/Button"
+import { Smc } from '../../../assets';
+import styles from "../../../styles.module.css";
+import Button from "../../../components/ui/Button"
 
-const ViewStore = () => {
+const ViewStore = ({ initialSeeStore = true }) => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   let token = localStorage.getItem("token");
   let getId = localStorage.getItem("itemId");
-  const [seeStore, setSeeStore] = useState(true);
+  const [seeStore, setSeeStore] = useState(initialSeeStore);
+  useEffect(() => {
+    setSeeStore(initialSeeStore);
+  }, [initialSeeStore]);
   const [change, setChange] = useState('Services');
   const { loading, error, success, myStore, previewDetails } = useSelector((state) => state.store);
 
@@ -37,7 +40,7 @@ const ViewStore = () => {
   ];
 
   const gotoStore = () => {
-    navigate('/store')
+    navigate('/vendor/store')
   }
 
   const renderContent = () => {
@@ -107,7 +110,7 @@ const ViewStore = () => {
         default:
           return null;
       }
-    };
+  };
 
 
   return (
@@ -117,8 +120,8 @@ const ViewStore = () => {
           <div className="p-4">
             <div className="d-flex justify-content-between">
                 <div>
-                    <h5 className="mb-1 my text-dark">Manage Your Store</h5>
-                    <p className="text-muted">Choose which store you’d like to manage today</p>
+                  <h5 className="mb-1 my text-dark">Manage Your Store</h5>
+                  <p className="text-muted">Choose which store you’d like to manage today</p>
                 </div>
                 <div>
                     <button
@@ -171,7 +174,7 @@ const ViewStore = () => {
                       <Button variant='noBackground' size='xsm' className='w-100'><FontAwesomeIcon icon={faPen} style={{color: '#1C1917', cursor: 'pointer'}} className='mx-1'/>Edit</Button>
                     </div>
                     <div>
-                      <Button variant='primary' size='xsm' className='w-100'>Back</Button>
+                      <Button variant='primary' size='xsm' className='w-100' onClick={() => setSeeStore(true)}>Back</Button>
                     </div>
                 </div>
             </div>

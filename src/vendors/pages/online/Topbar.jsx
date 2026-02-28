@@ -3,7 +3,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faBell, faStore, faChevronDown } from '@fortawesome/free-solid-svg-icons';
 import { useNavigate } from 'react-router-dom';
 import '../sidebar/sidebar.css';
-import styles from "../../styles.module.css";
+import styles from "../../../styles.module.css";
 import Swal from 'sweetalert2';
 
 
@@ -50,7 +50,7 @@ for (const btn of sidebarButtons) {
   }).then((result) => {
     if (result.isConfirmed) {
       localStorage.clear();
-      navigate("/login");
+      navigate("/vendor/login");
     }
   });
 };

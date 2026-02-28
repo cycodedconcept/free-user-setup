@@ -1,7 +1,7 @@
 import React, {useState} from 'react'
-import styles from "../../styles.module.css";
+import styles from "../../../styles.module.css";
 // import { auditData } from '../data';
-import { Re, Reb } from '../../assets'
+import { Re, Reb } from '../../../assets'
 
 const ReturnAudit = () => {
   const cardDetails = [

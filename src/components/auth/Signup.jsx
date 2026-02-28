@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { registerForm, resetStatus } from '../../slice/authSlice';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Logo, Bg, Gs, G12 } from '../../assets';
 import styles from "../../styles.module.css";
 import Swal from 'sweetalert2';
@@ -55,7 +55,7 @@ const Signup = () => {
       confirmButtonColor: "#0273F9",
     }).then(() => {
       dispatch(resetStatus());
-      navigate("/welcome");
+      navigate("/vendor/welcome");
     });
   }
 
@@ -92,9 +92,9 @@ const Signup = () => {
             <small style={{ color: '#78716C' }}>Welcome! Please fill in the details to get started.</small>
             <small className="d-block">
               Already have an account?
-              <a href="@" style={{ color: '#0273F9', textDecoration: 'none' }} className="mx-2">
+              <Link to="/vendor/login" style={{ color: '#0273F9', textDecoration: 'none' }} className="mx-2">
                 Sign in
-              </a>
+              </Link>
             </small>
 
             <form className="mt-4 px-5" onSubmit={handleSubmit}>

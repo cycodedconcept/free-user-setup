@@ -1,9 +1,9 @@
 import React, {useState} from 'react'
-import styles from "../../styles.module.css";
-import stylesItem from '../../Tabs.module.css';
+import styles from "../../../styles.module.css";
+import stylesItem from '../../../Tabs.module.css';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEllipsisV, faTrash, faEye, faEdit, faTimes, faChevronLeft } from '@fortawesome/free-solid-svg-icons';
-import { Cb, Cp, Cin, Cv, Cbi, Eli2 } from '../../assets';
+import { Cb, Cp, Cin, Cv, Cbi, Eli2 } from '../../../assets';
 // import { customerData } from '../data';
 
 

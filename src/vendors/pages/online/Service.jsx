@@ -4,11 +4,11 @@ import { faExternalLinkAlt, faTimes, faCog, faClock, faImage, faTrashCan, faPen,
 import { useDispatch, useSelector } from 'react-redux';
 import { createService, updateService, getAllServices, deleteService, getAllCollection, 
     createCollection, resetStatus, addServiceToCollection, getServiceCollection, addBulkServicesToCollection, 
-    updateServiceInCollection, deleteServiceInCollection, updateCollection, deleteCollection } from '../../slice/onlineStoreSlice';
-import styles from "../../styles.module.css";
+    updateServiceInCollection, deleteServiceInCollection, updateCollection, deleteCollection } from '../../../slice/onlineStoreSlice';
+import styles from "../../../styles.module.css";
 import Swal from 'sweetalert2';
 import axios from 'axios';
-import { API_URL } from '../../config/constant';
+import { API_URL } from '../../../config/constant';
 
 
 
