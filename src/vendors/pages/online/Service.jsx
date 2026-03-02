@@ -91,14 +91,7 @@ const Service = ({setPer, setVog}) => {
     sort_order: ''
   })
 
-//   const [updateCollection, setUpdateCollection] = useState({
-//     collection_name: '',
-//     collection_type: '',
-//     layout_type: '',
-//     is_pinned: false,
-//     is_visible: false,
-//     sort_order: ''
-//   })
+
 
   useEffect(() => {
     if (token) {

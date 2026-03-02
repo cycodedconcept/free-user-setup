@@ -4,6 +4,7 @@ import countryReducer from '../slice/countriesSlice'
 import storeReducer from '../slice/onlineStoreSlice'
 import invoiceReducer from '../slice/invoiceSlice'
 import paymentReducer from '../slice/paymentSlice'
+import customerReducer from '../slice/customerFacingSlice'
 
 const store = configureStore({
   reducer: {
@@ -11,7 +12,8 @@ const store = configureStore({
     user: userReducer,
     store: storeReducer,
     invoice: invoiceReducer,
-    payment: paymentReducer
+    payment: paymentReducer,
+    customer: customerReducer
   },
 });
 

@@ -287,6 +287,27 @@
   margin: 4px 0 16px;
 }
 
+.customerHomeEmptyState {
+  background: #f8f2f1;
+  border: 1px dashed #c9c1bf;
+  border-radius: 14px;
+  padding: 18px 16px;
+  text-align: center;
+  color: #5c5553;
+}
+
+.customerHomeEmptyTitle {
+  margin: 0 0 6px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.customerHomeEmptyText {
+  margin: 0;
+  font-size: 13.5px;
+  color: #7a716f;
+}
+
 .customerHomeScrollable {
   max-height: 52vh;
   overflow-y: auto;
@@ -1610,6 +1631,61 @@
   font-size: 15.5px;
   font-weight: 700;
   color: #2e2a28;
+  text-align: left;
+}
+
+.customerHomeAvailability {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border: 1px solid #ece6e4;
+  border-radius: 14px;
+  padding: 12px;
+  background: #fff;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.customerHomeAvailabilityRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+  color: #2e2a28;
+  text-transform: capitalize;
+}
+
+.customerHomeAvailabilityDay {
+  font-weight: 600;
+  min-width: 90px;
+}
+
+.customerHomeAvailabilitySlots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.customerHomeAvailabilitySlot {
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #f5f1ef;
+  color: #5f5754;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.customerHomeAvailabilityStatus {
+  color: #a39d9b;
+  font-size: 12px;
+}
+
+.customerHomeAvailabilityEmpty {
+  margin: 0;
+  font-size: 13px;
+  color: #8b8482;
   text-align: left;
 }
 
@@ -2972,6 +3048,40 @@ input:checked + .slider:before {
   margin: 4px 0;
 }
 
+.customerHomePagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.customerHomePaginationMeta {
+  font-size: 0.8rem;
+  color: #78716c;
+}
+
+.customerHomePaginationControls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.customerHomePaginationButton {
+  padding: 0.45rem 0.9rem;
+  border-radius: 999px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  color: #1c1917;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.customerHomePaginationButton:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 
 
 /* Responsive adjustments */
@@ -2988,5 +3098,9 @@ input:checked + .slider:before {
   .timelineLine {
     top: 28px;
     height: 50px;
+  }
+
+  .customerHomeServiceTitle, .customerHomeServiceCta {
+    font-size: 12.5px;
   }
 }

@@ -16,6 +16,7 @@ const initialState = {
     colDetails:{},
     myStore: {},
     previewDetails: {},
+    available: {},
     collectionProducts: {
         data: [],
         pagination: {
@@ -354,6 +355,26 @@ export const addServiceToCollection = createAsyncThunk(
         }
     }
 );
+
+export const getServiceAvailability = createAsyncThunk(
+    'store/getServiceAvailability',
+    async ({token, id}, {rejectWithValue}) => {
+        try {
+            const response = await axios.get(`${API_URL}/stores/services/${id}/availability`, {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            })
+
+            return response.data;
+        } catch (error) {
+            if (error.response && error.response.data) {
+                return rejectWithValue(error.response.data);
+            }
+            return rejectWithValue(error.message || "Something went wrong");
+        }
+    }
+)
 
 export const addBulkServicesToCollection = createAsyncThunk(
     'store/addBulkService',
@@ -1286,7 +1307,21 @@ const storeSlice = createSlice({
             state.loading = false;
             state.success = false;
             state.error = action.payload;
-        })   
+        })
+        .addCase(getServiceAvailability.pending, (state) => {
+            state.loading = true;
+            state.success = false;
+            state.error = null;
+        })
+        .addCase(getServiceAvailability.fulfilled, (state, action) => {
+            state.loading = false;
+            state.available = action.payload;
+        })
+        .addCase(getServiceAvailability.rejected, (state, action) => {
+            state.loading = false;
+            state.success = false;
+            state.error = action.payload;
+        })
 
     }
 })
