@@ -18,6 +18,7 @@ import Marketing from "../crm/Marketing";
 import Birthdays from "../crm/Birthdays";
 import ReturnAudit from "../crm/ReturnAudit";
 import Ai from "../crm/Ai";
+import GeneralSettings from "../settings/GeneralSettings"
 // import Payment from "../payment/Payment";
 
 const MainContent = ({ activeTab, setActiveTab }) => {
@@ -132,11 +133,7 @@ const MainContent = ({ activeTab, setActiveTab }) => {
 
         {/* Settings */}
         {activeTab === "settings" && (
-          <div>
-            <h2>Settings</h2>
-            <p>Application settings</p>
-            {/* Add your settings component here */}
-          </div>
+          <GeneralSettings setActiveTab={setActiveTab} />
         )}
 
         {/* Backward compatibility for old keys */}

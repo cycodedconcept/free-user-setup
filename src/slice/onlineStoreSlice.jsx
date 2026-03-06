@@ -788,6 +788,7 @@ export const getStorePreview = createAsyncThunk(
               }
            }) 
 
+           localStorage.setItem("storeView", response.data.data.store.username)
            return response.data;
         } catch (error) {
             if (error.response && error.response.data) {
