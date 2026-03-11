@@ -18,7 +18,9 @@ import Marketing from "../crm/Marketing";
 import Birthdays from "../crm/Birthdays";
 import ReturnAudit from "../crm/ReturnAudit";
 import Ai from "../crm/Ai";
-import GeneralSettings from "../settings/GeneralSettings"
+import GeneralSettings from "../settings/GeneralSettings";
+import Home from "../dashboard/Home";
+import Domain from "../domain/Domain";
 // import Payment from "../payment/Payment";
 
 const MainContent = ({ activeTab, setActiveTab }) => {
@@ -27,12 +29,8 @@ const MainContent = ({ activeTab, setActiveTab }) => {
     <>
       <div className={!noPaddingTabs.includes(activeTab) ? "p-4" : ""}>
         {/* Home Page */}
-        {activeTab === "home" && (
-          <div>
-            <h2>Dashboard</h2>
-            <p>Welcome to your dashboard!</p>
-            {/* Add your home/dashboard component here */}
-          </div>
+        {activeTab === "dashboard" && (
+          <Home setActiveTab={setActiveTab} />
         )}
 
         {/* Inventory Section */}
@@ -134,6 +132,11 @@ const MainContent = ({ activeTab, setActiveTab }) => {
         {/* Settings */}
         {activeTab === "settings" && (
           <GeneralSettings setActiveTab={setActiveTab} />
+        )}
+
+        {/* Domains */}
+        {activeTab === "domains" && (
+          <Domain setActiveTab={setActiveTab} />
         )}
 
         {/* Backward compatibility for old keys */}

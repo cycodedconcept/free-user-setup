@@ -4,7 +4,9 @@ import styles from "../../styles.module.css";
 import Button from "../../components/ui/Button";
 
 const SHOW_BOOKING_KEY = "mycroshop.showBookingConfirmation";
+const PENDING_BOOKING_KEY = "mycroshop.pendingBooking";
 const PAYMENT_REFERENCE_KEY = "mycroshop.paymentReference";
+const PAYMENT_CONTEXT_KEY = "mycroshop.paymentContext";
 
 const PaymentCallback = () => {
   const [searchParams] = useSearchParams();
@@ -23,15 +25,39 @@ const PaymentCallback = () => {
     }
   }, [reference]);
 
+  const isBookingPayment = useMemo(() => {
+    try {
+      const paymentContext =
+        sessionStorage.getItem(PAYMENT_CONTEXT_KEY) ||
+        localStorage.getItem(PAYMENT_CONTEXT_KEY) ||
+        "";
+
+      if (paymentContext) {
+        return paymentContext === "booking";
+      }
+
+      return Boolean(
+        sessionStorage.getItem(PENDING_BOOKING_KEY) || localStorage.getItem(PENDING_BOOKING_KEY)
+      );
+    } catch (error) {
+      return false;
+    }
+  }, []);
+
   const handleContinue = useCallback(() => {
     try {
-      localStorage.setItem(SHOW_BOOKING_KEY, "true");
-      sessionStorage.setItem(SHOW_BOOKING_KEY, "true");
+      localStorage.removeItem(PAYMENT_CONTEXT_KEY);
+      sessionStorage.removeItem(PAYMENT_CONTEXT_KEY);
+
+      if (isBookingPayment) {
+        localStorage.setItem(SHOW_BOOKING_KEY, "true");
+        sessionStorage.setItem(SHOW_BOOKING_KEY, "true");
+      }
     } catch (error) {
       // Ignore storage errors
     }
-    navigate("/customer?showBooking=1");
-  }, [navigate]);
+    navigate(isBookingPayment ? "/customer?showBooking=1" : "/customer");
+  }, [isBookingPayment, navigate]);
 
   return (
     <div className={styles.paymentCallbackPage}>
@@ -47,9 +73,13 @@ const PaymentCallback = () => {
             />
           </svg>
         </div>
-        <h1 className={styles.paymentCallbackTitle}>Booking Confirmed!</h1>
+        <h1 className={styles.paymentCallbackTitle}>
+          {isBookingPayment ? "Booking Confirmed!" : "Order Confirmed!"}
+        </h1>
         <p className={styles.paymentCallbackText}>
-          Thank you for your purchase. Your booking is being processed.
+          {isBookingPayment
+            ? "Thank you for your purchase. Your booking is being processed."
+            : "Thank you for your purchase. Your order is being processed."}
         </p>
         <Button
           className={styles.paymentCallbackButton}

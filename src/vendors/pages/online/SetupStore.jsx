@@ -2,9 +2,9 @@ import React, {useState, useEffect} from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { getCountries } from '../../../slice/countriesSlice';
 import { useDispatch, useSelector } from 'react-redux';
-import { createOnlineStore, resetStatus, updateStoreLinks, getAllServices, getCollectionForProduct, productImageForCollection } from '../../../slice/onlineStoreSlice';
+import { createOnlineStore, resetStatus, updateStoreLinks, getAllServices, getCollectionForProduct, productImageForCollection, getMyOnlineStore } from '../../../slice/onlineStoreSlice';
 import { faInfoCircle, faLink, faStore, faCube, faDatabase, faExternalLinkAlt, faEllipsisV } from '@fortawesome/free-solid-svg-icons';
-import { Flash, F, X, In, In2, Owi, Smc, Gl } from '../../../assets';
+import { Flash, F, X, In, In2, Owi, Smc } from '../../../assets';
 import Service from './Service';
 import Appearance from './Appearance';
 import Product from './Product';
@@ -26,7 +26,7 @@ const SetupStore = () => {
   const [ms, setMs] = useState(true)
   const [hasCollections, setHasCollections] = useState(false);
   const primaryColor = "#0273F9";
-  const { loading, error, success, allStore, collectionProduct, collections } = useSelector((state) => state.store);
+  const { loading, error, success, allStore, collectionProduct, collections, myStore } = useSelector((state) => state.store);
 
   // Sync country with links state
   useEffect(() => {
@@ -97,6 +97,7 @@ useEffect(() => {
     if (token) {
         dispatch(getAllServices({ token, id: getId || '7'}))
         dispatch(getCollectionForProduct({ token, id: getId || '7'}));
+        dispatch(getMyOnlineStore({ token, id: getId || '7'}))
     }
 }, [token, dispatch])
 
@@ -482,6 +483,51 @@ useEffect(() => {
         });
     }
   }, [success, error, dispatch])
+
+
+  const copyStoreLink = async () => {
+    const storefrontLink = myStore?.onlineStore?.storefront_link;
+
+    if (!storefrontLink) {
+      Swal.fire({
+        icon: "info",
+        title: "Link unavailable",
+        text: "Your store link is not available yet.",
+        confirmButtonColor: "#0273F9",
+      });
+      return;
+    }
+
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(storefrontLink);
+      } else {
+        const textArea = document.createElement("textarea");
+        textArea.value = storefrontLink;
+        textArea.style.position = "fixed";
+        textArea.style.left = "-9999px";
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textArea);
+      }
+
+      Swal.fire({
+        icon: "success",
+        title: "Copied",
+        text: "Store link copied to clipboard.",
+        confirmButtonColor: "#0273F9",
+      });
+    } catch {
+      Swal.fire({
+        icon: "error",
+        title: "Copy failed",
+        text: "Unable to copy the store link right now.",
+        confirmButtonColor: "#0273F9",
+      });
+    }
+  };
 
 
   return (
@@ -1126,10 +1172,17 @@ useEffect(() => {
                     </>
                 ) : (
                 <>
-                  <div>
+                    <div>
                     <div className={`d-flex justify-content-between p-3 m-0`} style={{background: '#EAF4FF', borderRadius: '10px', border: '1px solid #0273F9'}}>
-                        <p className='m-0'><span style={{color: '#78716C'}}>mycroshop</span>/username</p>
-                        <p style={{color: '#0273F9'}} className='m-0'>Share Link <FontAwesomeIcon icon={faExternalLinkAlt} /></p>
+                        <p className='m-0'><span style={{color: '#78716C'}}>mycroshop</span>/{myStore?.onlineStore?.username}</p>
+                        <p
+                          style={{color: '#0273F9', cursor: 'pointer'}}
+                          className='m-0'
+                          onClick={copyStoreLink}
+                          title={myStore?.onlineStore?.storefront_link || "Share Link"}
+                        >
+                          Share Link <FontAwesomeIcon icon={faExternalLinkAlt} />
+                        </p>
                     </div>
                     <div className="d-flex justify-content-between border-bottom" style={{borderBottom: '1px solid #EEEEEE'}}>
                         {tabs.map((tab) => (
@@ -1202,10 +1255,10 @@ useEffect(() => {
                                 ) : (
                                 <>
                                 <div className="text-center mt-5 mx-3">
-                                    <img src={Owi} alt="" />
+                                    <img src={myStore.onlineStore.profile_logo_url} alt="" className='rounded-pill w-25'/>
 
                                     <h5 className="my text-dark mt-3">Your Store</h5>
-                                    <small style={{color: '#78716C'}} className='mb-4 d-block'>Store Description Here...</small>
+                                    <small style={{color: '#78716C'}} className='mb-4 d-block'>{myStore.onlineStore.store_description}</small>
                                     
                                     {allStore.data?.services?.map((store) => 
                                       <div key={store.id} className="d-flex justify-content-between px-3 py-2 rounded-pill mt-2" style={{background: '#78716C', color: '#fff'}}>
@@ -1228,10 +1281,9 @@ useEffect(() => {
                             ) : (
                                 <>
                                 <div className="text-center mt-5 mx-3">
-                                    <img src={Owi} alt="" />
-
+                                    <img src={myStore.onlineStore.profile_logo_url} alt="" className='rounded-pill w-25'/>
                                     <h5 className="my text-dark mt-3">Your Store</h5>
-                                    <small style={{color: '#78716C'}} className='mb-4 d-block'>Store Description Here...</small>
+                                    <small style={{color: '#78716C'}} className='mb-4 d-block'>{myStore.onlineStore.store_description}</small>
 
                                     <h6 className='bx mt-4 mb-3'>My Service Collections</h6>
                                     {allStore.data?.services?.map((store) => 
@@ -1256,10 +1308,10 @@ useEffect(() => {
                         <>
                           <div style={{margin: '5% auto'}}>
                             <div className='mb-2'>
-                                <img src={Gl} alt="" />
+                                <img src={myStore.onlineStore.profile_logo_url} alt="" className='rounded-pill w-25'/>
                             </div>
                             <h5 className="my text-dark">Your Store</h5>
-                            <p>Store Description Here...</p>
+                            <p>{myStore.onlineStore.store_description}</p>
                           </div>
                           <div className="container" style={{ maxWidth: '400px' }}>
                             {/* Tab buttons */}

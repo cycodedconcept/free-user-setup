@@ -34,6 +34,7 @@ const fallbackServiceImages = [serviceOne, serviceTwo, serviceThree];
 const fallbackProductImages = [productOne, productTwo, productThree, productFour, productFive, productSix];
 const PENDING_BOOKING_KEY = "mycroshop.pendingBooking";
 const SHOW_BOOKING_KEY = "mycroshop.showBookingConfirmation";
+const PAYMENT_CONTEXT_KEY = "mycroshop.paymentContext";
 const CART_KEY = "mycroshop.cart";
 
 const formatNaira = (value) => {
@@ -1518,6 +1519,8 @@ const CustomersHome = () => {
           const serializedBooking = JSON.stringify(pendingBooking);
           localStorage.setItem(PENDING_BOOKING_KEY, serializedBooking);
           sessionStorage.setItem(PENDING_BOOKING_KEY, serializedBooking);
+          localStorage.setItem(PAYMENT_CONTEXT_KEY, "booking");
+          sessionStorage.setItem(PAYMENT_CONTEXT_KEY, "booking");
           localStorage.removeItem(SHOW_BOOKING_KEY);
           sessionStorage.removeItem(SHOW_BOOKING_KEY);
         } catch (error) {

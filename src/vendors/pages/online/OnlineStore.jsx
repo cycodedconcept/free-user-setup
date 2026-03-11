@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Sidebar from "../sidebar/Sidebar";
 import Topbar from "./Topbar";
 import MainContent from "./MainContent";
@@ -13,14 +13,16 @@ import {
   faTruck,
   faUserShield,
   faCog,
+  faGlobe
 } from "@fortawesome/free-solid-svg-icons";
-import styles from "../../../styles.module.css";
+
+const VENDOR_ACTIVE_TAB_KEY = "mycroshop.vendorActiveTab";
 
 // Updated sidebar buttons to match the new comprehensive sidebar
 const sidebarButtons = [
     {
-      label: "Home",
-      key: "home",
+      label: "Dashboard",
+      key: "dashboard",
       icon: faHome,
       visible: true,
     },
@@ -113,11 +115,31 @@ const sidebarButtons = [
       icon: faCog,
       visible: true,
     },
+    {
+      label: "Domains",
+      key: "domains",
+      icon: faGlobe,
+      visible: true,
+    },
   ];
 
 const OnlineStore = () => {
-  // Set initial active tab to match the new sidebar structure
-  const [activeTab, setActiveTab] = useState("home");
+  const [activeTab, setActiveTab] = useState(() => {
+    if (typeof window === "undefined") return "dashboard";
+    try {
+      return localStorage.getItem(VENDOR_ACTIVE_TAB_KEY) || "dashboard";
+    } catch {
+      return "dashboard";
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(VENDOR_ACTIVE_TAB_KEY, activeTab);
+    } catch {
+      // Ignore storage errors
+    }
+  }, [activeTab]);
 
   // Helper function to get the current page info for topbar
   const getCurrentPageInfo = (activeTab) => {
@@ -167,42 +189,7 @@ const OnlineStore = () => {
     };
   };
 
-  // Create a flattened buttons array for topbar that includes submenu items
-  const getFlattenedButtons = () => {
-    const flattened = [];
-    
-    sidebarButtons.forEach(button => {
-      // Add main button
-      flattened.push(button);
-      
-      // Add submenu items with full keys
-      if (button.hasSubmenu) {
-        button.submenu.forEach(subItem => {
-          flattened.push({
-            label: subItem.label,
-            key: `${button.key}-${subItem.key}`,
-            icon: button.icon,
-            visible: true,
-            parentLabel: button.label
-          });
-        });
-      }
-    });
-
-    // Add special cases
-    flattened.push({
-      label: "Create Invoice",
-      key: "create-invoice",
-      icon: faReceipt,
-      visible: true
-    });
-
-    return flattened;
-  };
-
   const currentPageInfo = getCurrentPageInfo(activeTab);
-  const flattenedButtons = getFlattenedButtons();
-
   return (
     <div
       className="d-flex overflow-hidden vh-100"

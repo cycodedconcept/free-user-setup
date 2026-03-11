@@ -1,259 +1,3 @@
-// import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-// import { API_URL } from '../config/constant';
-// import axios from 'axios';
-
-// const buildInitialBookingPayload = () => ({
-//     amount: null,
-//     email: "",
-//     tenant_id: null,
-//     callback_url: "",
-//     metadata: {
-//         is_booking: true,
-//         booking_type: "service",
-//         service_id: null,
-//         scheduled_at: "",
-//         customer_name: "",
-//         customer_email: "",
-//         customer_phone: "",
-//         timezone: "",
-//         location_type: "in_person",
-//         notes: null
-//     }
-// });
-
-// const initialState = {
-//     loading: false,
-//     error: null,
-//     success: false,
-//     content: {},
-//     myServices: {},
-//     myProducts: {},
-//     productDetails: {},
-//     bookingLoading: false,
-//     bookingError: null,
-//     bookingSuccess: false,
-//     bookingResponse: null,
-//     bookingPayload: buildInitialBookingPayload()
-// };
-
-// export const getOnlineEcommerceStore = createAsyncThunk(
-//     'customer/getOnlineEcommerceStore',
-//     async ({token, tenant_id, store}, { rejectWithValue}) => {
-//         try {
-//             const response = await axios.get(`${API_URL}/public-store/${store}?tenant_id=${tenant_id}`, {
-//                 headers: {
-//                     Authorization: `Bearer ${token}`
-//                 }
-//             })
-
-//             return response.data;
-//         } catch (error) {
-//             if (error.response && error.response.data) {
-//                 return rejectWithValue(error.response.data);
-//             }
-//             return rejectWithValue(error.message || "Something went wrong");
-//         }
-//     }
-// );
-
-// export const getServices = createAsyncThunk(
-//     'customer/getServices',
-//     async ({ tenant_id, page = 1, limit = 20, token, store }, { rejectWithValue }) => {
-//         try {
-//             const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
-//             const response = await axios.get(
-//                 `${API_URL}/public-store/${store}/services?tenant_id=${tenant_id}&page=${page}&limit=${limit}`,
-//                 { headers }
-//             );
-
-//             return response.data;
-//         } catch (error) {
-//             if (error.response && error.response.data) {
-//                 return rejectWithValue(error.response.data);
-//             }
-//             return rejectWithValue(error.message || "Something went wrong");
-//         }
-//     }
-// );
-
-// export const getProductOnline = createAsyncThunk(
-//     'customer/getProduct',
-//     async ({ tenant_id, page = 1, limit = 20, token, store }, { rejectWithValue }) => {
-//         try {
-//             const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
-//             const response = await axios.get(
-//                 `${API_URL}/public-store/${store}/products?tenant_id=${tenant_id}&page=${page}&limit=${limit}`,
-//                 { headers }
-//             );
-
-//             return response.data;
-//         } catch (error) {
-//             if (error.response && error.response.data) {
-//                 return rejectWithValue(error.response.data);
-//             }
-//             return rejectWithValue(error.message || "Something went wrong");
-//         }
-//     }
-// );
-
-// export const getProductDetails = createAsyncThunk(
-//     'customer/getProductDetails',
-//     async ({ tenant_id, token, store, productId }, {rejectWithValue}) => {
-//         try {
-//             const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
-//             const resolvedStore = store || "comfort";
-//             const resolvedProductId = productId || 27;
-//             const response = await axios.get(
-//                 `${API_URL}/public-store/${resolvedStore}/products/${resolvedProductId}?tenant_id=${tenant_id}`,
-//                 { headers }
-//             );
-
-//             return response.data;
-//         } catch (error) {
-//             if (error.response && error.response.data) {
-//                 return rejectWithValue(error.response.data);
-//             }
-//             return rejectWithValue(error.message || "Something went wrong");
-//         }
-//     }
-// )
-
-
-// export const bookService = createAsyncThunk(
-//     'customer/bookService',
-//     async ({ payload, token }, { rejectWithValue }) => {
-//         try {
-//             const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
-//             const response = await axios.post(`${API_URL}/payments/initialize`, payload, { headers });
-
-//             return response.data;
-//         } catch (error) {
-//             if (error.response && error.response.data) {
-//                 return rejectWithValue(error.response.data);
-//             }
-//             return rejectWithValue(error.message || "Something went wrong");
-//         }
-//     }
-// );
-
-// export const checkoutProduct = createAsyncThunk(
-//     'customer/checkoutProduct', 
-//     async ({tenant_id, online_store_id, customer_name, customer_email})
-// )
-
-// const customerSlice = createSlice({
-//     name: 'customer',
-//     initialState,
-//     reducers: {
-//         resetStatus: (state) => {
-//             state.loading = false;
-//             state.success = false;
-//             state.error = null;
-//         },
-//         resetBookingStatus: (state) => {
-//             state.bookingLoading = false;
-//             state.bookingSuccess = false;
-//             state.bookingError = null;
-//             state.bookingResponse = null;
-//         },
-//         setBookingPayload: (state, action) => {
-//             state.bookingPayload = action.payload;
-//         },
-//         updateBookingField: (state, action) => {
-//             const { field, value } = action.payload;
-//             state.bookingPayload[field] = value;
-//         },
-//         updateBookingMetadataField: (state, action) => {
-//             const { field, value } = action.payload;
-//             state.bookingPayload.metadata = {
-//                 ...state.bookingPayload.metadata,
-//                 [field]: value
-//             };
-//         }
-//     },
-//     extraReducers: (builder) => {
-//         builder
-//         .addCase(getOnlineEcommerceStore.pending, (state) => {
-//             state.loading = true;
-//             state.success = false;
-//             state.error = null;
-//         })
-//         .addCase(getOnlineEcommerceStore.fulfilled, (state, action) => {
-//             state.loading = false;
-//             state.content = action.payload;
-//             state.success = true;
-//         })
-//         .addCase(getOnlineEcommerceStore.rejected, (state, action) => {
-//             state.loading = false;
-//             state.success = false;
-//             state.error = action.payload;
-//         })
-//         .addCase(bookService.pending, (state) => {
-//             state.bookingLoading = true;
-//             state.bookingSuccess = false;
-//             state.bookingError = null;
-//         })
-//         .addCase(bookService.fulfilled, (state, action) => {
-//             state.bookingLoading = false;
-//             state.bookingSuccess = true;
-//             state.bookingResponse = action.payload;
-//         })
-//         .addCase(bookService.rejected, (state, action) => {
-//             state.bookingLoading = false;
-//             state.bookingSuccess = false;
-//             state.bookingError = action.payload;
-//         })
-//         .addCase(getServices.pending, (state) => {
-//             state.loading = true;
-//             state.success = false;
-//             state.error = null;
-//         })
-//         .addCase(getServices.fulfilled, (state, action) => {
-//             state.loading = false;
-//             state.myServices = action.payload;
-//             state.success = true;
-//         })
-//         .addCase(getServices.rejected, (state, action) => {
-//             state.loading = false;
-//             state.success = false;
-//             state.error = action.payload;
-//         })
-//         .addCase(getProductOnline.pending, (state) => {
-//             state.loading = true;
-//             state.success = false;
-//             state.error = null;
-//         })
-//         .addCase(getProductOnline.fulfilled, (state, action) => {
-//             state.loading = false;
-//             state.myProducts = action.payload;
-//             state.success = true;
-//         })
-//         .addCase(getProductOnline.rejected, (state, action) => {
-//             state.loading = false;
-//             state.success = false;
-//             state.error = action.payload;
-//         })
-//         .addCase(getProductDetails.pending, (state) => {
-//             state.loading = true;
-//             state.success = false;
-//             state.error = null;
-//         })
-//         .addCase(getProductDetails.fulfilled, (state, action) => {
-//             state.loading = false;
-//             state.productDetails = action.payload;
-//             state.success = true;
-//         })
-//         .addCase(getProductDetails.rejected, (state, action) => {
-//             state.loading = false;
-//             state.success = false;
-//             state.error = action.payload;
-//         })
-//     }
-// });
-
-// export const { resetStatus, resetBookingStatus, setBookingPayload, updateBookingField, updateBookingMetadataField } = customerSlice.actions;
-// export default customerSlice.reducer
-
 import { createSlice, createAsyncThunk, nanoid } from '@reduxjs/toolkit';
 import { API_URL } from '../config/constant';
 import axios from 'axios';
@@ -372,8 +116,8 @@ export const getProductDetails = createAsyncThunk(
   async ({ tenant_id, token, store, productId }, { rejectWithValue }) => {
     try {
       const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
-      const resolvedStore = store || "comfort";
-      const resolvedProductId = productId || 27;
+      const resolvedStore = store;
+      const resolvedProductId = productId;
 
       const response = await axios.get(
         `${API_URL}/public-store/${resolvedStore}/products/${resolvedProductId}?tenant_id=${tenant_id}`,
@@ -401,23 +145,46 @@ export const bookService = createAsyncThunk(
   }
 );
 
+export const proceedToPayment = createAsyncThunk(
+  'customer/proceedToPayment', 
+  async ({tenant_id, order_id, amount, email, name, currency, callback_url, token}, {rejectWithValue}) => {
+    try {
+      const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
+      const response = await axios.post(`${API_URL}/public-checkout/payments/initialize`, {
+        tenant_id,
+        order_id,
+        amount,
+        email,
+        name,
+        currency,
+        callback_url
+      }, {
+        headers
+      })
+
+      return response.data;
+    } catch (error) {
+      if (error.response && error.response.data) return rejectWithValue(error.response.data);
+      return rejectWithValue(error.message || "Something went wrong");
+    }
+  }
+)
+
 /**
  * ✅ Checkout thunk (adjust endpoint to your backend route if different)
  * Example assumed endpoint: POST /public-store/:store/checkout?tenant_id=...
  */
 export const checkoutProduct = createAsyncThunk(
   'customer/checkoutProduct',
-  async ({ payload, token, store }, { rejectWithValue }) => {
+  async ({ payload, token }, { rejectWithValue }) => {
     try {
       const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
-      const tenant_id = payload?.tenant_id;
 
       const response = await axios.post(
-        `${API_URL}/public-store/${store}/checkout?tenant_id=${tenant_id}`,
+        `${API_URL}/public-checkout/orders`,
         payload,
         { headers }
       );
-      localStorage.setItem("orId", response.data.data.id)
       return response.data;
     } catch (error) {
       if (error.response && error.response.data) return rejectWithValue(error.response.data);
@@ -606,6 +373,21 @@ const customerSlice = createSlice({
         state.success = true;
       })
       .addCase(getProductDetails.rejected, (state, action) => {
+        state.loading = false;
+        state.success = false;
+        state.error = action.payload;
+      })
+      .addCase(proceedToPayment.pending, (state) => {
+        state.loading = true;
+        state.success = false;
+        state.error = null;
+      })
+      .addCase(proceedToPayment.fulfilled, (state, action) => {
+        state.loading = false;
+        state.success = action.payload;
+        state.success = true;
+      })
+      .addCase(proceedToPayment.rejected, (state, action) => {
         state.loading = false;
         state.success = false;
         state.error = action.payload;

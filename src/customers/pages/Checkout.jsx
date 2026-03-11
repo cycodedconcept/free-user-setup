@@ -232,6 +232,17 @@ const Checkout = () => {
 
     const result = await dispatch(checkoutProduct({ payload, token, store: resolvedStoreSlug }));
     if (checkoutProduct.fulfilled.match(result)) {
+      const orderId =
+        result?.payload?.data?.order?.id ??
+        result?.payload?.data?.id ??
+        result?.payload?.order?.id ??
+        result?.payload?.order_id ??
+        null;
+
+      if (orderId !== null && orderId !== undefined) {
+        localStorage.setItem("orderId", JSON.stringify(orderId));
+      }
+
       writeCartItems([]);
       setCartItems([]);
       await Swal.fire({
@@ -240,6 +251,12 @@ const Checkout = () => {
         text: "Your order has been created successfully.",
         confirmButtonText: "Continue",
         confirmButtonColor: "#0273F9",
+      });
+      navigate("/customer/order", {
+        state: {
+          orderResponse: result.payload,
+          storeName,
+        },
       });
       return;
     }
@@ -652,7 +669,19 @@ const Checkout = () => {
                 disabled={checkoutLoading}
                 unstyled
               >
-                Pay and Place Order
+                {checkoutLoading ? (
+                  <>
+                    <span
+                      className="spinner-border spinner-border-sm"
+                      role="status"
+                      aria-hidden="true"
+                      style={{ marginRight: "8px" }}
+                    />
+                    Processing...
+                  </>
+                ) : (
+                  "Pay and Place Order"
+                )}
               </Button>
               <p className={styles.customerCheckoutPaymentNote}>
                 By clicking on “Pay and Place Order”, you agree to make your purchase from My

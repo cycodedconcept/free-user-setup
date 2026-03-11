@@ -8,6 +8,7 @@ import { faPen, faExternalLinkAlt, faDotCircle, faEllipsisV } from '@fortawesome
 import { Smc } from '../../../assets';
 import styles from "../../../styles.module.css";
 import Button from "../../../components/ui/Button"
+import Swal from 'sweetalert2';
 
 const ViewStore = ({ initialSeeStore = true }) => {
   const dispatch = useDispatch();
@@ -42,6 +43,58 @@ const ViewStore = ({ initialSeeStore = true }) => {
   const gotoStore = () => {
     navigate('/vendor/store')
   }
+
+  const copyStoreLink = async () => {
+    const storefrontLink = myStore?.onlineStore?.storefront_link;
+
+    if (!storefrontLink) {
+      Swal.fire({
+        icon: "info",
+        title: "Link unavailable",
+        text: "Your store link is not available yet.",
+        confirmButtonColor: "#0273F9",
+      });
+      return;
+    }
+
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(storefrontLink);
+      } else {
+        const textArea = document.createElement("textarea");
+        textArea.value = storefrontLink;
+        textArea.style.position = "fixed";
+        textArea.style.left = "-9999px";
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textArea);
+      }
+
+      Swal.fire({
+        icon: "success",
+        title: "Copied",
+        text: "Store link copied to clipboard.",
+        confirmButtonColor: "#0273F9",
+      });
+    } catch {
+      Swal.fire({
+        icon: "error",
+        title: "Copy failed",
+        text: "Unable to copy the store link right now.",
+        confirmButtonColor: "#0273F9",
+      });
+    }
+  };
+
+  const blinkingDotStyle = {
+    color: '#0EC049',
+    fontSize: '12px',
+    animation: 'blinkActiveDot 1s ease-in-out infinite',
+  };
+
+  console.log(myStore)
 
   const renderContent = () => {
       switch(change) {
@@ -115,6 +168,14 @@ const ViewStore = ({ initialSeeStore = true }) => {
 
   return (
     <>
+      <style>
+        {`
+          @keyframes blinkActiveDot {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.2; }
+          }
+        `}
+      </style>
       {seeStore ? (
         <>
           <div className="p-4">
@@ -180,14 +241,21 @@ const ViewStore = ({ initialSeeStore = true }) => {
             </div>
             <hr style={{border: '1px solid #bbb8b8'}}/>
             
-            <small className="d-block text-end" style={{color: '#1C1917'}}>Status <FontAwesomeIcon icon={faDotCircle} style={{color: '#0EC049', fontSize: '12px'}}/></small>
+            <small className="d-block text-end" style={{color: '#1C1917'}}>Active <FontAwesomeIcon icon={faDotCircle} style={blinkingDotStyle}/></small>
 
             {myStore && (
                 <>
                     <div className="d-flex justify-content-center align-items-center">
                         <div className={`d-flex justify-content-between p-3 m-0 w-50`} style={{background: '#EAF4FF', borderRadius: '10px', border: '1px solid #0273F9'}}>
                             <p className='m-0'><span style={{color: '#78716C'}}>mycroshop</span>/{myStore.onlineStore.username}</p>
-                            <p style={{color: '#0273F9'}} className='m-0'>Share Link <FontAwesomeIcon icon={faExternalLinkAlt} /></p>
+                            <p
+                              style={{color: '#0273F9', cursor: 'pointer'}}
+                              className='m-0'
+                              onClick={copyStoreLink}
+                              title={myStore?.onlineStore?.storefront_link || "Share Link"}
+                            >
+                              Share Link <FontAwesomeIcon icon={faExternalLinkAlt} />
+                            </p>
                         </div>
                     </div>
                     <div className="d-flex justify-content-center align-items-center mt-4">
@@ -197,7 +265,7 @@ const ViewStore = ({ initialSeeStore = true }) => {
                         <img src={myStore.onlineStore.profile_logo_url} alt="" className='rounded-pill w-50'/>
                     </div>
                     <h5 className="my text-dark">Your Store</h5>
-                    <p>Store Description Here...</p>
+                    <p>{myStore.onlineStore.store_description}</p>
                 </div>
                 <div className="container" style={{ maxWidth: '400px' }}>
                         <div className="text-center" role="tablist">

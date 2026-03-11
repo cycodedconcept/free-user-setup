@@ -14,6 +14,7 @@ import {
   faTruck,
   faUserShield,
   faCog,
+  faGlobe
 } from "@fortawesome/free-solid-svg-icons";
 import { Logo, El } from "../../../assets";
 import "./sidebar.css";
@@ -49,15 +50,15 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
       visible: true,
     },
     {
-      label: "Products",
-      key: "products",
-      icon: faBoxes,
-      visible: true,
-    },
-    {
       label: "Online Store",
       key: "online-store",
       icon: faStore,
+      visible: true,
+    },
+    {
+      label: "Products",
+      key: "products",
+      icon: faBoxes,
       visible: true,
     },
     {
@@ -90,13 +91,13 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
       label: "Buying Pool",
       key: "buying-pool",
       icon: faHandshake,
-      visible: true,
+      visible: false,
     },
     {
       label: "Bookings",
       key: "bookings",
       icon: faCalendarAlt,
-      visible: true,
+      visible: false,
       hasSubmenu: true,
       submenu: [
         { label: "Manage Bookings", key: "manage-bookings" },
@@ -108,13 +109,13 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
       label: "Invoices",
       key: "invoices",
       icon: faReceipt,
-      visible: true,
+      visible: false,
     },
     {
       label: "CRM",
       key: "crm",
       icon: faUsers,
-      visible: true,
+      visible: false,
       hasSubmenu: true,
       submenu: [
         { label: "My Customers", key: "my-customers" },
@@ -129,18 +130,24 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
       label: "Logistics",
       key: "logistics",
       icon: faTruck,
-      visible: true,
+      visible: false,
     },
     {
       label: "Admin Users",
       key: "admin-users",
       icon: faUserShield,
-      visible: true,
+      visible: false,
     },
     {
       label: "Settings",
       key: "settings",
       icon: faCog,
+      visible: true,
+    },
+    {
+      label: "Domains",
+      key: "domains",
+      icon: faGlobe,
       visible: true,
     },
   ];

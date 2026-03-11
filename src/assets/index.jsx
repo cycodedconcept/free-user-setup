@@ -54,6 +54,9 @@ import Wui from "./wui.png"
 import men from "./men.png"
 import Tiv from "./tiv.png"
 import Upi from "./upi.png"
+import Hm from "./hm.png"
+import Ben from "./ben.png"
+
 export {
   Logo,
   Bg,
@@ -92,5 +95,5 @@ export {
   Eli2,
   Bank, 
   Payment, 
-  Cop, Car, Su, Qr, Tp, Tc, Tm, Tb, Cb, Cbi, Cin, Cp, Cv, Re, Reb, Wu, Wui, men, Tiv, Upi
+  Cop, Car, Su, Qr, Tp, Tc, Tm, Tb, Cb, Cbi, Cin, Cp, Cv, Re, Reb, Wu, Wui, men, Tiv, Upi, Hm, Ben
 };
