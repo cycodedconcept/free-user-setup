@@ -12,8 +12,12 @@ const Pagination = ({
   showItemInfo = true,
   disabled = false,
   className = '',
+  containerStyle = {},
   buttonClassName = '',
-  activeButtonClassName = ''
+  activeButtonClassName = '',
+  showPrevNextLabels = false,
+  previousLabel = 'Previous',
+  nextLabel = 'Next'
 }) => {
   // Calculate pagination info
   const startItem = (currentPage - 1) * itemsPerPage + 1;
@@ -50,7 +54,10 @@ const Pagination = ({
   }
 
   return (
-    <div className={`d-flex align-items-center justify-content-between mt-4 ${className}`}>
+    <div
+      className={`d-flex align-items-center justify-content-between mt-4 ${className}`}
+      style={containerStyle}
+    >
       {showItemInfo && totalItems > 0 && (
         <small style={{ fontSize: '13px', color: '#78716C' }}>
           Showing {startItem} to {endItem} of {totalItems} items
@@ -76,6 +83,9 @@ const Pagination = ({
               disabled={disabled || currentPage === 1}
               className={`${buttonClassName}`}
               style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
                 padding: '8px 12px',
                 border: '1px solid #ddd',
                 borderRadius: '6px',
@@ -87,6 +97,7 @@ const Pagination = ({
               }}
             >
               <FontAwesomeIcon icon={faChevronLeft} style={{ fontSize: '12px' }} />
+              {showPrevNextLabels && <span>{previousLabel}</span>}
             </button>
           </li>
 
@@ -175,6 +186,9 @@ const Pagination = ({
               disabled={disabled || currentPage === totalPages}
               className={buttonClassName}
               style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
                 padding: '8px 12px',
                 border: '1px solid #ddd',
                 borderRadius: '6px',
@@ -185,6 +199,7 @@ const Pagination = ({
                 transition: 'all 0.2s ease'
               }}
             >
+              {showPrevNextLabels && <span>{nextLabel}</span>}
               <FontAwesomeIcon icon={faChevronRight} style={{ fontSize: '12px' }} />
             </button>
           </li>

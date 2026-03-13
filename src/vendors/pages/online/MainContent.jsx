@@ -21,6 +21,7 @@ import Ai from "../crm/Ai";
 import GeneralSettings from "../settings/GeneralSettings";
 import Home from "../dashboard/Home";
 import Domain from "../domain/Domain";
+import Product from "../product/Product";
 // import Payment from "../payment/Payment";
 
 const MainContent = ({ activeTab, setActiveTab }) => {
@@ -34,7 +35,7 @@ const MainContent = ({ activeTab, setActiveTab }) => {
         )}
 
         {/* Inventory Section */}
-        {activeTab === "inventory-products" && (
+        {/* {activeTab === "inventory-products" && (
           <ProductInventory setActiveTab={setActiveTab} />
         )}
         
@@ -49,16 +50,9 @@ const MainContent = ({ activeTab, setActiveTab }) => {
         )}
         {activeTab === "inventory-activity-log" && (
           <ActivityHistory setActiveTab={setActiveTab}/>
-        )}
+        )} */}
 
-        {/* Manage Online Store Section - Main parent */}
-        {activeTab === "manage-online-store" && (
-          <div>
-            <h2>Manage Online Store</h2>
-            <p>Select a submenu option to get started</p>
-            {/* This shows when the main item is clicked without submenu */}
-          </div>
-        )}
+        
         
         {/* Manage Online Store Submenu Items */}
         {activeTab === "manage-online-store-manage-store" && (
@@ -66,6 +60,9 @@ const MainContent = ({ activeTab, setActiveTab }) => {
         )}
         {activeTab === "online-store" && (
           <SetupStoreMain setActiveTab={setActiveTab} />
+        )}
+        {activeTab === "products" && (
+          <Product setActiveTab={setActiveTab} />
         )}
         {activeTab === "manage-online-store-payment-methods" && (
           <Payment setActiveTab={setActiveTab} />

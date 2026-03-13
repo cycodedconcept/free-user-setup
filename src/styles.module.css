@@ -4045,6 +4045,10 @@ input:checked + .slider:before {
   color: #111827;
 }
 
+.vendorDomainPageWithPagination {
+  padding-bottom: 120px;
+}
+
 .vendorDomainHeader {
   display: flex;
   align-items: flex-start;
@@ -4161,6 +4165,239 @@ input:checked + .slider:before {
   font-size: 0.95rem;
   font-weight: 600;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.vendorDomainGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+.vendorDomainListCard {
+  position: relative;
+  border-radius: 14px;
+  background: #ffffff;
+  border: 1px solid #e7e5e4;
+  overflow: visible;
+}
+
+.vendorDomainListCardHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 18px 12px;
+}
+
+.vendorDomainListCardMeta {
+  min-width: 0;
+}
+
+.vendorDomainListCardTitle {
+  margin: 0 0 6px;
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: #1c1917;
+  word-break: break-word;
+}
+
+.vendorDomainListCardExpiry {
+  margin: 0;
+  color: #78716c;
+  font-size: 0.85rem;
+}
+
+.vendorDomainListCardMenu {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: none;
+  background: transparent;
+  color: #78716c;
+  padding: 0;
+  border-radius: 999px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.vendorDomainListCardHeaderActions {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.vendorDomainListCardMenu:hover,
+.vendorDomainListCardMenu:focus-visible {
+  background: #f5f5f4;
+  color: #1c1917;
+  outline: none;
+}
+
+.vendorDomainListActionsMenu {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  width: 280px;
+  border: 1px solid #e7e5e4;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 18px 36px rgba(28, 25, 23, 0.14);
+  overflow: hidden;
+  z-index: 30;
+}
+
+.vendorDomainListActionsMenuTitle {
+  padding: 14px 16px 12px;
+  border-bottom: 1px solid #e7e5e4;
+  color: #1c1917;
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.vendorDomainListActionsMenuItem {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  border: none;
+  background: transparent;
+  padding: 14px 16px;
+  color: #292524;
+  font-size: 0.98rem;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.vendorDomainListActionsMenuItem:hover,
+.vendorDomainListActionsMenuItem:focus-visible {
+  background: #f5f5f4;
+  outline: none;
+}
+
+.vendorDomainListActionsMenuItem:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.vendorDomainListActionsMenuItem svg {
+  color: #292524;
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.vendorDomainListActionsMenuItemDanger {
+  color: #dc2626;
+}
+
+.vendorDomainListActionsMenuItemDanger:hover,
+.vendorDomainListActionsMenuItemDanger:focus-visible {
+  background: #fef2f2;
+}
+
+.vendorDomainListActionsMenuItemDanger svg {
+  color: #dc2626;
+}
+
+.vendorDomainListDivider {
+  width: 100%;
+  height: 1px;
+  background: #e7e5e4;
+}
+
+.vendorDomainListCardBody {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px 18px 18px;
+}
+
+.vendorDomainListLinkRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.vendorDomainListLinkLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: #78716c;
+  font-size: 0.85rem;
+}
+
+.vendorDomainListBadgeRow {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.vendorDomainListStatusBadge,
+.vendorDomainListSslBadge,
+.vendorDomainListStoreChip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.vendorDomainListStatusBadge {
+  padding: 6px 12px;
+  background: #dbeafe;
+  color: #2563eb;
+}
+
+.vendorDomainListStatusBadgeActive {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.vendorDomainListStatusBadgePending {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.vendorDomainListSslBadge {
+  padding: 6px 12px;
+  background: #f3e8ff;
+  color: #9333ea;
+}
+
+.vendorDomainListStoreChip {
+  width: fit-content;
+  max-width: 100%;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: #eeeeee;
+  color: #57534e;
+  font-size: 0.78rem;
+  justify-content: flex-start;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vendorDomainListStoreChipLinked {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.vendorDomainPaginationSticky {
+  position: fixed;
+  z-index: 20;
+  box-sizing: border-box;
+  padding: 12px 16px 8px;
+  background: #ffffff;
+  border-top: 1px solid #e7e5e4;
+  box-shadow: 0 -6px 18px rgba(15, 23, 42, 0.04);
+  border-radius: 12px 12px 0 0;
 }
 
 .vendorDomainBrowsePage {
@@ -4817,6 +5054,15 @@ input:checked + .slider:before {
   box-shadow: 0 24px 80px rgba(15, 23, 42, 0.2);
 }
 
+.vendorDomainDnsModal {
+  width: min(100%, 980px);
+  max-height: calc(100vh - 48px);
+  overflow: auto;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 24px 80px rgba(15, 23, 42, 0.2);
+}
+
 .vendorDomainCartModalHeader {
   display: flex;
   align-items: center;
@@ -4831,6 +5077,12 @@ input:checked + .slider:before {
   font-size: 1rem;
   font-weight: 600;
   color: #111827;
+}
+
+.vendorDomainDnsModalSubtitle {
+  margin: 6px 0 0;
+  color: #6b7280;
+  font-size: 0.92rem;
 }
 
 .vendorDomainCartCloseButton {
@@ -4848,6 +5100,175 @@ input:checked + .slider:before {
 
 .vendorDomainCartModalBody {
   padding: 14px 16px 24px;
+}
+
+.vendorDomainDnsModalBody {
+  padding: 18px 16px 20px;
+}
+
+.vendorDomainDnsSummary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+
+.vendorDomainDnsSummaryItem {
+  color: #4b5563;
+  font-size: 0.92rem;
+}
+
+.vendorDomainDnsStatusBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 30px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.vendorDomainDnsStatusBadgeInternal {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.vendorDomainDnsStatusBadgeExternal {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.vendorDomainDnsUpdateButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  margin-left: auto;
+  padding: 7px 14px;
+  border: none;
+  border-radius: 999px;
+  background: #dcfce7;
+  color: #15803d;
+  font-size: 0.84rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.vendorDomainDnsUpdateButton:hover,
+.vendorDomainDnsUpdateButton:focus-visible {
+  background: #bbf7d0;
+  outline: none;
+}
+
+.vendorDomainDnsTableWrap {
+  overflow-x: auto;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+}
+
+.vendorDomainDnsTable {
+  width: 100%;
+  min-width: 720px;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+
+.vendorDomainDnsTable th,
+.vendorDomainDnsTable td {
+  padding: 14px 16px;
+  border-bottom: 1px solid #e5e7eb;
+  text-align: left;
+  font-size: 0.92rem;
+  color: #111827;
+  white-space: nowrap;
+}
+
+.vendorDomainDnsTable th {
+  background: #f8fafc;
+  color: #475569;
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.vendorDomainDnsTable tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.vendorDomainDnsEmptyState {
+  text-align: center !important;
+  color: #6b7280 !important;
+  white-space: normal !important;
+}
+
+.vendorDomainDnsEditorOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10010;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(15, 23, 42, 0.36);
+  backdrop-filter: blur(5px);
+}
+
+.vendorDomainDnsEditorModal {
+  width: min(100%, 1040px);
+  max-height: calc(100vh - 48px);
+  overflow: auto;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 24px 80px rgba(15, 23, 42, 0.24);
+}
+
+.vendorDomainDnsInput {
+  width: 100%;
+  min-width: 110px;
+  min-height: 40px;
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+  background: #ffffff;
+  padding: 0 12px;
+  color: #111827;
+  font-size: 0.92rem;
+  outline: none;
+}
+
+.vendorDomainDnsInput:focus {
+  border-color: #0f6fff;
+  box-shadow: 0 0 0 3px rgba(15, 111, 255, 0.12);
+}
+
+.vendorDomainDnsEditorActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.vendorDomainDnsEditorSecondaryButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 110px;
+  min-height: 44px;
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #334155;
+  font-size: 0.94rem;
+  font-weight: 600;
+}
+
+.vendorDomainDnsEditorPrimaryButton {
+  min-width: 170px;
+  min-height: 44px;
+  border-radius: 10px;
 }
 
 .vendorDomainCartSectionTitle {
@@ -5048,6 +5469,10 @@ input:checked + .slider:before {
     font-size: 1rem;
   }
 
+  .vendorDomainGrid {
+    grid-template-columns: 1fr;
+  }
+
   .vendorDomainCard {
     min-height: 250px;
     padding: 16px;
@@ -5105,6 +5530,32 @@ input:checked + .slider:before {
 
   .vendorDomainSectionHeader {
     gap: 6px;
+  }
+
+  .vendorDomainListCardHeader,
+  .vendorDomainListLinkRow {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .vendorDomainListBadgeRow {
+    width: 100%;
+  }
+
+  .vendorDomainListCardHeaderActions {
+    align-self: flex-end;
+  }
+
+  .vendorDomainListActionsMenu {
+    width: min(280px, calc(100vw - 48px));
+  }
+
+  .vendorDomainPaginationSticky {
+    padding-top: 10px;
+    padding-left: 12px;
+    padding-right: 12px;
+    padding-bottom: calc(10px + env(safe-area-inset-bottom));
+    border-radius: 16px 16px 0 0;
   }
 
   .vendorDomainCard {

@@ -1,20 +1,25 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useDispatch, useSelector } from 'react-redux';
-import { getDomainPrice, getDomains, resetStatus, payForDomain } from "../../../slice/domainSlice";
+import { getDomainPrice, getDomains, resetStatus, payForDomain, getAllDomains, linkStore, unLinkStore, getDnsRecord, updateDnsRecord, addSsl, getSSLDomain } from "../../../slice/domainSlice";
 import Swal from "sweetalert2";
 import {
   faArrowLeft,
   faCartShopping,
   faCircleCheck,
   faCircleInfo,
+  faEllipsisVertical,
+  faEye,
+  faGear,
   faGlobe,
+  faLink,
   faMagnifyingGlass,
   faTrash,
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
 import Button from "../../../components/ui/Button";
+import Pagination from "../../../components/Pagination";
 import styles from "../../../styles.module.css";
 
 const DOMAIN_CART_KEY = "mycroshop.domainCart";
@@ -44,6 +49,20 @@ const normalizeDomainResults = (payload) => {
   if (payload.data && typeof payload.data === "object") return [payload.data];
   if (typeof payload === "object") return [payload];
   return [];
+};
+
+const readStoredManagedDomains = () => {
+  if (typeof window === "undefined") return [];
+
+  try {
+    const rawDomains = localStorage.getItem("dom");
+    if (!rawDomains) return [];
+
+    const parsedDomains = JSON.parse(rawDomains);
+    return Array.isArray(parsedDomains) ? parsedDomains : [];
+  } catch {
+    return [];
+  }
 };
 
 const resolveDomainName = (domainResult) =>
@@ -213,10 +232,74 @@ const resolvePeriodYears = (periodLabel) => {
   return Number.isFinite(parsedYears) ? parsedYears : 1;
 };
 
+const resolveManagedDomainName = (domainItem) =>
+  domainItem?.domain_name || domainItem?.domain || domainItem?.name || "";
+
+const resolveManagedDomainId = (domainItem) =>
+  domainItem?.id || domainItem?.domain_id || domainItem?.domainId || null;
+
+const formatManagedDomainDate = (dateValue) => {
+  if (!dateValue) return "N/A";
+
+  const date = new Date(dateValue);
+  if (Number.isNaN(date.getTime())) return dateValue;
+
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+};
+
+const resolveLinkedStoreCount = (domainItem) =>
+  domainItem?.OnlineStore || domainItem?.online_store_id ? 1 : 0;
+
+const resolveLinkedStoreId = (domainItem) =>
+  domainItem?.online_store_id || domainItem?.OnlineStore?.id || null;
+
+const resolveLinkedStoreName = (domainItem) =>
+  domainItem?.OnlineStore?.store_name ||
+  domainItem?.OnlineStore?.name ||
+  domainItem?.OnlineStore?.business_name ||
+  null;
+
+const normalizeDnsFormRecords = (records) =>
+  (Array.isArray(records) ? records : []).map((record) => ({
+    hostId: record?.hostId?.toString?.() || "",
+    name: record?.name?.toString?.() || "",
+    type: record?.type?.toString?.() || "",
+    address: record?.address?.toString?.() || "",
+    mxPref: record?.mxPref?.toString?.() || "",
+    ttl: record?.ttl?.toString?.() || "",
+  }));
+
+const formatDomainStatusLabel = (status) => {
+  if (!status) return "Pending";
+  return status
+    .toString()
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (character) => character.toUpperCase());
+};
+
+const resolveDomainStatusClassName = (status) => {
+  const normalizedStatus = status?.toString?.().toLowerCase?.() || "";
+
+  if (normalizedStatus === "active") {
+    return styles.vendorDomainListStatusBadgeActive;
+  }
+
+  if (normalizedStatus === "pending") {
+    return styles.vendorDomainListStatusBadgePending;
+  }
+
+  return "";
+};
+
 const Domain = () => {
+  const pageRef = useRef(null);
   const dispatch = useDispatch();
   const token = localStorage.getItem("token");
-  const onlineStoreId = localStorage.getItem("itemId");
+  const onlineStoreId = localStorage.getItem("itemId") || '7';
   const initialPaymentSuccess = readPendingDomainPayment();
   const [showDomainSearch, setShowDomainSearch] = useState(Boolean(initialPaymentSuccess));
   const [searchInput, setSearchInput] = useState("");
@@ -226,11 +309,29 @@ const Domain = () => {
     initialPaymentSuccess ? [] : readDomainCart()
   );
   const [showCart, setShowCart] = useState(false);
+  const [showDnsModal, setShowDnsModal] = useState(false);
+  const [showDnsUpdateModal, setShowDnsUpdateModal] = useState(false);
   const [showCheckout, setShowCheckout] = useState(false);
   const [showReviewDetails, setShowReviewDetails] = useState(false);
   const [showPaymentSuccess, setShowPaymentSuccess] = useState(Boolean(initialPaymentSuccess));
   const [paymentSuccessDetails, setPaymentSuccessDetails] = useState(initialPaymentSuccess);
   const [checkoutForm, setCheckoutForm] = useState(initialCheckoutForm);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [activeDomainActionId, setActiveDomainActionId] = useState(null);
+  const [linkingDomainId, setLinkingDomainId] = useState(null);
+  const [unlinkingDomainId, setUnlinkingDomainId] = useState(null);
+  const [dnsLoadingDomainId, setDnsLoadingDomainId] = useState(null);
+  const [sslLoadingDomainId, setSslLoadingDomainId] = useState(null);
+  const [activatingSslDomainId, setActivatingSslDomainId] = useState(null);
+  const [dnsModalData, setDnsModalData] = useState(null);
+  const [dnsModalDomainId, setDnsModalDomainId] = useState(null);
+  const [dnsFormRecords, setDnsFormRecords] = useState([]);
+  const [isSubmittingDnsUpdate, setIsSubmittingDnsUpdate] = useState(false);
+  const [paginationViewportStyle, setPaginationViewportStyle] = useState({});
+  const [storedManagedDomains, setStoredManagedDomains] = useState(() =>
+    readStoredManagedDomains()
+  );
+  const myStore = useSelector((state) => state.store?.myStore);
   const {
     success,
     error,
@@ -239,8 +340,59 @@ const Domain = () => {
     domainPricing,
     pricingStatus,
     paymentLoading,
+    allDomains
   } = useSelector((state) => state.domain);
   const domainResults = normalizeDomainResults(myDomain);
+  const managedDomains =
+    Array.isArray(allDomains?.data) && allDomains.data.length > 0
+      ? allDomains.data
+      : storedManagedDomains;
+  const managedDomainsPagination = allDomains?.pagination || {};
+  const totalManagedDomains =
+    allDomains?.total ||
+    managedDomainsPagination?.totalItems ||
+    storedManagedDomains.length ||
+    0;
+  const hasManagedDomains = managedDomains.length > 0;
+
+  useEffect(() => {
+    if (token && !showDomainSearch) {
+      dispatch(getAllDomains({ token, page: currentPage, limit: 20 }));
+    }
+  }, [currentPage, dispatch, showDomainSearch, token]);
+
+  useEffect(() => {
+    if (!hasManagedDomains || showDomainSearch || typeof window === "undefined") {
+      setPaginationViewportStyle({});
+      return undefined;
+    }
+
+    const updatePaginationViewportStyle = () => {
+      const pageElement = pageRef.current;
+      if (!pageElement) return;
+
+      const rect = pageElement.getBoundingClientRect();
+      setPaginationViewportStyle({
+        left: `${Math.max(0, rect.left)}px`,
+        right: `${Math.max(0, window.innerWidth - rect.right)}px`,
+        bottom: "0px",
+      });
+    };
+
+    updatePaginationViewportStyle();
+    window.addEventListener("resize", updatePaginationViewportStyle);
+
+    let resizeObserver;
+    if (typeof ResizeObserver !== "undefined" && pageRef.current) {
+      resizeObserver = new ResizeObserver(updatePaginationViewportStyle);
+      resizeObserver.observe(pageRef.current);
+    }
+
+    return () => {
+      window.removeEventListener("resize", updatePaginationViewportStyle);
+      resizeObserver?.disconnect();
+    };
+  }, [hasManagedDomains, showDomainSearch]);
 
   useEffect(() => {
     if (token && activeDomainQuery && searchCounter > 0) {
@@ -249,13 +401,19 @@ const Domain = () => {
   }, [activeDomainQuery, searchCounter, token, dispatch]);
 
   useEffect(() => {
+    setStoredManagedDomains(readStoredManagedDomains());
+  }, [allDomains]);
+
+  useEffect(() => {
     return () => {
       dispatch(resetStatus());
     };
   }, [dispatch]);
 
   useEffect(() => {
-    if (!showCart || typeof document === "undefined") return undefined;
+    if ((!showCart && !showDnsModal && !showDnsUpdateModal) || typeof document === "undefined") {
+      return undefined;
+    }
 
     const { overflow } = document.body.style;
     document.body.style.overflow = "hidden";
@@ -263,7 +421,33 @@ const Domain = () => {
     return () => {
       document.body.style.overflow = overflow;
     };
-  }, [showCart]);
+  }, [showCart, showDnsModal, showDnsUpdateModal]);
+
+  useEffect(() => {
+    if (!activeDomainActionId || typeof document === "undefined") return undefined;
+
+    const handlePointerDown = (event) => {
+      if (event.target.closest('[data-domain-action-menu="true"]')) {
+        return;
+      }
+
+      setActiveDomainActionId(null);
+    };
+
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") {
+        setActiveDomainActionId(null);
+      }
+    };
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [activeDomainActionId]);
 
   useEffect(() => {
     if (!paymentSuccessDetails || typeof window === "undefined") return;
@@ -601,6 +785,7 @@ const Domain = () => {
     } catch {
       // Ignore storage errors
     }
+    setCurrentPage(1);
     setShowPaymentSuccess(false);
     setPaymentSuccessDetails(null);
     setShowDomainSearch(false);
@@ -624,6 +809,503 @@ const Domain = () => {
     setShowCart(false);
     setSearchInput("");
     setActiveDomainQuery("");
+  };
+
+  const handleDomainPageChange = (page) => {
+    setCurrentPage(page);
+  };
+
+  const handleToggleStoreLink = async (domainItem) => {
+    const domainId = resolveManagedDomainId(domainItem);
+    const domainName = resolveManagedDomainName(domainItem) || "this domain";
+    const linkedStoreId = resolveLinkedStoreId(domainItem);
+    const linkedStoreName = resolveLinkedStoreName(domainItem);
+    const currentStoreName =
+      myStore?.onlineStore?.store_name || linkedStoreName || "your store";
+    const targetStoreId = onlineStoreId;
+
+    setActiveDomainActionId(null);
+
+    if (!token) {
+      await Swal.fire({
+        icon: "error",
+        title: "Authentication required",
+        text: "Please log in again before linking a store.",
+      });
+      return;
+    }
+
+    if (!domainId) {
+      await Swal.fire({
+        icon: "error",
+        title: "Domain not found",
+        text: "This domain is missing its identifier.",
+      });
+      return;
+    }
+
+    if (!targetStoreId) {
+      await Swal.fire({
+        icon: "warning",
+        title: "Store not found",
+        text: "Set up or select an online store before linking a domain.",
+      });
+      return;
+    }
+
+    if (linkedStoreId) {
+      await Swal.fire({
+        icon: "info",
+        title: "Store already linked",
+        text: `${linkedStoreName || currentStoreName} is already linked to ${domainName}.`,
+      });
+      return;
+    }
+
+    setLinkingDomainId(domainId);
+
+    Swal.fire({
+      title: "Linking Store",
+      text: `Linking ${currentStoreName} to ${domainName}.`,
+      allowOutsideClick: false,
+      allowEscapeKey: false,
+      didOpen: () => {
+        Swal.showLoading();
+      },
+    });
+
+    try {
+      await dispatch(
+        linkStore({
+          token,
+          domainId,
+          online_store_id: targetStoreId,
+        })
+      ).unwrap();
+
+      const refetchResponse = await dispatch(
+        getAllDomains({ token, page: currentPage, limit: 20 })
+      ).unwrap();
+      Swal.close();
+
+      const refreshedDomain =
+        refetchResponse?.data?.domains?.find((item) => resolveManagedDomainId(item) === domainId) ||
+        domainItem;
+      const refreshedStoreName =
+        resolveLinkedStoreName(refreshedDomain) ||
+        myStore?.onlineStore?.store_name ||
+        currentStoreName;
+
+      await Swal.fire({
+        icon: "success",
+        title: "Store Linked",
+        text: `${refreshedStoreName} has been linked to ${domainName}.`,
+      });
+    } catch (linkError) {
+      Swal.close();
+      await Swal.fire({
+        icon: "error",
+        title: "Unable to link store",
+        text:
+          linkError?.message ||
+          linkError?.error ||
+          linkError?.data?.message ||
+          "Something went wrong while updating the domain link.",
+      });
+    } finally {
+      setLinkingDomainId(null);
+    }
+  };
+
+  const handleUnlinkStore = async (domainItem) => {
+    const domainId = resolveManagedDomainId(domainItem);
+    const domainName = resolveManagedDomainName(domainItem) || "this domain";
+    const linkedStoreId = resolveLinkedStoreId(domainItem);
+    const linkedStoreName =
+      resolveLinkedStoreName(domainItem) || myStore?.onlineStore?.store_name || "The store";
+
+    setActiveDomainActionId(null);
+
+    if (!token) {
+      await Swal.fire({
+        icon: "error",
+        title: "Authentication required",
+        text: "Please log in again before unlinking a store.",
+      });
+      return;
+    }
+
+    if (!domainId) {
+      await Swal.fire({
+        icon: "error",
+        title: "Domain not found",
+        text: "This domain is missing its identifier.",
+      });
+      return;
+    }
+
+    if (!linkedStoreId) {
+      await Swal.fire({
+        icon: "info",
+        title: "No linked store",
+        text: `${domainName} is not linked to any store yet.`,
+      });
+      return;
+    }
+
+    setUnlinkingDomainId(domainId);
+
+    Swal.fire({
+      title: "Unlinking Store",
+      text: `Unlinking ${linkedStoreName} from ${domainName}.`,
+      allowOutsideClick: false,
+      allowEscapeKey: false,
+      didOpen: () => {
+        Swal.showLoading();
+      },
+    });
+
+    try {
+      await dispatch(
+        unLinkStore({
+          token,
+          domainId,
+        })
+      ).unwrap();
+
+      await dispatch(getAllDomains({ token, page: currentPage, limit: 20 })).unwrap();
+      Swal.close();
+
+      await Swal.fire({
+        icon: "success",
+        title: "Store Unlinked",
+        text: `${linkedStoreName} has been unlinked from ${domainName}.`,
+      });
+    } catch (unlinkError) {
+      Swal.close();
+      await Swal.fire({
+        icon: "error",
+        title: "Unable to unlink store",
+        text:
+          unlinkError?.message ||
+          unlinkError?.error ||
+          unlinkError?.data?.message ||
+          "Something went wrong while unlinking the store.",
+      });
+    } finally {
+      setUnlinkingDomainId(null);
+    }
+  };
+
+  const handleManageDns = async (domainItem) => {
+    const domainId = resolveManagedDomainId(domainItem);
+    const domainName = resolveManagedDomainName(domainItem) || "this domain";
+
+    setActiveDomainActionId(null);
+
+    if (!token) {
+      await Swal.fire({
+        icon: "error",
+        title: "Authentication required",
+        text: "Please log in again before loading DNS records.",
+      });
+      return;
+    }
+
+    if (!domainId) {
+      await Swal.fire({
+        icon: "error",
+        title: "Domain not found",
+        text: "This domain is missing its identifier.",
+      });
+      return;
+    }
+
+    setDnsLoadingDomainId(domainId);
+
+    Swal.fire({
+      title: "Loading DNS Records",
+      text: `Fetching DNS records for ${domainName}.`,
+      allowOutsideClick: false,
+      allowEscapeKey: false,
+      didOpen: () => {
+        Swal.showLoading();
+      },
+    });
+
+    try {
+      const dnsResponse = await dispatch(
+        getDnsRecord({
+          token,
+          domainId,
+        })
+      ).unwrap();
+
+      Swal.close();
+      setDnsModalDomainId(domainId);
+      setDnsModalData(dnsResponse?.data || null);
+      setDnsFormRecords(normalizeDnsFormRecords(dnsResponse?.data?.records));
+      setShowDnsUpdateModal(false);
+      setShowDnsModal(true);
+    } catch (dnsError) {
+      Swal.close();
+      await Swal.fire({
+        icon: "error",
+        title: "Unable to load DNS records",
+        text:
+          dnsError?.message ||
+          dnsError?.error ||
+          dnsError?.data?.message ||
+          "Something went wrong while loading DNS records.",
+      });
+    } finally {
+      setDnsLoadingDomainId(null);
+    }
+  };
+
+  const handleAddSsl = async (domainItem) => {
+    const domainId = resolveManagedDomainId(domainItem);
+    const domainName = resolveManagedDomainName(domainItem) || "this domain";
+
+    setActiveDomainActionId(null);
+
+    if (!token) {
+      await Swal.fire({
+        icon: "error",
+        title: "Authentication required",
+        text: "Please log in again before adding SSL.",
+      });
+      return;
+    }
+
+    if (!domainId) {
+      await Swal.fire({
+        icon: "error",
+        title: "Domain not found",
+        text: "This domain is missing its identifier.",
+      });
+      return;
+    }
+
+    if (domainItem?.ssl_enabled) {
+      await Swal.fire({
+        icon: "info",
+        title: "SSL already active",
+        text: `${domainName} already has SSL enabled.`,
+      });
+      return;
+    }
+
+    setSslLoadingDomainId(domainId);
+
+    Swal.fire({
+      title: "Adding SSL",
+      text: `Provisioning SSL for ${domainName}.`,
+      allowOutsideClick: false,
+      allowEscapeKey: false,
+      didOpen: () => {
+        Swal.showLoading();
+      },
+    });
+
+    try {
+      const sslResponse = await dispatch(
+        addSsl({
+          token,
+          domainId,
+        })
+      ).unwrap();
+
+      await dispatch(getAllDomains({ token, page: currentPage, limit: 20 })).unwrap();
+      Swal.close();
+
+      await Swal.fire({
+        icon: "success",
+        title: "SSL Added",
+        text:
+          sslResponse?.message ||
+          `SSL has been added to ${domainName}.`,
+      });
+    } catch (sslError) {
+      Swal.close();
+      await Swal.fire({
+        icon: "error",
+        title: "Unable to add SSL",
+        text:
+          sslError?.message ||
+          sslError?.error ||
+          sslError?.data?.message ||
+          "Something went wrong while adding SSL to the domain.",
+      });
+    } finally {
+      setSslLoadingDomainId(null);
+    }
+  };
+
+  const handleActivateSsl = async (domainItem) => {
+    const domainId = resolveManagedDomainId(domainItem);
+    const domainName = resolveManagedDomainName(domainItem) || "this domain";
+
+    setActiveDomainActionId(null);
+
+    if (!token) {
+      await Swal.fire({
+        icon: "error",
+        title: "Authentication required",
+        text: "Please log in again before activating SSL.",
+      });
+      return;
+    }
+
+    if (!domainId) {
+      await Swal.fire({
+        icon: "error",
+        title: "Domain not found",
+        text: "This domain is missing its identifier.",
+      });
+      return;
+    }
+
+    setActivatingSslDomainId(domainId);
+
+    Swal.fire({
+      title: "Activating SSL",
+      text: `Activating SSL for ${domainName}.`,
+      allowOutsideClick: false,
+      allowEscapeKey: false,
+      didOpen: () => {
+        Swal.showLoading();
+      },
+    });
+
+    try {
+      const sslResponse = await dispatch(
+        getSSLDomain({
+          token,
+          domainId,
+        })
+      ).unwrap();
+
+      await dispatch(getAllDomains({ token, page: currentPage, limit: 20 })).unwrap();
+      Swal.close();
+
+      await Swal.fire({
+        icon: "success",
+        title: "SSL Activated",
+        text:
+          sslResponse?.message ||
+          `SSL activation was triggered for ${domainName}.`,
+      });
+    } catch (sslError) {
+      Swal.close();
+      await Swal.fire({
+        icon: "error",
+        title: "Unable to activate SSL",
+        text:
+          sslError?.message ||
+          sslError?.error ||
+          sslError?.data?.message ||
+          "Something went wrong while activating SSL for the domain.",
+      });
+    } finally {
+      setActivatingSslDomainId(null);
+    }
+  };
+
+  const handleOpenDnsUpdateModal = () => {
+    setDnsFormRecords(normalizeDnsFormRecords(dnsModalData?.records));
+    setShowDnsUpdateModal(true);
+  };
+
+  const handleDnsRecordFieldChange = (index, field, value) => {
+    setDnsFormRecords((currentRecords) =>
+      currentRecords.map((record, recordIndex) =>
+        recordIndex === index ? { ...record, [field]: value } : record
+      )
+    );
+  };
+
+  const handleSubmitDnsUpdate = async () => {
+    if (!token) {
+      await Swal.fire({
+        icon: "error",
+        title: "Authentication required",
+        text: "Please log in again before updating DNS records.",
+      });
+      return;
+    }
+
+    if (!dnsModalDomainId) {
+      await Swal.fire({
+        icon: "error",
+        title: "Domain not found",
+        text: "The active DNS domain could not be resolved.",
+      });
+      return;
+    }
+
+    const sanitizedRecords = dnsFormRecords.map((record) => ({
+      hostId: record.hostId.trim(),
+      name: record.name.trim(),
+      type: record.type.trim(),
+      address: record.address.trim(),
+      mxPref: record.mxPref.trim(),
+      ttl: record.ttl.trim(),
+    }));
+
+    const invalidRecord = sanitizedRecords.find(
+      (record) => !record.hostId || !record.name || !record.type || !record.address || !record.ttl
+    );
+
+    if (invalidRecord) {
+      await Swal.fire({
+        icon: "warning",
+        title: "Incomplete DNS record",
+        text: "Host ID, Name, Type, Address, and TTL are required for every record.",
+      });
+      return;
+    }
+
+    setIsSubmittingDnsUpdate(true);
+
+    try {
+      await dispatch(
+        updateDnsRecord({
+          token,
+          domainId: dnsModalDomainId,
+          records: sanitizedRecords,
+        })
+      ).unwrap();
+
+      const refreshedDnsResponse = await dispatch(
+        getDnsRecord({
+          token,
+          domainId: dnsModalDomainId,
+        })
+      ).unwrap();
+
+      setDnsModalData(refreshedDnsResponse?.data || null);
+      setDnsFormRecords(normalizeDnsFormRecords(refreshedDnsResponse?.data?.records));
+      setShowDnsUpdateModal(false);
+
+      await Swal.fire({
+        icon: "success",
+        title: "DNS Updated",
+        text: `DNS records for ${refreshedDnsResponse?.data?.domain || "this domain"} were updated successfully.`,
+      });
+    } catch (updateError) {
+      await Swal.fire({
+        icon: "error",
+        title: "Unable to update DNS",
+        text:
+          updateError?.message ||
+          updateError?.error ||
+          updateError?.data?.message ||
+          "Something went wrong while updating DNS records.",
+      });
+    } finally {
+      setIsSubmittingDnsUpdate(false);
+    }
   };
 
   const cartModal =
@@ -764,6 +1446,248 @@ const Domain = () => {
         )
       : null;
 
+  const dnsRecords = Array.isArray(dnsModalData?.records) ? dnsModalData.records : [];
+
+  const dnsModal =
+    showDnsModal && typeof document !== "undefined"
+      ? createPortal(
+          <div
+            className={styles.vendorDomainCartOverlay}
+            onClick={() => {
+              setShowDnsModal(false);
+              setShowDnsUpdateModal(false);
+            }}
+          >
+            <div
+              className={styles.vendorDomainDnsModal}
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className={styles.vendorDomainCartModalHeader}>
+                <div>
+                  <h3 className={styles.vendorDomainCartModalTitle}>Manage DNS</h3>
+                  <p className={styles.vendorDomainDnsModalSubtitle}>
+                    {dnsModalData?.domain || "Domain DNS records"}
+                  </p>
+                </div>
+
+                <Button
+                  type="button"
+                  unstyled
+                  className={styles.vendorDomainCartCloseButton}
+                    onClick={() => {
+                      setShowDnsModal(false);
+                      setShowDnsUpdateModal(false);
+                    }}
+                >
+                  <FontAwesomeIcon icon={faXmark} />
+                </Button>
+              </div>
+
+              <div className={styles.vendorDomainDnsModalBody}>
+                <div className={styles.vendorDomainDnsSummary}>
+                  <span className={styles.vendorDomainDnsSummaryItem}>
+                    Source: <strong>{dnsModalData?.source || "N/A"}</strong>
+                  </span>
+                  <span className={styles.vendorDomainDnsSummaryItem}>
+                    Mode: <strong>{dnsModalData?.usingExternalDNS ? "External DNS" : "Managed DNS"}</strong>
+                  </span>
+                  <button
+                    type="button"
+                    className={styles.vendorDomainDnsUpdateButton}
+                    onClick={handleOpenDnsUpdateModal}
+                  >
+                    Update DNS
+                  </button>
+                </div>
+
+                <div className={styles.vendorDomainDnsTableWrap}>
+                  <table className={styles.vendorDomainDnsTable}>
+                    <thead>
+                      <tr>
+                        <th>Host ID</th>
+                        <th>Name</th>
+                        <th>Type</th>
+                        <th>Address</th>
+                        <th>MX Pref</th>
+                        <th>TTL</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {dnsRecords.length > 0 ? (
+                        dnsRecords.map((record, index) => (
+                          <tr key={record.hostId || `${record.name}-${record.type}-${index}`}>
+                            <td>{record.hostId || "N/A"}</td>
+                            <td>{record.name || "N/A"}</td>
+                            <td>{record.type || "N/A"}</td>
+                            <td>{record.address || "N/A"}</td>
+                            <td>{record.mxPref || "N/A"}</td>
+                            <td>{record.ttl || "N/A"}</td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan="6" className={styles.vendorDomainDnsEmptyState}>
+                            No DNS records found for this domain.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )
+      : null;
+
+  const dnsUpdateModal =
+    showDnsUpdateModal && typeof document !== "undefined"
+      ? createPortal(
+          <div
+            className={styles.vendorDomainDnsEditorOverlay}
+            onClick={() => setShowDnsUpdateModal(false)}
+          >
+            <div
+              className={styles.vendorDomainDnsEditorModal}
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className={styles.vendorDomainCartModalHeader}>
+                <div>
+                  <h3 className={styles.vendorDomainCartModalTitle}>Update DNS</h3>
+                  <p className={styles.vendorDomainDnsModalSubtitle}>
+                    {dnsModalData?.domain || "Edit DNS records"}
+                  </p>
+                </div>
+
+                <Button
+                  type="button"
+                  unstyled
+                  className={styles.vendorDomainCartCloseButton}
+                  onClick={() => setShowDnsUpdateModal(false)}
+                >
+                  <FontAwesomeIcon icon={faXmark} />
+                </Button>
+              </div>
+
+              <div className={styles.vendorDomainDnsModalBody}>
+                <div className={styles.vendorDomainDnsTableWrap}>
+                  <table className={styles.vendorDomainDnsTable}>
+                    <thead>
+                      <tr>
+                        <th>Host ID</th>
+                        <th>Name</th>
+                        <th>Type</th>
+                        <th>Address</th>
+                        <th>MX Pref</th>
+                        <th>TTL</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {dnsFormRecords.length > 0 ? (
+                        dnsFormRecords.map((record, index) => (
+                          <tr key={record.hostId || `dns-edit-${index}`}>
+                            <td>
+                              <input
+                                type="text"
+                                value={record.hostId}
+                                onChange={(event) =>
+                                  handleDnsRecordFieldChange(index, "hostId", event.target.value)
+                                }
+                                className={styles.vendorDomainDnsInput}
+                              />
+                            </td>
+                            <td>
+                              <input
+                                type="text"
+                                value={record.name}
+                                onChange={(event) =>
+                                  handleDnsRecordFieldChange(index, "name", event.target.value)
+                                }
+                                className={styles.vendorDomainDnsInput}
+                              />
+                            </td>
+                            <td>
+                              <input
+                                type="text"
+                                value={record.type}
+                                onChange={(event) =>
+                                  handleDnsRecordFieldChange(index, "type", event.target.value)
+                                }
+                                className={styles.vendorDomainDnsInput}
+                              />
+                            </td>
+                            <td>
+                              <input
+                                type="text"
+                                value={record.address}
+                                onChange={(event) =>
+                                  handleDnsRecordFieldChange(index, "address", event.target.value)
+                                }
+                                className={styles.vendorDomainDnsInput}
+                              />
+                            </td>
+                            <td>
+                              <input
+                                type="text"
+                                value={record.mxPref}
+                                onChange={(event) =>
+                                  handleDnsRecordFieldChange(index, "mxPref", event.target.value)
+                                }
+                                className={styles.vendorDomainDnsInput}
+                              />
+                            </td>
+                            <td>
+                              <input
+                                type="text"
+                                value={record.ttl}
+                                onChange={(event) =>
+                                  handleDnsRecordFieldChange(index, "ttl", event.target.value)
+                                }
+                                className={styles.vendorDomainDnsInput}
+                              />
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan="6" className={styles.vendorDomainDnsEmptyState}>
+                            No DNS records available to update.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className={styles.vendorDomainDnsEditorActions}>
+                  <Button
+                    type="button"
+                    unstyled
+                    className={styles.vendorDomainDnsEditorSecondaryButton}
+                    onClick={() => setShowDnsUpdateModal(false)}
+                    disabled={isSubmittingDnsUpdate}
+                  >
+                    Cancel
+                  </Button>
+
+                  <Button
+                    type="button"
+                    variant="blueButton"
+                    className={styles.vendorDomainDnsEditorPrimaryButton}
+                    onClick={handleSubmitDnsUpdate}
+                    disabled={isSubmittingDnsUpdate || dnsFormRecords.length === 0}
+                  >
+                    {isSubmittingDnsUpdate ? "Updating..." : "Save DNS Changes"}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )
+      : null;
+
   if (showDomainSearch && showPaymentSuccess) {
     return (
       <div className={styles.vendorDomainBrowsePage}>
@@ -852,6 +1776,8 @@ const Domain = () => {
         </section>
 
         {cartModal}
+        {dnsModal}
+        {dnsUpdateModal}
       </div>
     );
   }
@@ -1029,6 +1955,8 @@ const Domain = () => {
         </section>
 
         {cartModal}
+        {dnsModal}
+        {dnsUpdateModal}
       </div>
     );
   }
@@ -1308,6 +2236,8 @@ const Domain = () => {
         </section>
 
         {cartModal}
+        {dnsModal}
+        {dnsUpdateModal}
       </div>
     );
   }
@@ -1494,7 +2424,10 @@ const Domain = () => {
   }
 
   return (
-    <div className={styles.vendorDomainPage}>
+    <div
+      ref={pageRef}
+      className={`${styles.vendorDomainPage} ${hasManagedDomains ? styles.vendorDomainPageWithPagination : ""}`}
+    >
       <header className={styles.vendorDomainHeader}>
         <div>
           <h5 className={styles.vendorDomainTitle}>Manage Your Domain</h5>
@@ -1517,35 +2450,263 @@ const Domain = () => {
       <section className={styles.vendorDomainSection}>
         <div className={styles.vendorDomainSectionHeader}>
           <small className={styles.vendorDomainSectionTitle}>My Domains</small>
-          <span className={styles.vendorDomainCount}>(1)</span>
+          <span className={styles.vendorDomainCount}>({totalManagedDomains})</span>
         </div>
 
         <div className={styles.vendorDomainDivider} />
 
-        <article className={styles.vendorDomainCard}>
-          <div className={styles.vendorDomainCardInner}>
-            <div className={styles.vendorDomainIconWrap} aria-hidden="true">
-              <FontAwesomeIcon icon={faGlobe} />
-            </div>
+        {hasManagedDomains ? (
+          <div className={styles.vendorDomainGrid}>
+            {managedDomains.map((domainItem) => {
+              const domainName = resolveManagedDomainName(domainItem);
+              const domainKey = domainItem.id || domainName;
+              const linkedStoreCount = resolveLinkedStoreCount(domainItem);
+              const linkedStoreId = resolveLinkedStoreId(domainItem);
+              const linkedStoreName = resolveLinkedStoreName(domainItem);
+              const isActionMenuOpen = activeDomainActionId === domainKey;
+              const isLinkingStore =
+                linkingDomainId !== null && linkingDomainId === resolveManagedDomainId(domainItem);
+              const isUnlinkingStore =
+                unlinkingDomainId !== null &&
+                unlinkingDomainId === resolveManagedDomainId(domainItem);
+              const isStoreLinked = Boolean(linkedStoreId);
+              const isDnsLoading =
+                dnsLoadingDomainId !== null &&
+                dnsLoadingDomainId === resolveManagedDomainId(domainItem);
+              const isSslLoading =
+                sslLoadingDomainId !== null &&
+                sslLoadingDomainId === resolveManagedDomainId(domainItem);
+              const isActivatingSsl =
+                activatingSslDomainId !== null &&
+                activatingSslDomainId === resolveManagedDomainId(domainItem);
 
-            <h3 className={styles.vendorDomainEmptyTitle}>
-              No active domain available
-            </h3>
-            <p className={styles.vendorDomainEmptyText}>
-              Expand your business by linking your store to your domain
-            </p>
+              return (
+                <article key={domainKey} className={styles.vendorDomainListCard}>
+                  <div className={styles.vendorDomainListCardHeader}>
+                    <div className={styles.vendorDomainListCardMeta}>
+                      <h3 className={styles.vendorDomainListCardTitle}>
+                        {domainName}
+                      </h3>
+                      <p className={styles.vendorDomainListCardExpiry}>
+                        Expires {formatManagedDomainDate(domainItem.expiration_date)}
+                      </p>
+                    </div>
 
-            <Button
-              type="button"
-              unstyled
-              className={styles.vendorDomainCta}
-              onClick={() => setShowDomainSearch(true)}
-            >
-              Get a Domain
-            </Button>
+                    <div
+                      className={styles.vendorDomainListCardHeaderActions}
+                      data-domain-action-menu="true"
+                    >
+                      <button
+                        type="button"
+                        className={styles.vendorDomainListCardMenu}
+                        aria-label={`Manage ${domainName}`}
+                        aria-haspopup="menu"
+                        aria-expanded={isActionMenuOpen}
+                        onClick={() =>
+                          setActiveDomainActionId((currentId) =>
+                            currentId === domainKey ? null : domainKey
+                          )
+                        }
+                      >
+                        <FontAwesomeIcon icon={faEllipsisVertical} />
+                      </button>
+
+                      {isActionMenuOpen && (
+                        <div
+                          className={styles.vendorDomainListActionsMenu}
+                          role="menu"
+                          aria-label={`Actions for ${domainName}`}
+                        >
+                          <div className={styles.vendorDomainListActionsMenuTitle}>
+                            Actions
+                          </div>
+
+                          <button
+                            type="button"
+                            className={styles.vendorDomainListActionsMenuItem}
+                            role="menuitem"
+                            onClick={() => handleToggleStoreLink(domainItem)}
+                            disabled={isLinkingStore || isUnlinkingStore || isStoreLinked}
+                          >
+                            <FontAwesomeIcon icon={faLink} />
+                            <span>
+                              {isLinkingStore
+                                ? "Linking Store..."
+                                : isStoreLinked
+                                  ? "Store Linked"
+                                  : "Link Store"}
+                            </span>
+                          </button>
+
+                          <button
+                            type="button"
+                            className={`${styles.vendorDomainListActionsMenuItem} ${styles.vendorDomainListActionsMenuItemDanger}`}
+                            role="menuitem"
+                            onClick={() => handleUnlinkStore(domainItem)}
+                            disabled={isLinkingStore || isUnlinkingStore || !isStoreLinked}
+                          >
+                            <FontAwesomeIcon icon={faLink} />
+                            <span>
+                              {isUnlinkingStore ? "Unlinking Store..." : "Unlink Store"}
+                            </span>
+                          </button>
+
+                          <button
+                            type="button"
+                            className={styles.vendorDomainListActionsMenuItem}
+                            role="menuitem"
+                            onClick={() => handleManageDns(domainItem)}
+                            disabled={isLinkingStore || isUnlinkingStore || isDnsLoading}
+                          >
+                            <FontAwesomeIcon icon={faGear} />
+                            <span>{isDnsLoading ? "Loading DNS..." : "Manage DNS"}</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            className={styles.vendorDomainListActionsMenuItem}
+                            role="menuitem"
+                            onClick={() => handleAddSsl(domainItem)}
+                            disabled={
+                              isLinkingStore ||
+                              isUnlinkingStore ||
+                              isDnsLoading ||
+                              isSslLoading ||
+                              domainItem.ssl_enabled
+                            }
+                          >
+                            <FontAwesomeIcon icon={faCircleCheck} />
+                            <span>
+                              {isSslLoading
+                                ? "Adding SSL..."
+                                : domainItem.ssl_enabled
+                                  ? "SSL Active"
+                                  : "Add SSL"}
+                            </span>
+                          </button>
+
+                          <button
+                            type="button"
+                            className={styles.vendorDomainListActionsMenuItem}
+                            role="menuitem"
+                            onClick={() => handleActivateSsl(domainItem)}
+                            disabled={
+                              isLinkingStore ||
+                              isUnlinkingStore ||
+                              isDnsLoading ||
+                              isSslLoading ||
+                              isActivatingSsl
+                            }
+                          >
+                            <FontAwesomeIcon icon={faCircleInfo} />
+                            <span>
+                              {isActivatingSsl ? "Activating SSL..." : "Activate SSL"}
+                            </span>
+                          </button>
+
+                          <button
+                            type="button"
+                            className={styles.vendorDomainListActionsMenuItem}
+                            role="menuitem"
+                            onClick={() => setActiveDomainActionId(null)}
+                          >
+                            <FontAwesomeIcon icon={faEye} />
+                            <span>View Details</span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className={styles.vendorDomainListDivider} />
+
+                  <div className={styles.vendorDomainListCardBody}>
+                    <div className={styles.vendorDomainListLinkRow}>
+                      <span className={styles.vendorDomainListLinkLabel}>
+                        <FontAwesomeIcon icon={faLink} />
+                        <span>Linked Store ({linkedStoreCount})</span>
+                      </span>
+
+                      <div className={styles.vendorDomainListBadgeRow}>
+                        <span
+                          className={`${styles.vendorDomainListStatusBadge} ${resolveDomainStatusClassName(domainItem.status)}`.trim()}
+                        >
+                          {formatDomainStatusLabel(domainItem.status)}
+                        </span>
+
+                        {domainItem.ssl_enabled && (
+                          <span className={styles.vendorDomainListSslBadge}>
+                            SSL Active
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {linkedStoreName && (
+                      <span
+                        className={`${styles.vendorDomainListStoreChip} ${styles.vendorDomainListStoreChipLinked}`}
+                      >
+                        {linkedStoreName}
+                      </span>
+                    )}
+                  </div>
+                </article>
+              );
+            })}
           </div>
-        </article>
+        ) : (
+          <article className={styles.vendorDomainCard}>
+            <div className={styles.vendorDomainCardInner}>
+              <div className={styles.vendorDomainIconWrap} aria-hidden="true">
+                <FontAwesomeIcon icon={faGlobe} />
+              </div>
+
+              <h3 className={styles.vendorDomainEmptyTitle}>
+                {loading ? "Loading your domains" : "No active domain available"}
+              </h3>
+              <p className={styles.vendorDomainEmptyText}>
+                {loading
+                  ? "Fetching your registered domains."
+                  : "Expand your business by linking your store to your domain"}
+              </p>
+
+              {!loading && (
+                <Button
+                  type="button"
+                  unstyled
+                  className={styles.vendorDomainCta}
+                  onClick={() => setShowDomainSearch(true)}
+                >
+                  Get a Domain
+                </Button>
+              )}
+            </div>
+          </article>
+        )}
+
+        {!hasManagedDomains && error && !loading && (
+          <p className={styles.vendorDomainEmptyText}>
+            {error?.message || error?.error || error || "Unable to load domains right now."}
+          </p>
+        )}
       </section>
+
+      {hasManagedDomains && (
+        <Pagination
+          currentPage={currentPage}
+          totalPages={managedDomainsPagination?.totalPages || 1}
+          onPageChange={handleDomainPageChange}
+          itemsPerPage={managedDomainsPagination?.limit || 20}
+          totalItems={managedDomainsPagination?.totalItems || totalManagedDomains}
+          disabled={loading}
+          className={styles.vendorDomainPaginationSticky}
+          containerStyle={paginationViewportStyle}
+          showPrevNextLabels
+        />
+      )}
+
+      {dnsModal}
+      {dnsUpdateModal}
     </div>
   );
 };
