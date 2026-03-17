@@ -41,6 +41,9 @@ export const loginForm = createAsyncThunk(
                 password
             })
 
+            localStorage.removeItem('itemId');
+            localStorage.removeItem('services');
+            localStorage.removeItem('storeView');
             localStorage.setItem('token', response.data.data.token);
             localStorage.setItem('user', JSON.stringify(response.data.data.user))
 

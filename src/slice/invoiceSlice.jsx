@@ -2,18 +2,85 @@ import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { API_URL } from '../config/constant';
 import axios from 'axios';
 
+const defaultPagination = {
+    page: 1,
+    limit: 20,
+    total_pages: 0,
+    total_items: 0
+};
+
+const normalizeStoreId = (storeId) => {
+    if (storeId === undefined || storeId === null || storeId === '') {
+        return null;
+    }
+
+    if (typeof storeId === 'string') {
+        try {
+            const parsedStoreId = JSON.parse(storeId);
+            return parsedStoreId === '' ? null : parsedStoreId;
+        } catch {
+            return storeId;
+        }
+    }
+
+    return storeId;
+};
+
+const normalizeInvoicesResponse = (payload) => {
+    const responseData = payload?.data ?? payload ?? {};
+    const source =
+        responseData?.invoices ||
+        responseData?.items ||
+        responseData?.results ||
+        Array.isArray(responseData?.data) ||
+        responseData?.pagination
+            ? responseData
+            : responseData?.data && typeof responseData.data === 'object'
+                ? responseData.data
+                : responseData;
+
+    const invoices =
+        source?.invoices ??
+        source?.items ??
+        source?.results ??
+        source?.data ??
+        [];
+
+    const pagination = source?.pagination ?? responseData?.pagination ?? {};
+    const limit =
+        Number(pagination?.limit) ||
+        Number(pagination?.per_page) ||
+        defaultPagination.limit;
+    const totalItems =
+        Number(pagination?.total_items) ||
+        Number(pagination?.totalItems) ||
+        Number(pagination?.total) ||
+        Number(source?.total) ||
+        Number(responseData?.total) ||
+        (Array.isArray(invoices) ? invoices.length : 0);
+
+    return {
+        data: Array.isArray(invoices) ? invoices : [],
+        pagination: {
+            page: Number(pagination?.page) || defaultPagination.page,
+            limit,
+            total_pages:
+                Number(pagination?.total_pages) ||
+                Number(pagination?.totalPages) ||
+                (limit > 0 ? Math.ceil(totalItems / limit) : 0),
+            total_items: totalItems
+        },
+        total: totalItems
+    };
+};
+
 const initialState = {
     loading: false,
     error: null,
     success: false,
     invoiceData: {
         data: [],
-        pagination: {
-            page: 1,
-            limit: 20,
-            total_pages: 0,
-            total_items: 0
-        },
+        pagination: defaultPagination,
         total: 0
     }
 };
@@ -28,7 +95,8 @@ export const getAllInvoice = createAsyncThunk(
                 }
             })
 
-            localStorage.setItem("invoice", JSON.stringify(response.data.data.invoices))
+            const normalizedResponse = normalizeInvoicesResponse(response.data);
+            localStorage.setItem("invoice", JSON.stringify(normalizedResponse.data))
             return response.data;
         } catch (error) {
             if (error.response && error.response.data) {
@@ -41,8 +109,14 @@ export const getAllInvoice = createAsyncThunk(
 
 export const createInvoice = createAsyncThunk(
     'invoice/createInvoice',
-    async ({ token, issue_date, due_date, currency, items, tax_rate, discount_amount, notes, store_id }, { rejectWithValue }) => {
+    async ({ token, issue_date, due_date, currency, items, tax_rate, discount_amount, notes, online_store_id, store_id }, { rejectWithValue }) => {
         try {
+            const resolvedStoreId = normalizeStoreId(online_store_id ?? store_id);
+
+            if (!resolvedStoreId) {
+                return rejectWithValue({ message: 'Online store ID not found' });
+            }
+
             const payload = {
                 issue_date,
                 due_date,
@@ -53,10 +127,7 @@ export const createInvoice = createAsyncThunk(
                 notes
             };
 
-            // Only include store_id if it exists
-            if (store_id) {
-                payload.store_id = store_id;
-            }
+            payload.online_store_id = resolvedStoreId;
 
             const response = await axios.post(`${API_URL}/invoices`, payload, {
                 headers: {
@@ -94,16 +165,7 @@ const invoicesSlice = createSlice({
         })
         .addCase(getAllInvoice.fulfilled, (state, action) => {
             state.loading = false;
-            state.invoiceData = {
-                data: action.payload.data.invoices || [],
-                pagination: action.payload.data.pagination || {
-                    page: 1,
-                    limit: 20,
-                    total_pages: 0,
-                    total_items: 0
-                },
-                total: action.payload.data.total || 0
-            };
+            state.invoiceData = normalizeInvoicesResponse(action.payload);
         })
         .addCase(getAllInvoice.rejected, (state, action) => {
             state.loading = false;

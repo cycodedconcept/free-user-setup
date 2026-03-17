@@ -28,7 +28,7 @@ const ManageStore = ({ setActiveTab }) => {
 
     useEffect(() => {
         if (token) {
-          dispatch(getMyOnlineStore({ token, id: getId || '7'}));
+          dispatch(getMyOnlineStore({ token, id: getId}));
         //   dispatch(getStorePreview({ token }));
         }
     }, [token, dispatch])

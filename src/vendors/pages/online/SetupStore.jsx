@@ -1255,10 +1255,10 @@ useEffect(() => {
                                 ) : (
                                 <>
                                 <div className="text-center mt-5 mx-3">
-                                    <img src={myStore.onlineStore.profile_logo_url} alt="" className='rounded-pill w-25'/>
+                                    <img src={myStore?.onlineStore?.profile_logo_url} alt="" className='rounded-pill w-25'/>
 
                                     <h5 className="my text-dark mt-3">Your Store</h5>
-                                    <small style={{color: '#78716C'}} className='mb-4 d-block'>{myStore.onlineStore.store_description}</small>
+                                    <small style={{color: '#78716C'}} className='mb-4 d-block'>{myStore?.onlineStore?.store_description}</small>
                                     
                                     {allStore.data?.services?.map((store) => 
                                       <div key={store.id} className="d-flex justify-content-between px-3 py-2 rounded-pill mt-2" style={{background: '#78716C', color: '#fff'}}>

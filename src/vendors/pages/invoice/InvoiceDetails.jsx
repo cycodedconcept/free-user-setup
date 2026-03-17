@@ -25,6 +25,16 @@ const InvoiceDetails = ({ invoice, onBack }) => {
     }
   };
 
+  const customer = invoice.Customer || invoice.customer;
+  const customerName =
+    typeof customer === 'string'
+      ? customer
+      : customer?.name || invoice.customer_name || invoice.customer_email || 'Customer';
+  const customerEmail =
+    typeof customer === 'object' && customer !== null
+      ? customer.email || invoice.customer_email || ''
+      : invoice.customer_email || '';
+
   const calculateSubtotal = () => {
     if (!invoice.items || invoice.items.length === 0) return 0;
     return invoice.items.reduce((sum, item) => {
@@ -112,8 +122,8 @@ const InvoiceDetails = ({ invoice, onBack }) => {
               </div>
               <div>
                 <small style={{color: '#6B7280', fontSize: '12px'}}>Bill To</small>
-                <p className="mb-0" style={{fontSize: '14px', fontWeight: '500'}}>{invoice.Customer || invoice.customer_name || 'Customer'}</p>
-                <p className="mb-0" style={{fontSize: '13px', color: '#6B7280'}}>{invoice.customer_email || ''}</p>
+                <p className="mb-0" style={{fontSize: '14px', fontWeight: '500'}}>{customerName}</p>
+                <p className="mb-0" style={{fontSize: '13px', color: '#6B7280'}}>{customerEmail}</p>
               </div>
             </div>
             <div className="col-md-6">

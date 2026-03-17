@@ -2,6 +2,41 @@ import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { API_URL } from '../config/constant';
 import axios from 'axios';
 
+const persistItemId = (id) => {
+    if (id === undefined || id === null || id === '') {
+        localStorage.removeItem('itemId');
+        return;
+    }
+
+    localStorage.setItem('itemId', String(id));
+};
+
+const readStoredItemId = () => {
+    const storedItemId = localStorage.getItem('itemId');
+
+    if (!storedItemId) {
+        return null;
+    }
+
+    try {
+        return JSON.parse(storedItemId);
+    } catch {
+        return storedItemId;
+    }
+};
+
+const extractStoreId = (payload) =>
+    payload?.data?.onlineStore?.id ??
+    payload?.data?.store?.id ??
+    payload?.onlineStore?.id ??
+    payload?.store?.id ??
+    payload?.user?.onlineStore?.id ??
+    payload?.user?.online_store_id ??
+    payload?.user?.store_id ??
+    payload?.online_store_id ??
+    payload?.store_id ??
+    null;
+
 const initialState = {
     loading: false,
     error: null,
@@ -54,7 +89,7 @@ export const createOnlineStore = createAsyncThunk(
                 }
             })
 
-            localStorage.setItem('itemId', response.data.data.onlineStore.id);
+            persistItemId(extractStoreId(response.data));
 
             return response.data;
         } catch (error) {
@@ -69,17 +104,34 @@ export const createOnlineStore = createAsyncThunk(
 export const getMyOnlineStore = createAsyncThunk(
     'store/getMyOnlineStore',
     async ({token, id}, {rejectWithValue}) => {
-        console.debug('[getMyOnlineStore] request', { id });
         try {
-            const response = await axios.get(`${API_URL}/stores/online/${id}`, {
+            let resolvedId = id || readStoredItemId();
+
+            if (!resolvedId && token) {
+                const previewResponse = await axios.get(`${API_URL}/stores/online/preview`, {
+                    headers: {
+                        Authorization: `Bearer ${token}`
+                    }
+                });
+
+                resolvedId = extractStoreId(previewResponse.data);
+            }
+
+            if (!resolvedId) {
+                persistItemId(null);
+                return { onlineStore: null };
+            }
+
+            const response = await axios.get(`${API_URL}/stores/online/${resolvedId}`, {
                 headers: {
                     Authorization: `Bearer ${token}`
                 }
             })
-            console.debug('[getMyOnlineStore] response', response?.data);
+
+            persistItemId(extractStoreId(response.data) || resolvedId);
             return response.data.data;
         } catch (error) {
-             console.error('[getMyOnlineStore] error', error?.response?.data || error?.message);
+             persistItemId(null);
              if (error.response && error.response.data) {
                 return rejectWithValue(error.response.data);
             }
@@ -1285,6 +1337,7 @@ const storeSlice = createSlice({
             state.loading = true;
             state.success = false;
             state.error = null;
+            state.myStore = {};
         })
         .addCase(getMyOnlineStore.fulfilled, (state, action) => {
             state.loading = false;
@@ -1294,6 +1347,7 @@ const storeSlice = createSlice({
             state.loading = false;
             state.success = false;
             state.error = action.payload;
+            state.myStore = {};
         }) 
         .addCase(getStorePreview.pending, (state) => {
             state.loading = true;

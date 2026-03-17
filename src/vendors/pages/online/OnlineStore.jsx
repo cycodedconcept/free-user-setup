@@ -83,6 +83,12 @@ const sidebarButtons = [
       visible: true,
     },
     {
+      label: "Orders",
+      key: "orders",
+      icon: faReceipt,
+      visible: true,
+    },
+    {
       label: "CRM",
       key: "crm",
       icon: faUsers,

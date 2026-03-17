@@ -1,6 +1,7 @@
 import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faChevronLeft, faChevronRight } from '@fortawesome/free-solid-svg-icons';
+import Button from './ui/Button';
 
 const Pagination = ({
   currentPage,
@@ -78,7 +79,8 @@ const Pagination = ({
         >
           {/* Previous Button */}
           <li>
-            <button
+            <Button
+              unstyled
               onClick={() => handlePageChange(currentPage - 1)}
               disabled={disabled || currentPage === 1}
               className={`${buttonClassName}`}
@@ -98,14 +100,15 @@ const Pagination = ({
             >
               <FontAwesomeIcon icon={faChevronLeft} style={{ fontSize: '12px' }} />
               {showPrevNextLabels && <span>{previousLabel}</span>}
-            </button>
+            </Button>
           </li>
 
           {/* First page and ellipsis */}
           {pageNumbers[0] > 1 && (
             <>
               <li>
-                <button
+                <Button
+                  unstyled
                   onClick={() => handlePageChange(1)}
                   disabled={disabled}
                   className={buttonClassName}
@@ -120,7 +123,7 @@ const Pagination = ({
                   }}
                 >
                   1
-                </button>
+                </Button>
               </li>
               {pageNumbers[0] > 2 && (
                 <li style={{ padding: '8px 4px', color: '#666' }}>...</li>
@@ -131,7 +134,8 @@ const Pagination = ({
           {/* Page numbers */}
           {pageNumbers.map((page) => (
             <li key={page}>
-              <button
+              <Button
+                unstyled
                 onClick={() => handlePageChange(page)}
                 disabled={disabled}
                 className={currentPage === page ? activeButtonClassName : buttonClassName}
@@ -148,7 +152,7 @@ const Pagination = ({
                 }}
               >
                 {page}
-              </button>
+              </Button>
             </li>
           ))}
 
@@ -159,7 +163,8 @@ const Pagination = ({
                 <li style={{ padding: '8px 4px', color: '#666' }}>...</li>
               )}
               <li>
-                <button
+                <Button
+                  unstyled
                   onClick={() => handlePageChange(totalPages)}
                   disabled={disabled}
                   className={buttonClassName}
@@ -174,14 +179,15 @@ const Pagination = ({
                   }}
                 >
                   {totalPages}
-                </button>
+                </Button>
               </li>
             </>
           )}
 
           {/* Next Button */}
           <li>
-            <button
+            <Button
+              unstyled
               onClick={() => handlePageChange(currentPage + 1)}
               disabled={disabled || currentPage === totalPages}
               className={buttonClassName}
@@ -201,7 +207,7 @@ const Pagination = ({
             >
               {showPrevNextLabels && <span>{nextLabel}</span>}
               <FontAwesomeIcon icon={faChevronRight} style={{ fontSize: '12px' }} />
-            </button>
+            </Button>
           </li>
         </ul>
       </nav>

@@ -62,6 +62,12 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
       visible: true,
     },
     {
+      label: "Orders",
+      key: "orders",
+      icon: faReceipt,
+      visible: true,
+    },
+    {
       label: "Inventory",
       key: "inventory",
       icon: faBoxes,
@@ -109,7 +115,7 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
       label: "Invoices",
       key: "invoices",
       icon: faReceipt,
-      visible: false,
+      visible: true,
     },
     {
       label: "CRM",

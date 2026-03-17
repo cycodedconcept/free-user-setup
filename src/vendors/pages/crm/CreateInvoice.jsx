@@ -3,13 +3,30 @@ import { useDispatch, useSelector } from 'react-redux';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPlus, faTrash, faEye, faShare, faEnvelope, faArrowLeft } from '@fortawesome/free-solid-svg-icons';
 import { createInvoice, resetStatus } from '../../../slice/invoiceSlice';
+import { getMyOnlineStore } from '../../../slice/onlineStoreSlice';
 import Swal from 'sweetalert2';
+
+const readStoredItemId = () => {
+  const storedItemId = localStorage.getItem("itemId");
+
+  if (!storedItemId) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(storedItemId);
+  } catch {
+    return storedItemId;
+  }
+};
 
 const CreateInvoice = ({ onBack }) => {
   const dispatch = useDispatch();
   let token = localStorage.getItem("token");
-  let getId = localStorage.getItem("itemId");
+  const storedStoreId = readStoredItemId();
+  const onlineStoreId = useSelector((state) => state.store?.myStore?.onlineStore?.id);
   const { loading, error, success } = useSelector((state) => state.invoice);
+  const resolvedStoreId = onlineStoreId || storedStoreId || '';
 
   const [formData, setFormData] = useState({
     issue_date: '',
@@ -143,9 +160,18 @@ const CreateInvoice = ({ onBack }) => {
       return;
     }
 
+    if (!resolvedStoreId) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Store Not Found',
+        text: 'Unable to find your online store ID. Refresh the store data and try again.',
+      });
+      return;
+    }
+
     dispatch(createInvoice({
       token,
-      store_id: getId || '7',
+      online_store_id: resolvedStoreId,
       issue_date: formData.issue_date,
       due_date: formData.due_date,
       currency: formData.currency,
@@ -155,6 +181,12 @@ const CreateInvoice = ({ onBack }) => {
       notes: formData.notes || ''
     }));
   };
+
+  useEffect(() => {
+    if (token && !resolvedStoreId) {
+      dispatch(getMyOnlineStore({ token }));
+    }
+  }, [token, resolvedStoreId, dispatch]);
 
   useEffect(() => {
     if (success) {
@@ -245,7 +277,7 @@ const CreateInvoice = ({ onBack }) => {
               <small className="d-block" style={{color: '#78716C'}}>Fill in the details to create a new invoice</small>
             </div>
           </div>
-          <div className="d-flex gap-2">
+          {/* <div className="d-flex gap-2">
             <button
               type="button"
               className="btn"
@@ -267,7 +299,7 @@ const CreateInvoice = ({ onBack }) => {
             >
               <FontAwesomeIcon icon={faEnvelope} className="me-2" />Send Invoice to Email
             </button>
-          </div>
+          </div> */}
         </div>
 
         <form onSubmit={handleSubmit} className="mt-4">

@@ -19,6 +19,7 @@ const AllInvoices = () => {
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [openDropdown, setOpenDropdown] = useState(null);
   const dropdownRef = useRef(null);
+  const invoicePagination = invoiceData?.pagination || {};
 
   useEffect(() => {
     if (token) {
@@ -43,6 +44,20 @@ const AllInvoices = () => {
 
   const toggleDropdown = (invoiceId) => {
     setOpenDropdown(openDropdown === invoiceId ? null : invoiceId);
+  };
+
+  const getCustomerName = (invoice) => {
+    const customer = invoice?.Customer || invoice?.customer;
+
+    if (typeof customer === 'string') {
+      return customer;
+    }
+
+    if (customer && typeof customer === 'object') {
+      return customer.name || customer.email || customer.phone || `Customer #${customer.id}`;
+    }
+
+    return invoice?.customer_name || invoice?.customer_email || '-';
   };
 
   const handlePreview = (invoice) => {
@@ -112,7 +127,7 @@ const AllInvoices = () => {
                 <tbody>
                 {loading ? (
                     <tr>
-                    <td colSpan="6" className="text-center py-4">
+                    <td colSpan="7" className="text-center py-4">
                         <div className="spinner-border spinner-border-sm" role="status">
                         <span className="visually-hidden">Loading...</span>
                         </div>
@@ -122,7 +137,7 @@ const AllInvoices = () => {
                     invoiceData.data.map((invoice) => (
                     <tr key={invoice.id} style={{borderBottom: '1px solid #eee'}}>
                         <td style={{fontSize: '13px'}}>{invoice.invoice_number || invoice.id}</td>
-                        <td style={{fontSize: '13px'}}>{invoice.Customer || '-'}</td>
+                        <td style={{fontSize: '13px'}}>{getCustomerName(invoice)}</td>
                         <td style={{fontSize: '13px'}}>₦{invoice.total?.toLocaleString() || '0'}</td>
                         <td style={{fontSize: '13px'}}>{invoice.issue_date}</td>
                         <td style={{fontSize: '13px'}}>{invoice.due_date}</td>
@@ -228,7 +243,7 @@ const AllInvoices = () => {
                     ))
                 ) : (
                     <tr>
-                    <td colSpan="6" className="text-center py-4" style={{color: '#78716C'}}>
+                    <td colSpan="7" className="text-center py-4" style={{color: '#78716C'}}>
                         No invoices found
                     </td>
                     </tr>
@@ -238,11 +253,11 @@ const AllInvoices = () => {
 
             {/* Pagination */}
             <Pagination
-                currentPage={currentPage}
-                totalPages={invoiceData?.pagination?.total_pages || 1}
+                currentPage={invoicePagination?.page || currentPage}
+                totalPages={invoicePagination?.total_pages || 1}
                 onPageChange={handlePageChange}
-                itemsPerPage={invoiceData?.pagination?.limit || 20}
-                totalItems={invoiceData?.pagination?.total_items || 0}
+                itemsPerPage={invoicePagination?.limit || 20}
+                totalItems={invoicePagination?.total_items || invoiceData?.data?.length || 0}
                 disabled={loading}
             />
             </div>

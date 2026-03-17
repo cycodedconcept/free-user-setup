@@ -6,6 +6,7 @@ import invoiceReducer from '../slice/invoiceSlice'
 import paymentReducer from '../slice/paymentSlice'
 import customerReducer from '../slice/customerFacingSlice'
 import domainReducer from "../slice/domainSlice"
+import orderReducer from "../slice/order"
 
 const store = configureStore({
   reducer: {
@@ -15,7 +16,8 @@ const store = configureStore({
     invoice: invoiceReducer,
     payment: paymentReducer,
     customer: customerReducer,
-    domain: domainReducer
+    domain: domainReducer,
+    order: orderReducer
   },
 });
 

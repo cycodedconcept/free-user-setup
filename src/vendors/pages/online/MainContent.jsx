@@ -13,7 +13,7 @@ import AllInvoices from "../invoice/AllInvoices";
 // import StockAudit from "../inventory/StockAudit";
 // import ActivityHistory from "../inventory/ActivityHistory";
 import Customers from "../crm/Customers";
-import Orders from "../crm/Orders";
+import Orders from "../orders/Orders";
 import Marketing from "../crm/Marketing";
 import Birthdays from "../crm/Birthdays";
 import ReturnAudit from "../crm/ReturnAudit";
@@ -34,24 +34,6 @@ const MainContent = ({ activeTab, setActiveTab }) => {
           <Home setActiveTab={setActiveTab} />
         )}
 
-        {/* Inventory Section */}
-        {/* {activeTab === "inventory-products" && (
-          <ProductInventory setActiveTab={setActiveTab} />
-        )}
-        
-        {activeTab === "inventory-category" && (
-          <ManageCategory setActiveTab={setActiveTab}/>
-        )}
-        {activeTab === "inventory-sales" && (
-          <Sales setActiveTab={setActiveTab}/>
-        )}
-        {activeTab === "inventory-stock-audit" && (
-          <StockAudit setActiveTab={setActiveTab}/>
-        )}
-        {activeTab === "inventory-activity-log" && (
-          <ActivityHistory setActiveTab={setActiveTab}/>
-        )} */}
-
         
         
         {/* Manage Online Store Submenu Items */}
@@ -63,6 +45,9 @@ const MainContent = ({ activeTab, setActiveTab }) => {
         )}
         {activeTab === "products" && (
           <Product setActiveTab={setActiveTab} />
+        )}
+        {activeTab === "orders" && (
+          <Orders setActiveTab={setActiveTab} />
         )}
         {activeTab === "manage-online-store-payment-methods" && (
           <Payment setActiveTab={setActiveTab} />

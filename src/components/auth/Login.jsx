@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { loginForm, resetStatus } from '../../slice/authSlice'
+import { getMyOnlineStore } from '../../slice/onlineStoreSlice';
 import { Link, useNavigate } from 'react-router-dom';
 import { Logo, Bg, Gs, G12 } from '../../assets';
 import styles from "../../styles.module.css";
@@ -47,15 +48,29 @@ const Login = () => {
 
   useEffect(() => {
     if (success) {
-      Swal.fire({
-        icon: "success",
-        title: "Login Successful",
-        text: success.message || "Redirecting to Dashboard...",
-        confirmButtonColor: "#0273F9",
-      }).then(() => {
-        dispatch(resetStatus());
-        navigate("/vendor/store-set-up");
-      });
+      const syncStoreAfterLogin = async () => {
+        const token = localStorage.getItem("token");
+
+        if (token) {
+          try {
+            await dispatch(getMyOnlineStore({ token })).unwrap();
+          } catch (storeError) {
+            console.error("Unable to sync online store after login", storeError);
+          }
+        }
+
+        Swal.fire({
+          icon: "success",
+          title: "Login Successful",
+          text: success.message || "Redirecting to Dashboard...",
+          confirmButtonColor: "#0273F9",
+        }).then(() => {
+          dispatch(resetStatus());
+          navigate("/vendor/store-set-up");
+        });
+      };
+
+      syncStoreAfterLogin();
     }
 
     if (error) {
