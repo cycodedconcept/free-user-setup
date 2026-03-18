@@ -12,17 +12,12 @@ const navigate = useNavigate();
 let activeLabel = "Dashboard";
 
 for (const btn of sidebarButtons) {
-  // 1️⃣ Exact match for parent menu
   if (btn.key === activeTab) {
     activeLabel = btn.label;
-  console.log(activeLabel)
-
     break;
   }
 
-  // 2️⃣ If submenu exists, check all possibilities
   if (btn.submenu && btn.submenu.length > 0) {
-    // Handle both `inventory-products` and `products`
     const foundSub = btn.submenu.find(
       (sub) =>
         activeTab === `${btn.key}-${sub.key}` || activeTab === sub.key
@@ -33,9 +28,6 @@ for (const btn of sidebarButtons) {
     }
   }
 }
-
-  console.log("Active Tab:", activeTab);
-  console.log(activeLabel)
 
   const logOut = () => {
   Swal.fire({
@@ -58,14 +50,21 @@ for (const btn of sidebarButtons) {
 
   return (
     <>
-      <div className="topbar d-flex justify-content-between align-items-center px-4 py-3 border-bottom">
+      <div
+        className="topbar d-flex justify-content-between align-items-center px-4 py-3"
+        style={{
+          background: "var(--app-surface)",
+          color: "var(--app-text)",
+          borderBottom: "1px solid var(--app-border)",
+        }}
+      >
           <div>
-              <h6 className="m-0" style={{color: '#0273F9'}}>{activeLabel}</h6>
+              <h6 className="m-0" style={{color: 'var(--app-primary)'}}>{activeLabel}</h6>
           </div>
           <div className="d-flex align-items-center gap-4">
-              <button className={`${styles.topBtn} p-2 mx`}><FontAwesomeIcon icon={faStore} /><span className="mx-2">Chuks Electronic Store</span> <FontAwesomeIcon icon={faChevronDown} style={{color: '#78716C', fontSize: '14px'}}/></button>
+              <button className={`${styles.topBtn} p-2 mx`}><FontAwesomeIcon icon={faStore} /><span className="mx-2">Chuks Electronic Store</span> <FontAwesomeIcon icon={faChevronDown} style={{color: 'var(--app-text-muted)', fontSize: '14px'}}/></button>
               <div style={{ position: 'relative', display: 'inline-block' }}>
-                  <FontAwesomeIcon icon={faBell} size="lg" style={{ color: '#000000' }} />
+                  <FontAwesomeIcon icon={faBell} size="lg" style={{ color: 'var(--app-text)' }} />
 
                   <span style={{
                       position: 'absolute',
@@ -82,7 +81,7 @@ for (const btn of sidebarButtons) {
                       0
                   </span>
               </div>
-              <span className="text-dark mx d-block px-4" style={{borderLeft: '2px solid #EEEEEE', cursor: 'pointer'}} onClick={logOut}>Log Out</span>
+              <span className="mx d-block px-4" style={{borderLeft: '2px solid var(--app-border)', color: 'var(--app-text)', cursor: 'pointer'}} onClick={logOut}>Log Out</span>
           </div>
 
       </div>

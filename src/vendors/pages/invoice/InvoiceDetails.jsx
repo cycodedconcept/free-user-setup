@@ -2,7 +2,7 @@ import React from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faArrowLeft, faPrint, faDownload, faEnvelope } from '@fortawesome/free-solid-svg-icons';
 
-const InvoiceDetails = ({ invoice, onBack }) => {
+const InvoiceDetails = ({ invoice, onBack, showHeader = true }) => {
   if (!invoice) {
     return (
       <div className="text-center py-5">
@@ -26,6 +26,7 @@ const InvoiceDetails = ({ invoice, onBack }) => {
   };
 
   const customer = invoice.Customer || invoice.customer;
+  const invoiceItems = invoice.items || invoice.InvoiceItems || [];
   const customerName =
     typeof customer === 'string'
       ? customer
@@ -36,8 +37,8 @@ const InvoiceDetails = ({ invoice, onBack }) => {
       : invoice.customer_email || '';
 
   const calculateSubtotal = () => {
-    if (!invoice.items || invoice.items.length === 0) return 0;
-    return invoice.items.reduce((sum, item) => {
+    if (!invoiceItems || invoiceItems.length === 0) return 0;
+    return invoiceItems.reduce((sum, item) => {
       const itemTotal = (item.quantity * item.unit_price) - ((item.quantity * item.unit_price * (item.discount_percentage || 0)) / 100);
       return sum + itemTotal;
     }, 0);
@@ -49,48 +50,49 @@ const InvoiceDetails = ({ invoice, onBack }) => {
 
   return (
     <>
-      <div className="p-3">
-        {/* Header */}
-        <div className="d-flex justify-content-between align-items-center mb-4">
-          <div className="d-flex align-items-center gap-3">
-            <button 
-              onClick={onBack} 
-              className="btn"
-              style={{
-                padding: '8px 12px',
-                border: '1px solid #E5E7EB',
-                borderRadius: '8px',
-                backgroundColor: '#fff'
-              }}
-            >
-              <FontAwesomeIcon icon={faArrowLeft} />
-            </button>
-            <div>
-              <h6 className="bx mb-0">Invoice #{invoice.invoice_number || invoice.id}</h6>
-              <small className="d-block" style={{color: '#78716C'}}>View invoice details</small>
+      <div className={showHeader ? "p-3" : ""}>
+        {showHeader && (
+          <div className="d-flex justify-content-between align-items-center mb-4">
+            <div className="d-flex align-items-center gap-3">
+              <button 
+                onClick={onBack} 
+                className="btn"
+                style={{
+                  padding: '8px 12px',
+                  border: '1px solid #E5E7EB',
+                  borderRadius: '8px',
+                  backgroundColor: '#fff'
+                }}
+              >
+                <FontAwesomeIcon icon={faArrowLeft} />
+              </button>
+              <div>
+                <h6 className="bx mb-0">Invoice #{invoice.invoice_number || invoice.id}</h6>
+                <small className="d-block" style={{color: '#78716C'}}>View invoice details</small>
+              </div>
+            </div>
+            <div className="d-flex gap-2">
+              <button
+                className="btn"
+                style={{padding: '8px 16px', border: '1px solid #E5E7EB', borderRadius: '8px', fontSize: '13px', backgroundColor: '#fff'}}
+              >
+                <FontAwesomeIcon icon={faPrint} className="me-2" />Print
+              </button>
+              <button
+                className="btn"
+                style={{padding: '8px 16px', border: '1px solid #E5E7EB', borderRadius: '8px', fontSize: '13px', backgroundColor: '#fff'}}
+              >
+                <FontAwesomeIcon icon={faDownload} className="me-2" />Download
+              </button>
+              <button
+                className="btn"
+                style={{padding: '8px 16px', backgroundColor: '#0273F9', color: '#fff', borderRadius: '8px', fontSize: '13px'}}
+              >
+                <FontAwesomeIcon icon={faEnvelope} className="me-2" />Send to Email
+              </button>
             </div>
           </div>
-          <div className="d-flex gap-2">
-            <button
-              className="btn"
-              style={{padding: '8px 16px', border: '1px solid #E5E7EB', borderRadius: '8px', fontSize: '13px', backgroundColor: '#fff'}}
-            >
-              <FontAwesomeIcon icon={faPrint} className="me-2" />Print
-            </button>
-            <button
-              className="btn"
-              style={{padding: '8px 16px', border: '1px solid #E5E7EB', borderRadius: '8px', fontSize: '13px', backgroundColor: '#fff'}}
-            >
-              <FontAwesomeIcon icon={faDownload} className="me-2" />Download
-            </button>
-            <button
-              className="btn"
-              style={{padding: '8px 16px', backgroundColor: '#0273F9', color: '#fff', borderRadius: '8px', fontSize: '13px'}}
-            >
-              <FontAwesomeIcon icon={faEnvelope} className="me-2" />Send to Email
-            </button>
-          </div>
-        </div>
+        )}
 
         {/* Invoice Content */}
         <div className="bg-white rounded-3 p-4" style={{border: '1px solid #eee'}}>
@@ -165,8 +167,8 @@ const InvoiceDetails = ({ invoice, onBack }) => {
                 </tr>
               </thead>
               <tbody>
-                {invoice.items && invoice.items.length > 0 ? (
-                  invoice.items.map((item, index) => {
+                {invoiceItems && invoiceItems.length > 0 ? (
+                  invoiceItems.map((item, index) => {
                     const itemSubtotal = item.quantity * item.unit_price;
                     const itemDiscount = (itemSubtotal * (item.discount_percentage || 0)) / 100;
                     const itemTotal = itemSubtotal - itemDiscount;

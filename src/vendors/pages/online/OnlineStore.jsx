@@ -199,18 +199,23 @@ const OnlineStore = () => {
   return (
     <div
       className="d-flex overflow-hidden vh-100"
-      style={{ background: "#FAFAFA" }}
+      style={{ background: "var(--app-bg)", color: "var(--app-text)" }}
     >
       <div
-        className="sidebar-container bg-light d-none d-lg-block flex-shrink-0"
-        style={{ width: "250px", height: "100vh" }}
+        className="sidebar-container d-none d-lg-block flex-shrink-0"
+        style={{ width: "250px", height: "100vh", background: "var(--app-surface)" }}
       >
         <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
       </div>
       <div className="main-container flex-grow-1 d-flex flex-column">
         <div
-          className="position-sticky top-0 bg-white shadow-sm"
-          style={{ zIndex: 1000 }}
+          className="position-sticky top-0"
+          style={{
+            zIndex: 1000,
+            background: "var(--app-surface)",
+            borderBottom: "1px solid var(--app-border)",
+            boxShadow: "var(--app-shadow-soft)",
+          }}
         >
           <Topbar 
             activeTab={activeTab} 

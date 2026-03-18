@@ -3609,9 +3609,9 @@ input:checked + .slider:before {
     transform: translate(-50%, -50%);
 }
 .topBtn {
-  background: #fff;
-  color: #1C1917;
-  border: 1px solid #eee;
+  background: var(--app-surface);
+  color: var(--app-text);
+  border: 1px solid var(--app-border);
   border-radius: 10px;
 }
 
@@ -3776,6 +3776,110 @@ input:checked + .slider:before {
   box-sizing: border-box;
 }
 
+.vendorSettingsPageDark {
+  background: #020617;
+  color: #e2e8f0;
+}
+
+.vendorSettingsPageDark .vendorSettingsHeader p,
+.vendorSettingsPageDark .vendorSettingsHeader small,
+.vendorSettingsPageDark .vendorSettingsSectionIntro h2,
+.vendorSettingsPageDark .vendorSettingsSectionIntro p,
+.vendorSettingsPageDark .vendorSettingsNavItem,
+.vendorSettingsPageDark .vendorSettingsChevron,
+.vendorSettingsPageDark .vendorSettingsCardHeader h2,
+.vendorSettingsPageDark .vendorSettingsLabel,
+.vendorSettingsPageDark .vendorSettingsValue,
+.vendorSettingsPageDark .vendorSettingsShippingTop h3,
+.vendorSettingsPageDark .vendorSettingsShippingTop p span,
+.vendorSettingsPageDark .vendorSettingsShippingToggleLabel,
+.vendorSettingsPageDark .vendorSettingsThemeBlock h3,
+.vendorSettingsPageDark .vendorSettingsThemeRow {
+  color: #f8fafc;
+}
+
+.vendorSettingsPageDark .vendorSettingsHeader small,
+.vendorSettingsPageDark .vendorSettingsCardHeader p,
+.vendorSettingsPageDark .vendorSettingsSectionIntro p,
+.vendorSettingsPageDark .vendorSettingsUploadNote,
+.vendorSettingsPageDark .vendorSettingsShippingTop p,
+.vendorSettingsPageDark .vendorSettingsShippingRate {
+  color: #94a3b8;
+}
+
+.vendorSettingsPageDark .vendorSettingsNavItem,
+.vendorSettingsPageDark .vendorSettingsCard,
+.vendorSettingsPageDark .vendorSettingsShippingCard {
+  background: #111827;
+  border-color: #1f2937;
+  box-shadow: 0 14px 32px rgba(15, 23, 42, 0.34);
+}
+
+.vendorSettingsPageDark .vendorSettingsNavActive {
+  border-color: #38bdf8;
+  background: #0f172a;
+}
+
+.vendorSettingsPageDark .vendorSettingsDivider,
+.vendorSettingsPageDark .vendorSettingsDividerThin {
+  background: #334155;
+}
+
+.vendorSettingsPageDark .vendorSettingsColorInput,
+.vendorSettingsPageDark .vendorSettingsSelect,
+.vendorSettingsPageDark .vendorSettingsInput,
+.vendorSettingsPageDark .vendorSettingsTextarea,
+.vendorSettingsPageDark .vendorSettingsSelectInput,
+.vendorSettingsPageDark .vendorSettingsUploadPanel {
+  background: #0f172a;
+  border-color: #334155;
+  color: #f8fafc;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.02);
+}
+
+.vendorSettingsPageDark .vendorSettingsInput::placeholder,
+.vendorSettingsPageDark .vendorSettingsTextarea::placeholder {
+  color: #64748b;
+}
+
+.vendorSettingsPageDark .vendorSettingsSelectIcon,
+.vendorSettingsPageDark .vendorSettingsMoreAction {
+  color: #cbd5e1;
+}
+
+.vendorSettingsPageDark .vendorSettingsDeleteAction {
+  color: #f87171;
+}
+
+.vendorSettingsPageDark .vendorSettingsUploadButton {
+  background: #111827;
+  border-color: #1d4ed8;
+  color: #93c5fd;
+}
+
+.vendorSettingsPageDark .vendorSettingsShippingToggleWrap,
+.vendorSettingsPageDark .vendorSettingsThemeRow,
+.vendorSettingsPageDark .vendorSettingsDeleteAction,
+.vendorSettingsPageDark .vendorSettingsPrimaryAction,
+.vendorSettingsPageDark .vendorSettingsUploadButton,
+.vendorSettingsPageDark .vendorSettingsMoreAction {
+  transition: opacity 0.2s ease;
+}
+
+.vendorSettingsPageDark .vendorSettingsThemeRow:hover,
+.vendorSettingsPageDark .vendorSettingsDeleteAction:hover,
+.vendorSettingsPageDark .vendorSettingsPrimaryAction:hover,
+.vendorSettingsPageDark .vendorSettingsUploadButton:hover,
+.vendorSettingsPageDark .vendorSettingsMoreAction:hover {
+  opacity: 0.88;
+}
+
+.vendorSettingsPageDark .vendorSettingsSave {
+  background: #1e293b;
+  border-color: #334155;
+  color: #cbd5e1;
+}
+
 .vendorSettingsHeader {
   margin-bottom: 28px;
 }
@@ -3804,6 +3908,38 @@ input:checked + .slider:before {
   display: flex;
   flex-direction: column;
   gap: 22px;
+}
+
+.vendorSettingsSectionHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.vendorSettingsSectionIntro h2 {
+  margin: 0 0 6px;
+  font-size: 22px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.vendorSettingsSectionIntro p {
+  margin: 0;
+  font-size: 14px;
+  color: #6b7280;
+}
+
+.vendorSettingsPrimaryAction {
+  border: none;
+  border-radius: 10px;
+  background: #0273f9;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 500;
+  padding: 14px 18px;
+  cursor: pointer;
+  white-space: nowrap;
 }
 
 .vendorSettingsNav {
@@ -3846,9 +3982,23 @@ input:checked + .slider:before {
   padding: 24px 28px 30px;
 }
 
+.vendorSettingsCardDark {
+  background: #111827;
+  border-color: #1f2937;
+  box-shadow: 0 14px 32px rgba(15, 23, 42, 0.34);
+}
+
 .vendorSettingsCardHeader {
   margin-bottom: 6px;
 }
+
+.vendorSettingsCardTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
 .vendorSettingsCardHeader h2 {
   margin: 0 0 6px;
   font-size: 22px;
@@ -3862,16 +4012,42 @@ input:checked + .slider:before {
   color: #6b7280;
 }
 
+.vendorSettingsCardDark .vendorSettingsCardHeader h2 {
+  color: #f8fafc;
+}
+
+.vendorSettingsCardDark .vendorSettingsCardHeader p {
+  color: #94a3b8;
+}
+
 .vendorSettingsDivider {
   height: 1px;
   background: #e5e7eb;
   margin: 18px -28px 22px;
 }
 
+.vendorSettingsDividerDark {
+  background: #334155;
+}
+
+.vendorSettingsDeleteAction {
+  border: none;
+  background: transparent;
+  color: #dc2626;
+  font-size: 14px;
+  font-weight: 500;
+  padding: 4px 0;
+  cursor: pointer;
+}
+
 .vendorSettingsDividerThin {
   height: 1px;
   background: #e5e7eb;
   margin: 12px 0 10px;
+}
+
+.vendorSettingsDividerThinDark {
+  background: #334155;
 }
 
 .vendorSettingsGrid {
@@ -3893,6 +4069,10 @@ input:checked + .slider:before {
   color: #111827;
 }
 
+.vendorSettingsLabelDark {
+  color: #f8fafc;
+}
+
 .vendorSettingsColorInput {
   display: flex;
   align-items: center;
@@ -3902,6 +4082,12 @@ input:checked + .slider:before {
   border: 1px solid #e5e7eb;
   background: #ffffff;
   box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.02);
+}
+
+.vendorSettingsColorInputDark {
+  border-color: #334155;
+  background: #0f172a;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.02);
 }
 
 .vendorSettingsColorSwatch {
@@ -3916,6 +4102,10 @@ input:checked + .slider:before {
   color: #111827;
 }
 
+.vendorSettingsValueDark {
+  color: #f8fafc;
+}
+
 .vendorSettingsSelect {
   display: flex;
   align-items: center;
@@ -3926,10 +4116,19 @@ input:checked + .slider:before {
   background: #ffffff;
 }
 
+.vendorSettingsSelectDark {
+  border-color: #334155;
+  background: #0f172a;
+}
+
 .vendorSettingsSelectIcon {
   font-size: 14px;
   color: #111827;
   transform: translateY(-1px);
+}
+
+.vendorSettingsSelectIconDark {
+  color: #cbd5e1;
 }
 
 .vendorSettingsSelectWrapper {
@@ -3970,6 +4169,211 @@ input:checked + .slider:before {
   color: #9ca3af;
 }
 
+.vendorSettingsTextarea {
+  width: 100%;
+  min-height: 108px;
+  border-radius: 14px;
+  border: 1px solid #e5e7eb;
+  padding: 14px 16px;
+  font-size: 15px;
+  color: #111827;
+  background: #ffffff;
+  box-sizing: border-box;
+  resize: vertical;
+}
+
+.vendorSettingsTextarea::placeholder {
+  color: #9ca3af;
+}
+
+.vendorSettingsUploadPanel {
+  border: 1px dashed #e5e7eb;
+  border-radius: 18px;
+  background: #ffffff;
+  min-height: 240px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.vendorSettingsUploadInner {
+  width: 100%;
+  max-width: 320px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  text-align: center;
+}
+
+.vendorSettingsUploadPreview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: #f3f4f6;
+}
+
+.vendorSettingsUploadPreview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.vendorSettingsUploadPreviewRound {
+  width: 96px;
+  height: 96px;
+  border-radius: 999px;
+}
+
+.vendorSettingsUploadPreviewBanner {
+  width: 184px;
+  height: 44px;
+  border-radius: 10px;
+}
+
+.vendorSettingsUploadPlaceholder {
+  width: 100%;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #f3f4f6, #e5e7eb);
+}
+
+.vendorSettingsUploadPlaceholderBanner {
+  width: 100%;
+  height: 100%;
+  border-radius: 10px;
+  background: #d4d4d4;
+}
+
+.vendorSettingsUploadButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #dbeafe;
+  background: #ffffff;
+  color: #2563eb;
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: 12px;
+  padding: 10px 14px;
+  cursor: pointer;
+}
+
+.vendorSettingsUploadIcon {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+}
+
+.vendorSettingsUploadNote {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #78716c;
+}
+
+.vendorSettingsShippingGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.vendorSettingsShippingCard {
+  background: #ffffff;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 10px 24px rgba(17, 24, 39, 0.08);
+  padding: 18px 16px;
+}
+
+.vendorSettingsShippingTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.vendorSettingsShippingTop h3 {
+  margin: 0 0 6px;
+  font-size: 17px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.vendorSettingsShippingTop p {
+  margin: 0 0 4px;
+  font-size: 14px;
+  color: #6b7280;
+}
+
+.vendorSettingsShippingTop p span {
+  color: #1c1917;
+}
+
+.vendorSettingsMoreAction {
+  border: none;
+  background: transparent;
+  color: #111827;
+  font-size: 24px;
+  line-height: 1;
+  padding: 0;
+  cursor: pointer;
+}
+
+.vendorSettingsShippingBottom {
+  margin-top: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.vendorSettingsShippingRate {
+  font-size: 14px;
+  color: #44403c;
+}
+
+.vendorSettingsShippingToggleWrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  border: none;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+}
+
+.vendorSettingsShippingToggleLabel {
+  font-size: 14px;
+  color: #1c1917;
+}
+
+.vendorSettingsShippingToggle {
+  width: 32px;
+  height: 18px;
+  border-radius: 999px;
+  background: #d1d5db;
+  padding: 2px;
+  display: inline-flex;
+  align-items: center;
+  transition: background 0.2s ease;
+}
+
+.vendorSettingsShippingToggleActive {
+  background: #16a34a;
+  justify-content: flex-end;
+}
+
+.vendorSettingsShippingToggleKnob {
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background: #ffffff;
+  display: inline-block;
+}
+
 .vendorSettingsSubTitle {
   font-size: 15px;
   font-weight: 600;
@@ -3987,6 +4391,10 @@ input:checked + .slider:before {
   color: #111827;
 }
 
+.vendorSettingsThemeTitleDark {
+  color: #f8fafc !important;
+}
+
 .vendorSettingsThemeRow {
   display: flex;
   align-items: center;
@@ -3994,6 +4402,15 @@ input:checked + .slider:before {
   padding: 8px 0;
   font-size: 16px;
   color: #111827;
+  width: 100%;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+}
+
+.vendorSettingsThemeRowDark {
+  color: #e2e8f0;
 }
 
 .vendorSettingsRadio {
@@ -4005,6 +4422,11 @@ input:checked + .slider:before {
   align-items: center;
   justify-content: center;
   background: #ffffff;
+}
+
+.vendorSettingsRadioDark {
+  border-color: #475569;
+  background: #0f172a;
 }
 
 .vendorSettingsRadioActive {
@@ -5454,6 +5876,24 @@ input:checked + .slider:before {
     justify-content: center;
   }
 
+  .vendorSettingsCardTop {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .vendorSettingsSectionHeader {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .vendorSettingsPrimaryAction {
+    width: 100%;
+  }
+
+  .vendorSettingsShippingGrid {
+    grid-template-columns: 1fr;
+  }
+
   .vendorDomainHeader {
     flex-direction: column;
   }
@@ -5514,6 +5954,24 @@ input:checked + .slider:before {
 
   .vendorSettingsNavItem {
     font-size: 15px;
+  }
+
+  .vendorSettingsCard {
+    padding: 20px 18px 24px;
+  }
+
+  .vendorSettingsDivider {
+    margin-left: -18px;
+    margin-right: -18px;
+  }
+
+  .vendorSettingsUploadPanel {
+    min-height: 220px;
+    padding: 18px;
+  }
+
+  .vendorSettingsUploadPreviewBanner {
+    width: 160px;
   }
 
   .vendorDomainPage {

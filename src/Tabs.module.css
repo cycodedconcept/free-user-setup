@@ -249,6 +249,71 @@
   border: 1px solid #E5E7EB;
 }
 
+.orderDetailsActionRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: flex-end;
+  width: 100%;
+}
+
+.orderDetailsActionButton {
+  min-width: 170px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+}
+
+.orderFulfilledToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  cursor: default;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.orderFulfilledToggle input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.orderFulfilledToggleBox {
+  width: 28px;
+  height: 28px;
+  border-radius: 9px;
+  border: 1px solid #D1D5DB;
+  background: #FFFFFF;
+  color: transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.orderFulfilledToggle input:checked + .orderFulfilledToggleBox {
+  background: #E9FFF0;
+  border-color: #0EC049;
+  color: #0EC049;
+  box-shadow: 0 8px 18px rgba(14, 192, 73, 0.18);
+}
+
+@media (min-width: 992px) {
+  .orderDetailsActionRow {
+    flex-wrap: nowrap;
+    width: auto;
+  }
+}
+
+@media (max-width: 767px) {
+  .orderDetailsActionButton {
+    width: 100%;
+  }
+}
+
 .card-sec {
   height: 500px;
   position: relative;
@@ -749,5 +814,4 @@
     font-size: 14px;
   }
 }
-
 

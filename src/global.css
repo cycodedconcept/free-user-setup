@@ -1,17 +1,142 @@
 @import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
 
+:root {
+  --app-bg: #fafafa;
+  --app-surface: #ffffff;
+  --app-surface-2: #f8fafc;
+  --app-surface-3: #f1f5f9;
+  --app-border: #e5e7eb;
+  --app-border-strong: #cbd5e1;
+  --app-text: #111827;
+  --app-text-muted: #6b7280;
+  --app-text-subtle: #8a92a5;
+  --app-primary: #0273f9;
+  --app-sidebar-active: #eaf4ff;
+  --app-sidebar-hover: #f8f9fa;
+  --app-shadow-soft: 0 6px 20px rgba(15, 23, 42, 0.06);
+}
+
 #root {
     margin: 0 !important;
     padding: 0 !important;
     text-align: left;
+    min-height: 100%;
+    background: var(--app-bg);
+    color: var(--app-text);
 }
 
 body, html {
   height: 100%;
 }
 
+body {
+  margin: 0;
+  background: var(--app-bg);
+  color: var(--app-text);
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
 * {
     font-family: "Poppins", "Open Sans", sans-serif;
+}
+
+body.mycroshop-theme-dark {
+  --app-bg: #020617;
+  --app-surface: #0f172a;
+  --app-surface-2: #111827;
+  --app-surface-3: #1e293b;
+  --app-border: #334155;
+  --app-border-strong: #475569;
+  --app-text: #e2e8f0;
+  --app-text-muted: #94a3b8;
+  --app-text-subtle: #cbd5e1;
+  --app-primary: #38bdf8;
+  --app-sidebar-active: rgba(56, 189, 248, 0.14);
+  --app-sidebar-hover: rgba(148, 163, 184, 0.12);
+  --app-shadow-soft: 0 18px 40px rgba(2, 6, 23, 0.4);
+}
+
+body.mycroshop-theme-dark .bg-white,
+body.mycroshop-theme-dark .bg-light,
+body.mycroshop-theme-dark .card,
+body.mycroshop-theme-dark .table-responsive,
+body.mycroshop-theme-dark [class*="modal-content"] {
+  background: var(--app-surface) !important;
+  color: var(--app-text) !important;
+  border-color: var(--app-border) !important;
+}
+
+body.mycroshop-theme-dark .shadow,
+body.mycroshop-theme-dark .shadow-sm,
+body.mycroshop-theme-dark .shadow-lg {
+  box-shadow: var(--app-shadow-soft) !important;
+}
+
+body.mycroshop-theme-dark .border,
+body.mycroshop-theme-dark .border-top,
+body.mycroshop-theme-dark .border-end,
+body.mycroshop-theme-dark .border-bottom,
+body.mycroshop-theme-dark .border-start {
+  border-color: var(--app-border) !important;
+}
+
+body.mycroshop-theme-dark .text-dark,
+body.mycroshop-theme-dark .table,
+body.mycroshop-theme-dark .table > :not(caption) > * > *,
+body.mycroshop-theme-dark .card-title,
+body.mycroshop-theme-dark .card-body,
+body.mycroshop-theme-dark .dropdown-item,
+body.mycroshop-theme-dark .page-link {
+  color: var(--app-text) !important;
+}
+
+body.mycroshop-theme-dark .text-muted,
+body.mycroshop-theme-dark small,
+body.mycroshop-theme-dark .form-text,
+body.mycroshop-theme-dark .dropdown-toggle::after {
+  color: var(--app-text-muted) !important;
+}
+
+body.mycroshop-theme-dark .table-light,
+body.mycroshop-theme-dark .table-light > th,
+body.mycroshop-theme-dark .table-light > td,
+body.mycroshop-theme-dark .table thead th {
+  background: var(--app-surface-2) !important;
+  color: var(--app-text) !important;
+  border-color: var(--app-border) !important;
+}
+
+body.mycroshop-theme-dark .form-control,
+body.mycroshop-theme-dark .form-select,
+body.mycroshop-theme-dark .input-group-text,
+body.mycroshop-theme-dark input,
+body.mycroshop-theme-dark textarea,
+body.mycroshop-theme-dark select {
+  background: var(--app-surface-2) !important;
+  color: var(--app-text) !important;
+  border-color: var(--app-border) !important;
+}
+
+body.mycroshop-theme-dark input::placeholder,
+body.mycroshop-theme-dark textarea::placeholder {
+  color: var(--app-text-muted) !important;
+}
+
+body.mycroshop-theme-dark .dropdown-menu,
+body.mycroshop-theme-dark .page-item.disabled .page-link {
+  background: var(--app-surface) !important;
+  color: var(--app-text) !important;
+  border-color: var(--app-border) !important;
+}
+
+body.mycroshop-theme-dark .swal2-popup {
+  background: var(--app-surface) !important;
+  color: var(--app-text) !important;
+}
+
+body.mycroshop-theme-dark .swal2-title,
+body.mycroshop-theme-dark .swal2-html-container {
+  color: var(--app-text) !important;
 }
 
 .my {

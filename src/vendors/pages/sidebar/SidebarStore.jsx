@@ -62,19 +62,29 @@ const SidebarStore = ({ activeTab, setActiveTab }) => {
 
   return (
     <>
-      <div className="sidebar d-flex flex-column p-3 bg-white shadow-sm" style={{ minHeight: "100vh", overflowY: "auto" }}>
+      <div
+        className="sidebar d-flex flex-column p-3"
+        style={{
+          minHeight: "100vh",
+          overflowY: "auto",
+          background: "var(--app-surface)",
+          color: "var(--app-text)",
+          borderRight: "1px solid var(--app-border)",
+          boxShadow: "var(--app-shadow-soft)",
+        }}
+      >
         {/* Logo Section */}
         <div className="d-flex align-items-center mb-4 justify-content-between">
           <img src={Logo} alt="" className="w-50" />
-          <FaBars className="mr-2" style={{ cursor: "pointer" }} />
+          <FaBars className="mr-2" style={{ cursor: "pointer", color: "var(--app-text)" }} />
         </div>
 
         {/* Profile Section */}
-        <div className="profile mb-3" style={{ borderBottom: "1px solid #FAFAFA", paddingBottom: "15px" }}>
+        <div className="profile mb-3" style={{ borderBottom: "1px solid var(--app-border)", paddingBottom: "15px" }}>
           <div className="d-flex align-items-center" style={{ cursor: "pointer" }}>
             <img src={El} alt="" style={{ width: "40px", height: "40px", borderRadius: "50%" }} />
-            <span className="mx-2" style={{ fontSize: "14px", fontWeight: "500" }}>{userName}</span>
-            <FontAwesomeIcon icon={faChevronDown} style={{ marginLeft: "auto", fontSize: "12px" }} />
+            <span className="mx-2" style={{ fontSize: "14px", fontWeight: "500", color: "var(--app-text)" }}>{userName}</span>
+            <FontAwesomeIcon icon={faChevronDown} style={{ marginLeft: "auto", fontSize: "12px", color: "var(--app-text-muted)" }} />
           </div>
         </div>
 
@@ -89,8 +99,8 @@ const SidebarStore = ({ activeTab, setActiveTab }) => {
                   onClick={() => handleItemClick(btn)}
                   className="btn d-flex align-items-center justify-content-between w-100 text-left p-2 mb-3"
                   style={{
-                    color: isActiveParent(btn) ? "#0273F9" : "#6C7293",
-                    background: isActiveParent(btn) ? "#EAF4FF" : "transparent",
+                    color: isActiveParent(btn) ? "var(--app-primary)" : "var(--app-text-muted)",
+                    background: isActiveParent(btn) ? "var(--app-sidebar-active)" : "transparent",
                     border: "none",
                     borderRadius: "8px",
                     fontSize: "14px",
@@ -99,7 +109,7 @@ const SidebarStore = ({ activeTab, setActiveTab }) => {
                   }}
                   onMouseEnter={(e) => {
                     if (!isActiveParent(btn)) {
-                      e.target.style.background = "#F8F9FA";
+                      e.target.style.background = "var(--app-sidebar-hover)";
                     }
                   }}
                   onMouseLeave={(e) => {
@@ -112,7 +122,7 @@ const SidebarStore = ({ activeTab, setActiveTab }) => {
                     <FontAwesomeIcon
                       icon={btn.icon}
                       style={{
-                        color: isActiveParent(btn) ? "#0273F9" : "#6C7293",
+                        color: isActiveParent(btn) ? "var(--app-primary)" : "var(--app-text-muted)",
                         width: "16px",
                         marginRight: "12px",
                       }}
@@ -124,7 +134,7 @@ const SidebarStore = ({ activeTab, setActiveTab }) => {
                       icon={expandedItems[btn.key] ? faChevronDown : faChevronRight}
                       style={{
                         fontSize: "12px",
-                        color: isActiveParent(btn) ? "#0273F9" : "#6C7293",
+                        color: isActiveParent(btn) ? "var(--app-primary)" : "var(--app-text-muted)",
                         transition: "transform 0.2s ease",
                         marginLeft: "auto",
                       }}

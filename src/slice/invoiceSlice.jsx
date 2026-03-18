@@ -74,6 +74,22 @@ const normalizeInvoicesResponse = (payload) => {
     };
 };
 
+const extractInvoiceFromPayload = (payload) => {
+    const responseData = payload?.data ?? payload ?? {};
+    const data = responseData?.data ?? {};
+    const invoice =
+        responseData?.invoice ??
+        data?.invoice ??
+        (data && !Array.isArray(data) ? data : null) ??
+        responseData;
+
+    if (!invoice || typeof invoice !== 'object' || Array.isArray(invoice)) {
+        return null;
+    }
+
+    return invoice;
+};
+
 const initialState = {
     loading: false,
     error: null,
@@ -146,6 +162,106 @@ export const createInvoice = createAsyncThunk(
     }
 );
 
+export const updateInvoice = createAsyncThunk(
+    'invoice/updateInvoice',
+    async (
+        {
+            token,
+            id,
+            invoiceId,
+            store_id,
+            online_store_id,
+            issue_date,
+            due_date,
+            currency,
+            items,
+            tax_rate,
+            discount_amount,
+            notes
+        },
+        { rejectWithValue }
+    ) => {
+        try {
+            const resolvedInvoiceId = id ?? invoiceId;
+
+            if (!resolvedInvoiceId) {
+                return rejectWithValue({ message: 'Invoice ID is required' });
+            }
+
+            const resolvedStoreId = normalizeStoreId(store_id ?? online_store_id);
+            const payload = {
+                store_id: resolvedStoreId ?? null,
+                issue_date,
+                due_date,
+                currency,
+                items,
+                tax_rate,
+                discount_amount,
+                notes
+            };
+
+            const response = await axios.put(`${API_URL}/invoices/${resolvedInvoiceId}`, payload, {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            return response.data;
+        } catch (error) {
+            if (error.response && error.response.data) {
+                return rejectWithValue(error.response.data);
+            }
+            return rejectWithValue(error.message || "Something went wrong");
+        }
+    }
+);
+
+export const updateInvoiceStatus = createAsyncThunk(
+    'invoice/updateInvoiceStatus',
+    async (
+        {
+            token,
+            id,
+            invoiceId,
+            status,
+            payment_method,
+            payment_date
+        },
+        { rejectWithValue }
+    ) => {
+        try {
+            const resolvedInvoiceId = id ?? invoiceId;
+
+            if (!resolvedInvoiceId) {
+                return rejectWithValue({ message: 'Invoice ID is required' });
+            }
+
+            const response = await axios.patch(
+                `${API_URL}/invoices/${resolvedInvoiceId}/status`,
+                {
+                    status,
+                    payment_method,
+                    payment_date
+                },
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                }
+            );
+
+            return response.data;
+        } catch (error) {
+            if (error.response && error.response.data) {
+                return rejectWithValue(error.response.data);
+            }
+            return rejectWithValue(error.message || "Something went wrong");
+        }
+    }
+);
+
 const invoicesSlice = createSlice({
     name: 'invoice',
     initialState,
@@ -182,6 +298,60 @@ const invoicesSlice = createSlice({
             state.success = action.payload;
         })
         .addCase(createInvoice.rejected, (state, action) => {
+            state.loading = false;
+            state.success = false;
+            state.error = action.payload;
+        })
+        .addCase(updateInvoice.pending, (state) => {
+            state.loading = true;
+            state.success = false;
+            state.error = null;
+        })
+        .addCase(updateInvoice.fulfilled, (state, action) => {
+            state.loading = false;
+            state.success = action.payload;
+
+            const updatedInvoice = extractInvoiceFromPayload(action.payload);
+
+            if (!updatedInvoice?.id) {
+                return;
+            }
+
+            state.invoiceData.data = state.invoiceData.data.map((invoice) =>
+                invoice.id === updatedInvoice.id ? { ...invoice, ...updatedInvoice } : invoice
+            );
+        })
+        .addCase(updateInvoice.rejected, (state, action) => {
+            state.loading = false;
+            state.success = false;
+            state.error = action.payload;
+        })
+        .addCase(updateInvoiceStatus.pending, (state) => {
+            state.loading = true;
+            state.success = false;
+            state.error = null;
+        })
+        .addCase(updateInvoiceStatus.fulfilled, (state, action) => {
+            state.loading = false;
+            state.success = action.payload;
+
+            const updatedInvoice =
+                extractInvoiceFromPayload(action.payload) || {
+                    id: action.meta.arg.id ?? action.meta.arg.invoiceId,
+                    status: action.meta.arg.status,
+                    payment_method: action.meta.arg.payment_method,
+                    payment_date: action.meta.arg.payment_date
+                };
+
+            if (!updatedInvoice?.id) {
+                return;
+            }
+
+            state.invoiceData.data = state.invoiceData.data.map((invoice) =>
+                invoice.id === updatedInvoice.id ? { ...invoice, ...updatedInvoice } : invoice
+            );
+        })
+        .addCase(updateInvoiceStatus.rejected, (state, action) => {
             state.loading = false;
             state.success = false;
             state.error = action.payload;
