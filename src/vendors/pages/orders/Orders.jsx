@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -6,21 +6,27 @@ import {
   faCalendarCheck,
   faChevronLeft,
   faCircleCheck,
+  faDownload,
   faEllipsisV,
+  faEye,
   faMagnifyingGlass,
   faReceipt,
 } from "@fortawesome/free-solid-svg-icons";
 import Button from "../../../components/ui/Button";
 import Pagination from "../../../components/Pagination";
+import CreateReceiptView from "./CreateReceiptView";
 import {
+  getReceiptDetails,
   getReceipts,
   getOnlineStoreOrderDetails,
   getOnlineStoreOrders,
+  resetReceiptDetails,
   resetOrderDetails,
   updateOnlineStoreOrderStatus,
 } from "../../../slice/order";
 import stylesItem from "../../../Tabs.module.css";
 import Swal from "sweetalert2";
+import { API_URL } from "../../../config/constant";
 
 const EMPTY_STATE_CONTENT = {
   orders: {
@@ -653,6 +659,65 @@ const getReceiptPreviewUrl = (receipt) =>
 const getReceiptPdfUrl = (receipt) =>
   receipt?.pdf_url || receipt?.document_url || "";
 
+const resolveReceiptAssetUrl = (value) => {
+  if (!value) {
+    return "";
+  }
+
+  if (
+    value.startsWith("http://") ||
+    value.startsWith("https://") ||
+    value.startsWith("data:") ||
+    value.startsWith("blob:")
+  ) {
+    return value;
+  }
+
+  const normalizedValue = value.startsWith("/") ? value : `/${value}`;
+  return new URL(normalizedValue, API_URL).href;
+};
+
+const getReceiptCustomerName = (receipt) =>
+  receipt?.customer_name || receipt?.customer?.name || "Walk-in Customer";
+
+const getReceiptCustomerEmail = (receipt) =>
+  receipt?.customer_email || receipt?.customer?.email || "-";
+
+const getReceiptCustomerPhone = (receipt) =>
+  receipt?.customer_phone || receipt?.phone || receipt?.customer?.phone || "-";
+
+const getReceiptAmount = (receipt) =>
+  receipt?.amount_received ??
+  receipt?.total ??
+  receipt?.paid_amount ??
+  receipt?.amount ??
+  0;
+
+const getReceiptStatus = (receipt) =>
+  titleize(receipt?.status || receipt?.payment_status || "saved");
+
+const getReceiptStatusClassName = (receipt) => {
+  const normalizedStatus = `${receipt?.status || receipt?.payment_status || "saved"}`.toLowerCase();
+
+  if (normalizedStatus.includes("paid") || normalizedStatus.includes("success")) {
+    return stylesItem.paid;
+  }
+
+  if (normalizedStatus.includes("process")) {
+    return stylesItem.processing;
+  }
+
+  if (normalizedStatus.includes("pending")) {
+    return stylesItem.pending;
+  }
+
+  if (normalizedStatus.includes("fail") || normalizedStatus.includes("cancel")) {
+    return stylesItem.cancelled;
+  }
+
+  return stylesItem.online;
+};
+
 const OrderDetailsView = ({
   order,
   loading,
@@ -682,11 +747,9 @@ const OrderDetailsView = ({
   const trackingNumber =
     order?.tracking_number || order?.shipment_tracking_number || "-";
   const timeline = buildTimeline(order);
-  const [isFulfilled, setIsFulfilled] = useState(false);
-
-  useEffect(() => {
-    setIsFulfilled(getStatusRank(order?.status) >= 4);
-  }, [order?.id, order?.status]);
+  const [isFulfilled, setIsFulfilled] = useState(
+    getStatusRank(order?.status) >= 4
+  );
 
   if (loading) {
     return (
@@ -1170,9 +1233,15 @@ const ReceiptManagementView = ({
   onBack,
   onCreateReceipt,
   onExport,
+  onOpenReceiptDetails,
+  onCloseReceiptDetails,
   loading,
   error,
   receipts,
+  selectedReceipt,
+  receiptDetailsLoading,
+  receiptDetailsError,
+  receiptDetails,
   searchInput,
   onSearchInputChange,
   status,
@@ -1185,9 +1254,217 @@ const ReceiptManagementView = ({
   onPageChange,
 }) => {
   const hasReceipts = receipts.length > 0;
+  const [openDropdown, setOpenDropdown] = useState(null);
+  const dropdownRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setOpenDropdown(null);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleToggleDropdown = (receiptId) => {
+    setOpenDropdown((prev) => (prev === receiptId ? null : receiptId));
+  };
+
+  const handlePreviewReceipt = (receipt) => {
+    const previewUrl =
+      resolveReceiptAssetUrl(getReceiptPreviewUrl(receipt)) ||
+      resolveReceiptAssetUrl(getReceiptPdfUrl(receipt));
+
+    if (previewUrl) {
+      window.open(previewUrl, "_blank", "noopener,noreferrer");
+    }
+
+    setOpenDropdown(null);
+  };
+
+  const handleDownloadReceipt = (receipt) => {
+    const downloadUrl =
+      resolveReceiptAssetUrl(getReceiptPdfUrl(receipt)) ||
+      resolveReceiptAssetUrl(getReceiptPreviewUrl(receipt));
+
+    if (!downloadUrl) {
+      setOpenDropdown(null);
+      return;
+    }
+
+    const link = document.createElement("a");
+    link.href = downloadUrl;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    link.download = `${getReceiptNumber(receipt) || "receipt"}.pdf`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setOpenDropdown(null);
+  };
 
   return (
     <div>
+      {selectedReceipt && (
+        <div
+          onClick={onCloseReceiptDetails}
+          style={{
+            position: "fixed",
+            inset: 0,
+            backgroundColor: "rgba(15, 23, 42, 0.66)",
+            zIndex: 2450,
+            padding: "24px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <div
+            onClick={(event) => event.stopPropagation()}
+            style={{
+              width: "min(760px, 100%)",
+              maxHeight: "90vh",
+              backgroundColor: "#FFFFFF",
+              borderRadius: "20px",
+              overflow: "hidden",
+              boxShadow: "0 24px 60px rgba(15, 23, 42, 0.24)",
+            }}
+          >
+            <div
+              className="d-flex justify-content-between align-items-center px-4 py-3"
+              style={{ borderBottom: "1px solid #E5E7EB" }}
+            >
+              <div>
+                <h6 className="mb-1">Receipt Details</h6>
+                <small style={{ color: "#6B7280" }}>
+                  {getReceiptNumber(receiptDetails || selectedReceipt)}
+                </small>
+              </div>
+              <button
+                type="button"
+                className="btn"
+                onClick={onCloseReceiptDetails}
+                style={{
+                  padding: "8px 14px",
+                  border: "1px solid #E5E7EB",
+                  borderRadius: "8px",
+                  fontSize: "13px",
+                  backgroundColor: "#fff",
+                }}
+              >
+                Close
+              </button>
+            </div>
+            <div style={{ padding: "20px 24px", overflowY: "auto", maxHeight: "calc(90vh - 72px)" }}>
+              {receiptDetailsLoading ? (
+                <div className="text-center py-5">
+                  <div className="spinner-border text-primary" role="status">
+                    <span className="visually-hidden">Loading receipt details...</span>
+                  </div>
+                  <p style={{ marginTop: "12px", marginBottom: 0, color: "#6B7280", fontSize: "13px" }}>
+                    Loading receipt details...
+                  </p>
+                </div>
+              ) : receiptDetailsError ? (
+                <div
+                  style={{
+                    border: "1px solid #FECACA",
+                    backgroundColor: "#FEF2F2",
+                    color: "#991B1B",
+                    borderRadius: "12px",
+                    padding: "14px 16px",
+                    fontSize: "13px",
+                  }}
+                >
+                  {receiptDetailsError?.message || receiptDetailsError?.error || "Unable to load receipt details."}
+                </div>
+              ) : (
+                <>
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+                      gap: "14px",
+                      marginBottom: "20px",
+                    }}
+                  >
+                    <div style={{ padding: "14px", borderRadius: "14px", backgroundColor: "#F9FAFB", border: "1px solid #F3F4F6" }}>
+                      <small style={{ display: "block", color: "#6B7280", marginBottom: "6px" }}>Receipt Number</small>
+                      <div style={{ fontSize: "14px", color: "#111827", fontWeight: 600 }}>
+                        {getReceiptNumber(receiptDetails)}
+                      </div>
+                    </div>
+                    <div style={{ padding: "14px", borderRadius: "14px", backgroundColor: "#F9FAFB", border: "1px solid #F3F4F6" }}>
+                      <small style={{ display: "block", color: "#6B7280", marginBottom: "6px" }}>Invoice ID</small>
+                      <div style={{ fontSize: "14px", color: "#111827", fontWeight: 600 }}>
+                        {getReceiptInvoiceId(receiptDetails)}
+                      </div>
+                    </div>
+                    <div style={{ padding: "14px", borderRadius: "14px", backgroundColor: "#F9FAFB", border: "1px solid #F3F4F6" }}>
+                      <small style={{ display: "block", color: "#6B7280", marginBottom: "6px" }}>Created At</small>
+                      <div style={{ fontSize: "14px", color: "#111827", fontWeight: 600 }}>
+                        {formatLongDate(getReceiptDate(receiptDetails))}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="d-flex flex-wrap gap-2 mb-4">
+                    <button
+                      type="button"
+                      className="btn"
+                      disabled={!resolveReceiptAssetUrl(getReceiptPreviewUrl(receiptDetails))}
+                      onClick={() =>
+                        window.open(
+                          resolveReceiptAssetUrl(getReceiptPreviewUrl(receiptDetails)),
+                          "_blank",
+                          "noopener,noreferrer"
+                        )
+                      }
+                      style={{
+                        padding: "9px 14px",
+                        border: "1px solid #BFDBFE",
+                        borderRadius: "10px",
+                        fontSize: "13px",
+                        color: resolveReceiptAssetUrl(getReceiptPreviewUrl(receiptDetails)) ? "#1D4ED8" : "#9CA3AF",
+                        backgroundColor: "#EFF6FF",
+                      }}
+                    >
+                      <FontAwesomeIcon icon={faEye} className="me-2" />
+                      Open Preview
+                    </button>
+                    <button
+                      type="button"
+                      className="btn"
+                      disabled={!resolveReceiptAssetUrl(getReceiptPdfUrl(receiptDetails))}
+                      onClick={() =>
+                        window.open(
+                          resolveReceiptAssetUrl(getReceiptPdfUrl(receiptDetails)),
+                          "_blank",
+                          "noopener,noreferrer"
+                        )
+                      }
+                      style={{
+                        padding: "9px 14px",
+                        border: "1px solid #D1FAE5",
+                        borderRadius: "10px",
+                        fontSize: "13px",
+                        color: resolveReceiptAssetUrl(getReceiptPdfUrl(receiptDetails)) ? "#047857" : "#9CA3AF",
+                        backgroundColor: "#ECFDF5",
+                      }}
+                    >
+                      <FontAwesomeIcon icon={faReceipt} className="me-2" />
+                      Open PDF
+                    </button>
+                  </div>
+
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
       <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-start gap-3 mb-4">
         <div>
           <Button
@@ -1245,10 +1522,29 @@ const ReceiptManagementView = ({
         }}
       >
         <div className="card-body p-0">
-          <div className="p-3">
+          <div className="p-3 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
             <h5 className="mb-0" style={{ color: "var(--app-text)", fontSize: "16px" }}>
               {hasReceipts ? "Order List" : "Receipt List"}
             </h5>
+            {hasReceipts && (
+              <Button
+                unstyled
+                onClick={onExport}
+                style={{
+                  minWidth: "92px",
+                  padding: "12px 18px",
+                  border: "1px solid #E5E7EB",
+                  borderRadius: "12px",
+                  background: "#FFFFFF",
+                  color: "#1C1917",
+                  fontSize: "14px",
+                  fontWeight: 600,
+                  alignSelf: "flex-start",
+                }}
+              >
+                Export
+              </Button>
+            )}
           </div>
           <hr className="m-0" />
 
@@ -1264,15 +1560,27 @@ const ReceiptManagementView = ({
           ) : hasReceipts ? (
             <>
               <div className="p-3">
-                <div className="d-flex flex-column flex-xl-row justify-content-between gap-3">
-                  <div style={{ position: "relative", maxWidth: "270px", width: "100%" }}>
+                <div className="d-flex flex-column flex-xl-row justify-content-between gap-3 align-items-xl-center">
+                  <div
+                    style={{
+                      position: "relative",
+                      width: "100%",
+                      maxWidth: "280px",
+                      flexShrink: 0,
+                    }}
+                  >
                     <input
                       type="text"
                       value={searchInput}
                       onChange={(event) => onSearchInputChange(event.target.value)}
-                      placeholder="Search for orders"
+                      placeholder="Search for receipts"
                       className={`form-control ${stylesItem["input-item"]}`}
-                      style={{ paddingRight: "42px", background: "#FFFFFF" }}
+                      style={{
+                        paddingRight: "46px",
+                        paddingLeft: "14px",
+                        background: "#FFFFFF",
+                        height: "44px",
+                      }}
                     />
                     <FontAwesomeIcon
                       icon={faMagnifyingGlass}
@@ -1282,6 +1590,8 @@ const ReceiptManagementView = ({
                         top: "50%",
                         transform: "translateY(-50%)",
                         color: "#9CA3AF",
+                        pointerEvents: "none",
+                        fontSize: "16px",
                       }}
                     />
                   </div>
@@ -1321,22 +1631,6 @@ const ReceiptManagementView = ({
                       className={`form-control ${stylesItem["input-item"]}`}
                       style={{ width: "150px", background: "#FFFFFF", fontSize: "12px" }}
                     />
-                    <Button
-                      unstyled
-                      onClick={onExport}
-                      style={{
-                        minWidth: "92px",
-                        padding: "12px 18px",
-                        border: "1px solid #E5E7EB",
-                        borderRadius: "12px",
-                        background: "#FFFFFF",
-                        color: "#1C1917",
-                        fontSize: "14px",
-                        fontWeight: 600,
-                      }}
-                    >
-                      Export
-                    </Button>
                   </div>
                 </div>
               </div>
@@ -1358,98 +1652,160 @@ const ReceiptManagementView = ({
 
               <div className="table-responsive px-3 pb-1">
                 <table className="table align-middle mb-0">
-                  <thead style={{ background: "#FFFFFF" }}>
+                  <thead style={{ background: "#F8FAFC" }}>
                     <tr>
-                      <th style={{ fontSize: "14px", color: "#111827", borderBottom: "1px solid #E5E7EB" }}>Receipt #</th>
-                      <th style={{ fontSize: "14px", color: "#111827", borderBottom: "1px solid #E5E7EB" }}>Invoice</th>
-                      <th style={{ fontSize: "14px", color: "#111827", borderBottom: "1px solid #E5E7EB" }}>Date</th>
-                      <th style={{ fontSize: "14px", color: "#111827", borderBottom: "1px solid #E5E7EB" }}>Type</th>
-                      <th style={{ fontSize: "14px", color: "#111827", borderBottom: "1px solid #E5E7EB" }}>Preview</th>
-                      <th style={{ fontSize: "14px", color: "#111827", borderBottom: "1px solid #E5E7EB" }}>PDF</th>
-                      <th style={{ fontSize: "14px", color: "#111827", borderBottom: "1px solid #E5E7EB" }}>Status</th>
-                      <th style={{ width: "42px", borderBottom: "1px solid #E5E7EB" }} />
+                      <th style={{ fontSize: "12px", fontWeight: 600, color: "#374151", borderBottom: "1px solid #E5E7EB", background: "#F8FAFC", paddingTop: "14px", paddingBottom: "14px" }}>Receipt #</th>
+                      <th style={{ fontSize: "12px", fontWeight: 600, color: "#374151", borderBottom: "1px solid #E5E7EB", background: "#F8FAFC", paddingTop: "14px", paddingBottom: "14px" }}>Customer Name</th>
+                      <th style={{ fontSize: "12px", fontWeight: 600, color: "#374151", borderBottom: "1px solid #E5E7EB", background: "#F8FAFC", paddingTop: "14px", paddingBottom: "14px" }}>Customer Phone</th>
+                      <th style={{ fontSize: "12px", fontWeight: 600, color: "#374151", borderBottom: "1px solid #E5E7EB", background: "#F8FAFC", paddingTop: "14px", paddingBottom: "14px" }}>Type</th>
+                      <th style={{ fontSize: "12px", fontWeight: 600, color: "#374151", borderBottom: "1px solid #E5E7EB", background: "#F8FAFC", paddingTop: "14px", paddingBottom: "14px" }}>Amount Received</th>
+                      <th style={{ fontSize: "12px", fontWeight: 600, color: "#374151", borderBottom: "1px solid #E5E7EB", background: "#F8FAFC", paddingTop: "14px", paddingBottom: "14px" }}>Date</th>
+                      <th style={{ fontSize: "12px", fontWeight: 600, color: "#374151", borderBottom: "1px solid #E5E7EB", background: "#F8FAFC", paddingTop: "14px", paddingBottom: "14px" }}>Status</th>
+                      <th style={{ width: "42px", borderBottom: "1px solid #E5E7EB", background: "#F8FAFC" }} />
                     </tr>
                   </thead>
                   <tbody>
                     {receipts.map((receipt) => {
-                      const previewUrl = getReceiptPreviewUrl(receipt);
-                      const pdfUrl = getReceiptPdfUrl(receipt);
+                      const receiptKey = receipt?.id || getReceiptNumber(receipt);
 
                       return (
-                        <tr key={receipt?.id || getReceiptNumber(receipt)}>
-                          <td style={{ fontSize: "14px", color: "#374151", borderBottom: "1px solid #F3F4F6", paddingTop: "18px", paddingBottom: "18px" }}>
+                        <tr
+                          key={receiptKey}
+                          onClick={() => onOpenReceiptDetails(receipt)}
+                          style={{ background: "#FFFFFF", cursor: "pointer" }}
+                        >
+                          <td style={{ fontSize: "12px", color: "#374151", borderBottom: "1px solid #F3F4F6", paddingTop: "22px", paddingBottom: "22px" }}>
                             {getReceiptNumber(receipt)}
                           </td>
-                          <td style={{ fontSize: "14px", color: "#374151", borderBottom: "1px solid #F3F4F6" }}>
-                            {getReceiptInvoiceId(receipt)}
+                          <td style={{ fontSize: "12px", color: "#374151", borderBottom: "1px solid #F3F4F6", paddingTop: "18px", paddingBottom: "18px" }}>
+                            <div style={{ color: "#1F2937", fontWeight: 600, fontSize: "12px" }}>
+                              {getReceiptCustomerName(receipt)}
+                            </div>
+                            <div style={{ color: "#78716C", fontSize: "11px", marginTop: "4px" }}>
+                              {getReceiptCustomerEmail(receipt)}
+                            </div>
                           </td>
-                          <td style={{ fontSize: "14px", color: "#374151", borderBottom: "1px solid #F3F4F6" }}>
-                            {formatDate(getReceiptDate(receipt))}
+                          <td style={{ fontSize: "12px", color: "#374151", borderBottom: "1px solid #F3F4F6", paddingTop: "18px", paddingBottom: "18px" }}>
+                            {getReceiptCustomerPhone(receipt)}
                           </td>
-                          <td style={{ borderBottom: "1px solid #F3F4F6" }}>
+                          <td style={{ borderBottom: "1px solid #F3F4F6", paddingTop: "18px", paddingBottom: "18px" }}>
                             <span className={`${stylesItem["status-btn"]} ${stylesItem.online}`}>
                               {getReceiptType(receipt)}
                             </span>
                           </td>
-                          <td style={{ borderBottom: "1px solid #F3F4F6" }}>
-                            {previewUrl ? (
-                              <Button
-                                unstyled
-                                onClick={() => window.open(previewUrl, "_blank", "noopener,noreferrer")}
-                                style={{
-                                  padding: "6px 10px",
-                                  borderRadius: "8px",
-                                  border: "1px solid #D6E8FF",
-                                  background: "#FFFFFF",
-                                  color: "#0273F9",
-                                  fontSize: "13px",
-                                  fontWeight: 500,
-                                }}
-                              >
-                                Preview
-                              </Button>
-                            ) : (
-                              <span style={{ color: "#78716C", fontSize: "13px" }}>-</span>
-                            )}
+                          <td style={{ fontSize: "12px", color: "#374151", borderBottom: "1px solid #F3F4F6", paddingTop: "18px", paddingBottom: "18px" }}>
+                            {formatCurrency(getReceiptAmount(receipt))}
                           </td>
-                          <td style={{ borderBottom: "1px solid #F3F4F6" }}>
-                            {pdfUrl ? (
-                              <Button
-                                unstyled
-                                onClick={() => window.open(pdfUrl, "_blank", "noopener,noreferrer")}
-                                style={{
-                                  padding: "6px 10px",
-                                  borderRadius: "8px",
-                                  border: "1px solid #E5E7EB",
-                                  background: "#FFFFFF",
-                                  color: "#1C1917",
-                                  fontSize: "13px",
-                                  fontWeight: 500,
-                                }}
-                              >
-                                Download PDF
-                              </Button>
-                            ) : (
-                              <span style={{ color: "#78716C", fontSize: "13px" }}>-</span>
-                            )}
+                          <td style={{ fontSize: "12px", color: "#374151", borderBottom: "1px solid #F3F4F6", paddingTop: "18px", paddingBottom: "18px" }}>
+                            {formatDate(getReceiptDate(receipt))}
                           </td>
-                          <td style={{ borderBottom: "1px solid #F3F4F6" }}>
-                            <span className={`${stylesItem["status-btn"]} ${stylesItem.online}`}>
-                              Saved
+                          <td style={{ borderBottom: "1px solid #F3F4F6", paddingTop: "18px", paddingBottom: "18px" }}>
+                            <span className={`${stylesItem["status-btn"]} ${getReceiptStatusClassName(receipt)}`}>
+                              {getReceiptStatus(receipt)}
                             </span>
                           </td>
-                          <td style={{ borderBottom: "1px solid #F3F4F6" }}>
-                            <Button
-                              unstyled
-                              style={{
-                                border: "none",
-                                background: "transparent",
-                                color: "#374151",
-                                padding: "4px 8px",
-                              }}
+                          <td style={{ borderBottom: "1px solid #F3F4F6", paddingTop: "18px", paddingBottom: "18px" }}>
+                            <div
+                              style={{ position: "relative", display: "inline-flex" }}
+                              ref={openDropdown === receiptKey ? dropdownRef : null}
                             >
-                              <FontAwesomeIcon icon={faEllipsisV} />
-                            </Button>
+                              <Button
+                                unstyled
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  handleToggleDropdown(receiptKey);
+                                }}
+                                style={{
+                                  border: "none",
+                                  background: "transparent",
+                                  color: "#374151",
+                                  padding: "4px 8px",
+                                  lineHeight: 1,
+                                }}
+                              >
+                                <FontAwesomeIcon icon={faEllipsisV} />
+                              </Button>
+
+                              {openDropdown === receipt?.id && (
+                                <div
+                                  style={{
+                                    position: "absolute",
+                                    right: 0,
+                                    top: "calc(100% + 8px)",
+                                    minWidth: "156px",
+                                    background: "#FFFFFF",
+                                    border: "1px solid #E5E7EB",
+                                    borderRadius: "12px",
+                                    boxShadow: "0 12px 28px rgba(15, 23, 42, 0.12)",
+                                    padding: "6px",
+                                    zIndex: 20,
+                                  }}
+                                >
+                                  <button
+                                    type="button"
+                                    onClick={(event) => {
+                                      event.stopPropagation();
+                                      handlePreviewReceipt(receipt);
+                                    }}
+                                    disabled={!getReceiptPreviewUrl(receipt) && !getReceiptPdfUrl(receipt)}
+                                    style={{
+                                      display: "flex",
+                                      alignItems: "center",
+                                      gap: "10px",
+                                      width: "100%",
+                                      border: "none",
+                                      background: "transparent",
+                                      color:
+                                        !getReceiptPreviewUrl(receipt) && !getReceiptPdfUrl(receipt)
+                                          ? "#9CA3AF"
+                                          : "#374151",
+                                      fontSize: "13px",
+                                      padding: "10px 12px",
+                                      borderRadius: "8px",
+                                      textAlign: "left",
+                                      cursor:
+                                        !getReceiptPreviewUrl(receipt) && !getReceiptPdfUrl(receipt)
+                                          ? "not-allowed"
+                                          : "pointer",
+                                    }}
+                                  >
+                                    <FontAwesomeIcon icon={faEye} style={{ color: "#0273F9" }} />
+                                    Preview
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={(event) => {
+                                      event.stopPropagation();
+                                      handleDownloadReceipt(receipt);
+                                    }}
+                                    disabled={!getReceiptPdfUrl(receipt) && !getReceiptPreviewUrl(receipt)}
+                                    style={{
+                                      display: "flex",
+                                      alignItems: "center",
+                                      gap: "10px",
+                                      width: "100%",
+                                      border: "none",
+                                      background: "transparent",
+                                      color:
+                                        !getReceiptPdfUrl(receipt) && !getReceiptPreviewUrl(receipt)
+                                          ? "#9CA3AF"
+                                          : "#374151",
+                                      fontSize: "13px",
+                                      padding: "10px 12px",
+                                      borderRadius: "8px",
+                                      textAlign: "left",
+                                      cursor:
+                                        !getReceiptPdfUrl(receipt) && !getReceiptPreviewUrl(receipt)
+                                          ? "not-allowed"
+                                          : "pointer",
+                                    }}
+                                  >
+                                    <FontAwesomeIcon icon={faDownload} style={{ color: "#0273F9" }} />
+                                    Download
+                                  </button>
+                                </div>
+                              )}
+                            </div>
                           </td>
                         </tr>
                       );
@@ -1622,6 +1978,9 @@ const Orders = () => {
     receiptsLoading,
     receiptsError,
     receiptsData,
+    receiptDetailsLoading,
+    receiptDetailsError,
+    receiptDetails,
     ordersData,
     orderDetails,
     orderDetailsLoading,
@@ -1639,12 +1998,14 @@ const Orders = () => {
   const [endDate, setEndDate] = useState("");
   const [selectedOrderId, setSelectedOrderId] = useState(null);
   const [showReceiptView, setShowReceiptView] = useState(false);
+  const [showCreateReceipt, setShowCreateReceipt] = useState(false);
   const [receiptPage, setReceiptPage] = useState(1);
   const [receiptSearchInput, setReceiptSearchInput] = useState("");
   const [receiptSearch, setReceiptSearch] = useState("");
   const [receiptStatus, setReceiptStatus] = useState("");
   const [receiptStartDate, setReceiptStartDate] = useState("");
   const [receiptEndDate, setReceiptEndDate] = useState("");
+  const [selectedReceipt, setSelectedReceipt] = useState(null);
 
   const isOrdersTab = activeTab === "orders";
   const currentEmptyState = EMPTY_STATE_CONTENT[activeTab];
@@ -1718,13 +2079,6 @@ const Orders = () => {
   }, [activeTab, dispatch, selectedOrderId, token]);
 
   useEffect(() => {
-    if (activeTab !== "orders" && selectedOrderId) {
-      setSelectedOrderId(null);
-      dispatch(resetOrderDetails());
-    }
-  }, [activeTab, dispatch, selectedOrderId]);
-
-  useEffect(() => {
     if (!showReceiptView || !token || activeTab !== "orders") {
       return;
     }
@@ -1752,12 +2106,6 @@ const Orders = () => {
     token,
   ]);
 
-  useEffect(() => {
-    if (activeTab !== "orders" && showReceiptView) {
-      setShowReceiptView(false);
-    }
-  }, [activeTab, showReceiptView]);
-
   const handleExport = () => {
     exportOrdersToCsv(orders, activeTab);
   };
@@ -1781,19 +2129,65 @@ const Orders = () => {
 
   const handleBackFromReceiptView = () => {
     setShowReceiptView(false);
+    setShowCreateReceipt(false);
+    setSelectedReceipt(null);
+    dispatch(resetReceiptDetails());
   };
 
-  const handleCreateReceipt = async () => {
-    await Swal.fire({
-      icon: "info",
-      title: "Receipt creation unavailable",
-      text: "Receipt creation is not wired to an API yet.",
-      confirmButtonColor: "#0273F9",
-    });
+  const handleCreateReceipt = () => {
+    setShowCreateReceipt(true);
+  };
+
+  const handleBackFromCreateReceipt = () => {
+    setShowCreateReceipt(false);
+  };
+
+  const handleReceiptCreated = () => {
+    setReceiptPage(1);
+
+    if (!token) {
+      return;
+    }
+
+    dispatch(
+      getReceipts({
+        token,
+        search: receiptSearch,
+        status: receiptStatus,
+        start_date: receiptStartDate,
+        end_date: receiptEndDate,
+        page: 1,
+        limit: 10,
+      })
+    );
   };
 
   const handleExportReceipts = () => {
     exportReceiptsToCsv(receipts);
+  };
+
+  const handleOpenReceiptDetails = async (receipt) => {
+    if (!token || !receipt?.id) {
+      return;
+    }
+
+    setSelectedReceipt(receipt);
+
+    try {
+      await dispatch(
+        getReceiptDetails({
+          token,
+          receiptId: receipt.id,
+        })
+      ).unwrap();
+    } catch (receiptError) {
+      console.error("Failed to fetch receipt details:", receiptError);
+    }
+  };
+
+  const handleCloseReceiptDetails = () => {
+    setSelectedReceipt(null);
+    dispatch(resetReceiptDetails());
   };
 
   const handlePrintOrder = () => {
@@ -1910,14 +2304,29 @@ const Orders = () => {
   }
 
   if (showReceiptView && activeTab === "orders") {
+    if (showCreateReceipt) {
+      return (
+        <CreateReceiptView
+          onBack={handleBackFromCreateReceipt}
+          onCreated={handleReceiptCreated}
+        />
+      );
+    }
+
     return (
       <ReceiptManagementView
         onBack={handleBackFromReceiptView}
         onCreateReceipt={handleCreateReceipt}
         onExport={handleExportReceipts}
+        onOpenReceiptDetails={handleOpenReceiptDetails}
+        onCloseReceiptDetails={handleCloseReceiptDetails}
         loading={receiptsLoading}
         error={receiptsError}
         receipts={receipts}
+        selectedReceipt={selectedReceipt}
+        receiptDetailsLoading={receiptDetailsLoading}
+        receiptDetailsError={receiptDetailsError}
+        receiptDetails={receiptDetails}
         searchInput={receiptSearchInput}
         onSearchInputChange={(value) => {
           setReceiptSearchInput(value);
@@ -1986,6 +2395,10 @@ const Orders = () => {
           onClick={() => {
             setActiveTab("orders");
             setCurrentPage(1);
+            setSelectedOrderId(null);
+            dispatch(resetOrderDetails());
+            setShowReceiptView(false);
+            setShowCreateReceipt(false);
           }}
           aria-pressed={isOrdersTab}
           style={{
@@ -2005,6 +2418,10 @@ const Orders = () => {
           onClick={() => {
             setActiveTab("bookings");
             setCurrentPage(1);
+            setSelectedOrderId(null);
+            dispatch(resetOrderDetails());
+            setShowReceiptView(false);
+            setShowCreateReceipt(false);
           }}
           aria-pressed={!isOrdersTab}
           style={{

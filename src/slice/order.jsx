@@ -14,6 +14,9 @@ const initialState = {
   error: null,
   success: false,
   message: null,
+  createReceiptLoading: false,
+  createReceiptError: null,
+  createdReceipt: null,
   receiptsLoading: false,
   receiptsError: null,
   receiptsData: {
@@ -21,6 +24,16 @@ const initialState = {
     pagination: defaultPagination,
     total: 0,
   },
+  invoiceReceiptsLoading: false,
+  invoiceReceiptsError: null,
+  invoiceReceiptsData: {
+    data: [],
+    pagination: defaultPagination,
+    total: 0,
+  },
+  receiptDetailsLoading: false,
+  receiptDetailsError: null,
+  receiptDetails: null,
   orderDetailsLoading: false,
   orderDetailsError: null,
   orderDetails: null,
@@ -128,9 +141,53 @@ const normalizeReceiptsResponse = (payload) => {
     },
     total:
       Number(source?.total) ||
+      Number(source?.count) ||
       Number(responseData?.total) ||
+      Number(responseData?.count) ||
       Number(pagination?.total_items) ||
       (Array.isArray(receipts) ? receipts.length : 0),
+  };
+};
+
+const extractCreatedReceipt = (payload) => {
+  const responseData = payload?.data ?? payload ?? {};
+  const data = responseData?.data ?? {};
+  const receiptData = data?.receipt_data ?? responseData?.receipt_data ?? {};
+  const receipt =
+    responseData?.receipt ??
+    data?.receipt ??
+    (data && !Array.isArray(data) ? data : null) ??
+    responseData;
+  const previews = data?.previews ?? responseData?.previews ?? [];
+  const primaryPreview = Array.isArray(previews) ? previews[0] : null;
+
+  if (!receipt || typeof receipt !== "object" || Array.isArray(receipt)) {
+    return null;
+  }
+
+  return {
+    ...(receiptData && typeof receiptData === "object" ? receiptData : {}),
+    ...receipt,
+    preview_url:
+      receipt?.preview_url ||
+      primaryPreview?.preview_url ||
+      responseData?.preview_url ||
+      data?.preview_url ||
+      "",
+    pdf_url:
+      receipt?.pdf_url ||
+      receipt?.document_url ||
+      primaryPreview?.pdf_url ||
+      responseData?.pdf_url ||
+      data?.pdf_url ||
+      "",
+    download_url:
+      receipt?.download_url ||
+      receipt?.document_url ||
+      primaryPreview?.pdf_url ||
+      responseData?.download_url ||
+      data?.download_url ||
+      "",
   };
 };
 
@@ -241,6 +298,99 @@ export const getReceipts = createAsyncThunk(
   }
 );
 
+export const createStandaloneReceipt = createAsyncThunk(
+  "order/createStandaloneReceipt",
+  async (
+    {
+      token,
+      items,
+      currency,
+      currency_symbol,
+      payment_method,
+      customer_name,
+      customer_phone,
+      customer_email,
+      notes,
+    },
+    { rejectWithValue }
+  ) => {
+    try {
+      const response = await axios.post(
+        `${API_URL}/receipts/standalone`,
+        {
+          items,
+          currency,
+          currency_symbol,
+          payment_method,
+          customer_name,
+          customer_phone,
+          customer_email,
+          notes,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      return response.data;
+    } catch (error) {
+      if (error.response && error.response.data) {
+        return rejectWithValue(error.response.data);
+      }
+
+      return rejectWithValue(error.message || "Something went wrong");
+    }
+  }
+);
+
+export const getInvoiceReceipts = createAsyncThunk(
+  "order/getInvoiceReceipts",
+  async ({ token, invoiceId }, { rejectWithValue }) => {
+    try {
+      const response = await axios.get(
+        `${API_URL}/receipts/invoices/${invoiceId}/receipts`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      return response.data;
+    } catch (error) {
+      if (error.response && error.response.data) {
+        return rejectWithValue(error.response.data);
+      }
+
+      return rejectWithValue(error.message || "Something went wrong");
+    }
+  }
+);
+
+export const getReceiptDetails = createAsyncThunk(
+  "order/getReceiptDetails",
+  async ({ token, receiptId }, { rejectWithValue }) => {
+    try {
+      const response = await axios.get(`${API_URL}/receipts/${receiptId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      return response.data;
+    } catch (error) {
+      if (error.response && error.response.data) {
+        return rejectWithValue(error.response.data);
+      }
+
+      return rejectWithValue(error.message || "Something went wrong");
+    }
+  }
+);
+
 export const updateOnlineStoreOrderStatus = createAsyncThunk(
   "order/updateOnlineStoreOrderStatus",
   async ({ token, id, status }, { rejectWithValue }) => {
@@ -266,6 +416,31 @@ export const updateOnlineStoreOrderStatus = createAsyncThunk(
   }
 );
 
+export const generateReceiptFromInvoice = createAsyncThunk(
+  'order/generateReceiptFromInvoice',
+  async ({token, invoiceId}, {rejectWithValue}) => {
+    try {
+      const response = await axios.post(
+        `${API_URL}/receipts/invoices/${invoiceId}/generate`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      return response.data;
+    } catch (error) {
+      if (error.response && error.response.data) {
+        return rejectWithValue(error.response.data);
+      }
+
+      return rejectWithValue(error.message || "Something went wrong");
+    }
+  }
+)
+
 const orderSlice = createSlice({
   name: "order",
   initialState,
@@ -275,17 +450,52 @@ const orderSlice = createSlice({
       state.success = false;
       state.error = null;
       state.message = null;
+      state.createReceiptLoading = false;
+      state.createReceiptError = null;
+      state.createdReceipt = null;
       state.receiptsLoading = false;
       state.receiptsError = null;
+      state.invoiceReceiptsLoading = false;
+      state.invoiceReceiptsError = null;
+      state.invoiceReceiptsData = {
+        data: [],
+        pagination: defaultPagination,
+        total: 0,
+      };
+      state.receiptDetailsLoading = false;
+      state.receiptDetailsError = null;
+      state.receiptDetails = null;
       state.orderDetailsLoading = false;
       state.orderDetailsError = null;
       state.orderStatusUpdating = false;
       state.orderStatusUpdateError = null;
     },
+    resetCreatedReceipt: (state) => {
+      state.createReceiptLoading = false;
+      state.createReceiptError = null;
+      state.createdReceipt = null;
+    },
+    resetInvoiceReceipts: (state) => {
+      state.invoiceReceiptsLoading = false;
+      state.invoiceReceiptsError = null;
+      state.invoiceReceiptsData = {
+        data: [],
+        pagination: defaultPagination,
+        total: 0,
+      };
+    },
+    resetReceiptDetails: (state) => {
+      state.receiptDetailsLoading = false;
+      state.receiptDetailsError = null;
+      state.receiptDetails = null;
+    },
     resetOrderDetails: (state) => {
       state.orderDetailsLoading = false;
       state.orderDetailsError = null;
       state.orderDetails = null;
+      state.createReceiptLoading = false;
+      state.createReceiptError = null;
+      state.createdReceipt = null;
       state.receiptsLoading = false;
       state.receiptsError = null;
       state.receiptsData = {
@@ -293,12 +503,37 @@ const orderSlice = createSlice({
         pagination: defaultPagination,
         total: 0,
       };
+      state.invoiceReceiptsLoading = false;
+      state.invoiceReceiptsError = null;
+      state.invoiceReceiptsData = {
+        data: [],
+        pagination: defaultPagination,
+        total: 0,
+      };
+      state.receiptDetailsLoading = false;
+      state.receiptDetailsError = null;
+      state.receiptDetails = null;
       state.orderStatusUpdating = false;
       state.orderStatusUpdateError = null;
     },
   },
   extraReducers: (builder) => {
     builder
+      .addCase(createStandaloneReceipt.pending, (state) => {
+        state.createReceiptLoading = true;
+        state.createReceiptError = null;
+        state.createdReceipt = null;
+      })
+      .addCase(createStandaloneReceipt.fulfilled, (state, action) => {
+        state.createReceiptLoading = false;
+        state.createReceiptError = null;
+        state.createdReceipt = extractCreatedReceipt(action.payload);
+      })
+      .addCase(createStandaloneReceipt.rejected, (state, action) => {
+        state.createReceiptLoading = false;
+        state.createReceiptError = action.payload;
+        state.createdReceipt = null;
+      })
       .addCase(getReceipts.pending, (state) => {
         state.receiptsLoading = true;
         state.receiptsError = null;
@@ -311,6 +546,44 @@ const orderSlice = createSlice({
       .addCase(getReceipts.rejected, (state, action) => {
         state.receiptsLoading = false;
         state.receiptsError = action.payload;
+      })
+      .addCase(getInvoiceReceipts.pending, (state) => {
+        state.invoiceReceiptsLoading = true;
+        state.invoiceReceiptsError = null;
+        state.invoiceReceiptsData = {
+          data: [],
+          pagination: defaultPagination,
+          total: 0,
+        };
+      })
+      .addCase(getInvoiceReceipts.fulfilled, (state, action) => {
+        state.invoiceReceiptsLoading = false;
+        state.invoiceReceiptsError = null;
+        state.invoiceReceiptsData = normalizeReceiptsResponse(action.payload);
+      })
+      .addCase(getInvoiceReceipts.rejected, (state, action) => {
+        state.invoiceReceiptsLoading = false;
+        state.invoiceReceiptsError = action.payload;
+        state.invoiceReceiptsData = {
+          data: [],
+          pagination: defaultPagination,
+          total: 0,
+        };
+      })
+      .addCase(getReceiptDetails.pending, (state) => {
+        state.receiptDetailsLoading = true;
+        state.receiptDetailsError = null;
+        state.receiptDetails = null;
+      })
+      .addCase(getReceiptDetails.fulfilled, (state, action) => {
+        state.receiptDetailsLoading = false;
+        state.receiptDetailsError = null;
+        state.receiptDetails = extractCreatedReceipt(action.payload);
+      })
+      .addCase(getReceiptDetails.rejected, (state, action) => {
+        state.receiptDetailsLoading = false;
+        state.receiptDetailsError = action.payload;
+        state.receiptDetails = null;
       })
       .addCase(getOnlineStoreOrders.pending, (state) => {
         state.loading = true;
@@ -374,9 +647,34 @@ const orderSlice = createSlice({
       .addCase(updateOnlineStoreOrderStatus.rejected, (state, action) => {
         state.orderStatusUpdating = false;
         state.orderStatusUpdateError = action.payload;
-      });
+      })
+      .addCase(generateReceiptFromInvoice.pending, (state) => {
+        state.createReceiptLoading = true;
+        state.createReceiptError = null;
+        state.createdReceipt = null;
+      })
+      .addCase(generateReceiptFromInvoice.fulfilled, (state, action) => {
+        state.createReceiptLoading = false;
+        state.createReceiptError = null;
+        state.createdReceipt = extractCreatedReceipt(action.payload);
+        state.success = true;
+        state.message = action.payload?.message || null;
+      })
+      .addCase(generateReceiptFromInvoice.rejected, (state, action) => {
+        state.createReceiptLoading = false;
+        state.createReceiptError = action.payload;
+        state.createdReceipt = null;
+        state.success = false;
+        state.error = action.payload;
+      })
   },
 });
 
-export const { resetOrderStatus, resetOrderDetails } = orderSlice.actions;
+export const {
+  resetOrderStatus,
+  resetCreatedReceipt,
+  resetInvoiceReceipts,
+  resetReceiptDetails,
+  resetOrderDetails,
+} = orderSlice.actions;
 export default orderSlice.reducer;

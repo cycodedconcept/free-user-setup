@@ -1,16 +1,60 @@
-# React + Vite
+# Mycroshop Free User Setup
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A free starter setup for new Mycroshop users to get their online store up and running quickly.
 
-Currently, two official plugins are available:
+## Why this exists
+Setting up a store for the first time can be confusing. This repository helps new users move from signup to launch with less stress and fewer mistakes.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## What you can do with it
+- Set up your Mycroshop store structure
+- Configure key store details
+- Prepare products and categories
+- Connect basic business settings
+- Follow a simple launch checklist
 
-## React Compiler
+## Who this is for
+- New Mycroshop users
+- Small business owners
+- Vendors moving from WhatsApp or Instagram selling
+- Anyone who wants a faster ecommerce setup process
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Features
+- Beginner-friendly setup flow
+- Clean onboarding structure
+- Launch checklist
+- Easy-to-follow configuration guide
+- Flexible enough for different store types
 
-## Expanding the ESLint configuration
+## Quick start
+1. Clone this repository
+2. Install dependencies
+3. Add your environment variables
+4. Start the project locally
+5. Follow the setup guide
+6. Deploy when ready
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Screenshots / Demo
+Add screenshots here:
+- Homepage
+- Product setup page
+- Store dashboard
+- Checkout flow
+
+## Tech stack
+- Frontend: [Add yours]
+- Backend: [Add yours]
+- Database: [Add yours]
+- Deployment: [Add yours]
+
+## Roadmap
+- [ ] Improve onboarding flow
+- [ ] Add sample store templates
+- [ ] Add payment configuration examples
+- [ ] Add deployment guide
+- [ ] Add troubleshooting section
+
+## Contributing
+Contributions, fixes, and suggestions are welcome.
+
+## License
+Add your license here.3

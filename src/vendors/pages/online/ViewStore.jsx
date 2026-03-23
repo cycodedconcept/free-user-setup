@@ -247,7 +247,7 @@ const ViewStore = ({ initialSeeStore = true }) => {
                 <>
                     <div className="d-flex justify-content-center align-items-center">
                         <div className={`d-flex justify-content-between p-3 m-0 w-50`} style={{background: '#EAF4FF', borderRadius: '10px', border: '1px solid #0273F9'}}>
-                            <p className='m-0'><span style={{color: '#78716C'}}>mycroshop</span>/{myStore.onlineStore.username}</p>
+                            <p className='m-0'><span style={{color: '#78716C'}}>mycroshop</span>/{myStore?.onlineStore?.username}</p>
                             <p
                               style={{color: '#0273F9', cursor: 'pointer'}}
                               className='m-0'
@@ -262,10 +262,10 @@ const ViewStore = ({ initialSeeStore = true }) => {
                 <div className={`${styles.preview} d-flex flex-column text-center w-50`} style={{border: '2px solid #1C1917'}}>
                 <div style={{margin: '5% auto'}}>
                     <div className='mb-2'>
-                        <img src={myStore.onlineStore.profile_logo_url} alt="" className='rounded-pill w-50'/>
+                        <img src={myStore?.onlineStore?.profile_logo_url} alt="" className='rounded-pill w-50'/>
                     </div>
                     <h5 className="my text-dark">Your Store</h5>
-                    <p>{myStore.onlineStore.store_description}</p>
+                    <p>{myStore?.onlineStore?.store_description}</p>
                 </div>
                 <div className="container" style={{ maxWidth: '400px' }}>
                         <div className="text-center" role="tablist">

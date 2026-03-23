@@ -2,27 +2,11 @@ import React from "react";
 import ManageStore from "./ManageStore";
 import SetupStoreMain from "./SetupStoreMain";
 import AllInvoices from "../invoice/AllInvoices";
-// import ManageBookings from "../Bookings/ManageBookings"
-// import Calendar from "../Bookings/Calendar";
-// import Settings from "../Bookings/Settings";
-// import BuyingPool from "../Pool/BuyingPool";
-// import Logistics from "../logistics/Logistics";
-// import ProductInventory from "../inventory/ProductInventory";
-// import ManageCategory from "../inventory/ManageCategory";
-// import Sales from "../inventory/Sales";
-// import StockAudit from "../inventory/StockAudit";
-// import ActivityHistory from "../inventory/ActivityHistory";
-import Customers from "../crm/Customers";
 import Orders from "../orders/Orders";
-import Marketing from "../crm/Marketing";
-import Birthdays from "../crm/Birthdays";
-import ReturnAudit from "../crm/ReturnAudit";
-import Ai from "../crm/Ai";
 import GeneralSettings from "../settings/GeneralSettings";
 import Home from "../dashboard/Home";
 import Domain from "../domain/Domain";
 import Product from "../product/Product";
-// import Payment from "../payment/Payment";
 
 const MainContent = ({ activeTab, setActiveTab }) => {
   const noPaddingTabs = ["crm-ai-assistant"];
@@ -58,49 +42,9 @@ const MainContent = ({ activeTab, setActiveTab }) => {
           <SetupStore setActiveTab={setActiveTab} />
         )}
 
-        {/* Buying Pool */}
-        {activeTab === "buying-pool" && (
-          <BuyingPool setActiveTab={setActiveTab} />
-        )}
-
-        {/* Bookings Section */}
-        {activeTab === "bookings-manage-bookings" && (
-          <ManageBookings setActiveTab={setActiveTab} />
-        )}
-        {activeTab === "bookings-settings" && (
-          <Settings setActiveTab={setActiveTab} />
-        )}
-        {activeTab === "bookings-calendar" && (
-          <Calendar setActiveTab={setActiveTab} />
-        )}
-
         {/* Invoices */}
         {activeTab === "invoices" && <AllInvoices setActiveTab={setActiveTab} />}
 
-        {/* CRM Section */}
-        {activeTab === "crm-my-customers" && (
-          <Customers setActiveTab={setActiveTab} />
-        )}
-        {activeTab === "crm-ai-assistant" && (
-          <Ai setActiveTab={setActiveTab} />
-        )}
-        {activeTab === "crm-orders" && (
-          <Orders setActiveTab={setActiveTab} />
-        )}
-        {activeTab === "crm-marketing" && (
-          <Marketing setActiveTab={setActiveTab} />
-        )}
-        {activeTab === "crm-birthdays" && (
-          <Birthdays setActiveTab={setActiveTab} />
-        )}
-        {activeTab === "crm-return-audit" && (
-          <ReturnAudit setActiveTab={setActiveTab} />
-        )}
-
-        {/* Logistics */}
-        {activeTab === "logistics" && (
-          <Logistics setActiveTab={setActiveTab} />
-        )}
 
         {/* Admin Users */}
         {activeTab === "admin-users" && (

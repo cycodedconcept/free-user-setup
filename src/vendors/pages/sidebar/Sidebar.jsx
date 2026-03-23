@@ -71,14 +71,11 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
       label: "Inventory",
       key: "inventory",
       icon: faBoxes,
-      visible: false,
-      hasSubmenu: false,
+      visible: true,
+      hasSubmenu: true,
       submenu: [
         { label: "Products", key: "products" },
-        { label: "Category", key: "category" },
-        { label: "Sales", key: "sales" },
-        { label: "Stock Audit", key: "stock-audit" },
-        { label: "Activity Log", key: "activity-log" },
+        { label: "Collection", key: "collection" }, 
       ]
     },
     {

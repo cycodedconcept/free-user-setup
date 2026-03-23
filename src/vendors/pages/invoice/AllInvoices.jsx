@@ -3,23 +3,108 @@ import stylesItem from '../../../Tabs.module.css';
 import InvoiceCards from './InvoiceCards';
 import { useDispatch, useSelector } from 'react-redux';
 import { getAllInvoice, updateInvoiceStatus } from '../../../slice/invoiceSlice';
+import {
+  generateReceiptFromInvoice,
+  getInvoiceReceipts,
+  resetInvoiceReceipts
+} from '../../../slice/order';
+import { getMyOnlineStore } from '../../../slice/onlineStoreSlice';
+import { API_URL } from '../../../config/constant';
 import Swal from 'sweetalert2';
 import Pagination from '../../../components/Pagination';
 import CreateInvoice from '../crm/CreateInvoice';
 import InvoiceDetails from './InvoiceDetails';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faEllipsisV, faEye, faPen, faTrash, faMoneyBillWave } from '@fortawesome/free-solid-svg-icons';
-import { Tiv, Pb2, Tp, Tm, Upi } from '../../../assets';
+import { faEllipsisV, faEye, faPen, faTrash, faMoneyBillWave, faReceipt } from '@fortawesome/free-solid-svg-icons';
+import { Tiv, Pb2, Tp, Tm, Upi, Logo } from '../../../assets';
+
+const resolveStoreInfo = (myStore) =>
+  myStore?.onlineStore || myStore?.data?.onlineStore || myStore?.store || {};
+
+const resolveStoreLogoUrl = (storeInfo) => {
+  const candidate = storeInfo?.profile_logo_url || storeInfo?.logo || Logo;
+
+  if (!candidate) {
+    return '';
+  }
+
+  if (
+    candidate.startsWith('http://') ||
+    candidate.startsWith('https://') ||
+    candidate.startsWith('data:') ||
+    candidate.startsWith('blob:')
+  ) {
+    return candidate;
+  }
+
+  if (typeof window !== 'undefined') {
+    return new URL(candidate, window.location.origin).href;
+  }
+
+  return candidate;
+};
+
+const resolveReceiptFileUrl = (value) => {
+  if (!value) {
+    return '';
+  }
+
+  if (
+    value.startsWith('http://') ||
+    value.startsWith('https://') ||
+    value.startsWith('data:') ||
+    value.startsWith('blob:')
+  ) {
+    return value;
+  }
+
+  const normalizedValue = value.startsWith('/') ? value : `/${value}`;
+  return new URL(normalizedValue, API_URL).href;
+};
+
+const formatReceiptDateTime = (value) => {
+  if (!value) {
+    return '-';
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return date.toLocaleString('en-NG', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+};
 
 const AllInvoices = () => {
   const dispatch = useDispatch();
   let token = localStorage.getItem("token");
-  const {loading, error, success, invoiceData } = useSelector((state) => state.invoice);
+  const {loading, invoiceData } = useSelector((state) => state.invoice);
+  const {
+    createReceiptLoading,
+    invoiceReceiptsLoading,
+    invoiceReceiptsError,
+    invoiceReceiptsData
+  } = useSelector((state) => state.order);
+  const myStore = useSelector((state) => state.store?.myStore);
   const [currentPage, setCurrentPage] = useState(1);
   const [view, setView] = useState('list'); // 'list', 'create', 'edit', 'details'
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [openDropdown, setOpenDropdown] = useState(null);
+  const [generatingReceiptId, setGeneratingReceiptId] = useState(null);
+  const [receiptsModalInvoice, setReceiptsModalInvoice] = useState(null);
+  const [fetchingReceiptsInvoiceId, setFetchingReceiptsInvoiceId] = useState(null);
   const dropdownRef = useRef(null);
+  const storeInfo = resolveStoreInfo(myStore);
+  const storeLogoUrl = resolveStoreLogoUrl(storeInfo);
+  const isGeneratingReceipt = createReceiptLoading && generatingReceiptId !== null;
+  const invoiceReceipts = invoiceReceiptsData?.data || [];
   const invoicePagination = invoiceData?.pagination || {};
   const invoices = invoiceData?.data || [];
 
@@ -74,6 +159,12 @@ const AllInvoices = () => {
         dispatch(getAllInvoice({token, page: currentPage, limit: 20}))
     }
   }, [token, dispatch, currentPage])
+
+  useEffect(() => {
+    if (token && !storeInfo?.id) {
+      dispatch(getMyOnlineStore({ token }));
+    }
+  }, [dispatch, storeInfo?.id, token]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -264,6 +355,76 @@ const AllInvoices = () => {
     }
   };
 
+  const handleGenerateReceipt = async (invoice) => {
+    setOpenDropdown(null);
+    setGeneratingReceiptId(invoice.id);
+
+    try {
+      const response = await dispatch(
+        generateReceiptFromInvoice({
+          token,
+          invoiceId: invoice.id
+        })
+      ).unwrap();
+
+      const receiptData = response?.data || {};
+      const previewUrl = receiptData?.preview_url;
+      const pdfUrl = receiptData?.pdf_url;
+
+      const result = await Swal.fire({
+        icon: 'success',
+        title: receiptData?.already_exists ? 'Receipt Already Exists' : 'Receipt Generated',
+        text: response?.message || 'Receipt generated successfully.',
+        showCancelButton: Boolean(previewUrl),
+        cancelButtonText: 'Preview Receipt',
+        confirmButtonText: pdfUrl ? 'Download PDF' : 'Close',
+        confirmButtonColor: '#0273F9',
+        cancelButtonColor: '#10B981',
+      });
+
+      if (result.isConfirmed && pdfUrl) {
+        window.open(pdfUrl, '_blank');
+      }
+
+      if (result.dismiss === Swal.DismissReason.cancel && previewUrl) {
+        window.open(previewUrl, '_blank');
+      }
+    } catch (receiptError) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Receipt Generation Failed',
+        text: receiptError?.message || receiptError?.error || 'Unable to generate receipt for this invoice.',
+      });
+    } finally {
+      setGeneratingReceiptId(null);
+    }
+  };
+
+  const handleGetReceipts = async (invoice) => {
+    setOpenDropdown(null);
+    setReceiptsModalInvoice(invoice);
+    setFetchingReceiptsInvoiceId(invoice.id);
+
+    try {
+      await dispatch(
+        getInvoiceReceipts({
+          token,
+          invoiceId: invoice.id
+        })
+      ).unwrap();
+    } catch (receiptListError) {
+      console.error('Failed to fetch invoice receipts:', receiptListError);
+    } finally {
+      setFetchingReceiptsInvoiceId(null);
+    }
+  };
+
+  const closeReceiptsModal = () => {
+    setReceiptsModalInvoice(null);
+    setFetchingReceiptsInvoiceId(null);
+    dispatch(resetInvoiceReceipts());
+  };
+
   const handleDelete = (invoice) => {
     Swal.fire({
       title: 'Delete Invoice?',
@@ -284,6 +445,220 @@ const AllInvoices = () => {
 
   return (
     <>
+      <style>
+        {`
+          @keyframes invoiceReceiptLogoPulse {
+            0% { transform: scale(0.94); opacity: 0.75; }
+            50% { transform: scale(1.02); opacity: 1; }
+            100% { transform: scale(0.94); opacity: 0.75; }
+          }
+        `}
+      </style>
+      {isGeneratingReceipt && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(15, 23, 42, 0.72)',
+            backdropFilter: 'blur(4px)',
+            zIndex: 2500,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '24px'
+          }}
+        >
+          <div
+            style={{
+              width: 'min(320px, 100%)',
+              backgroundColor: '#FFFFFF',
+              borderRadius: '24px',
+              padding: '28px 24px',
+              textAlign: 'center',
+              boxShadow: '0 24px 60px rgba(15, 23, 42, 0.28)'
+            }}
+          >
+            <img
+              src={storeLogoUrl}
+              alt={`${storeInfo?.store_name || 'Store'} logo`}
+              style={{
+                width: '88px',
+                height: '88px',
+                objectFit: 'cover',
+                borderRadius: '50%',
+                display: 'block',
+                margin: '0 auto 18px',
+                border: '4px solid rgba(2, 115, 249, 0.12)',
+                animation: 'invoiceReceiptLogoPulse 1.4s ease-in-out infinite'
+              }}
+            />
+            <h6 style={{ marginBottom: '8px', color: '#111827' }}>Generating Receipt</h6>
+            <p style={{ margin: 0, color: '#6B7280', fontSize: '13px', lineHeight: 1.6 }}>
+              Please wait while we prepare the receipt for invoice #{generatingReceiptId}.
+            </p>
+          </div>
+        </div>
+      )}
+      {receiptsModalInvoice && (
+        <div
+          onClick={closeReceiptsModal}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(15, 23, 42, 0.62)',
+            zIndex: 2400,
+            padding: '24px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}
+        >
+          <div
+            onClick={(event) => event.stopPropagation()}
+            style={{
+              width: 'min(960px, 100%)',
+              maxHeight: '90vh',
+              backgroundColor: '#FFFFFF',
+              borderRadius: '20px',
+              overflow: 'hidden',
+              boxShadow: '0 24px 60px rgba(15, 23, 42, 0.24)'
+            }}
+          >
+            <div
+              className="d-flex justify-content-between align-items-center px-4 py-3"
+              style={{ borderBottom: '1px solid #E5E7EB' }}
+            >
+              <div>
+                <h6 className="mb-1">Invoice Receipts</h6>
+                <small style={{ color: '#6B7280' }}>
+                  Invoice #{receiptsModalInvoice?.invoice_number || receiptsModalInvoice?.id} • {invoiceReceiptsData?.total || invoiceReceipts.length} receipt(s)
+                </small>
+              </div>
+              <button
+                type="button"
+                className="btn"
+                onClick={closeReceiptsModal}
+                style={{
+                  padding: '8px 14px',
+                  border: '1px solid #E5E7EB',
+                  borderRadius: '8px',
+                  fontSize: '13px',
+                  backgroundColor: '#fff'
+                }}
+              >
+                Close
+              </button>
+            </div>
+            <div style={{ padding: '20px 24px', overflowX: 'auto' }}>
+              {invoiceReceiptsLoading ? (
+                <div className="text-center py-5">
+                  <div className="spinner-border text-primary" role="status">
+                    <span className="visually-hidden">Loading receipts...</span>
+                  </div>
+                  <p style={{ marginTop: '12px', marginBottom: 0, color: '#6B7280', fontSize: '13px' }}>
+                    Loading receipts for this invoice...
+                  </p>
+                </div>
+              ) : invoiceReceiptsError ? (
+                <div
+                  style={{
+                    border: '1px solid #FECACA',
+                    backgroundColor: '#FEF2F2',
+                    color: '#991B1B',
+                    borderRadius: '12px',
+                    padding: '14px 16px',
+                    fontSize: '13px'
+                  }}
+                >
+                  {invoiceReceiptsError?.message || invoiceReceiptsError?.error || 'Unable to load receipts for this invoice.'}
+                </div>
+              ) : invoiceReceipts.length > 0 ? (
+                <table className="table table-borderless align-middle mb-0">
+                  <thead>
+                    <tr style={{ borderBottom: '1px solid #E5E7EB' }}>
+                      <th style={{ fontSize: '13px', color: '#78716C' }}>Receipt Number</th>
+                      <th style={{ fontSize: '13px', color: '#78716C' }}>Created At</th>
+                      <th style={{ fontSize: '13px', color: '#78716C' }}>Preview</th>
+                      <th style={{ fontSize: '13px', color: '#78716C' }}>PDF</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {invoiceReceipts.map((receipt) => {
+                      const previewUrl = resolveReceiptFileUrl(receipt?.preview_url);
+                      const pdfUrl = resolveReceiptFileUrl(receipt?.pdf_url);
+
+                      return (
+                        <tr key={receipt.id} style={{ borderBottom: '1px solid #F3F4F6' }}>
+                          <td style={{ fontSize: '13px', color: '#111827' }}>
+                            {receipt.receipt_number || `Receipt #${receipt.id}`}
+                          </td>
+                          <td style={{ fontSize: '13px', color: '#4B5563' }}>
+                            {formatReceiptDateTime(receipt.created_at)}
+                          </td>
+                          <td>
+                            {previewUrl ? (
+                              <button
+                                type="button"
+                                className="btn btn-sm"
+                                onClick={() => window.open(previewUrl, '_blank')}
+                                style={{
+                                  padding: '6px 12px',
+                                  border: '1px solid #BFDBFE',
+                                  borderRadius: '8px',
+                                  fontSize: '12px',
+                                  color: '#1D4ED8',
+                                  backgroundColor: '#EFF6FF'
+                                }}
+                              >
+                                Open Preview
+                              </button>
+                            ) : (
+                              <span style={{ fontSize: '12px', color: '#9CA3AF' }}>Not available</span>
+                            )}
+                          </td>
+                          <td>
+                            {pdfUrl ? (
+                              <button
+                                type="button"
+                                className="btn btn-sm"
+                                onClick={() => window.open(pdfUrl, '_blank')}
+                                style={{
+                                  padding: '6px 12px',
+                                  border: '1px solid #D1FAE5',
+                                  borderRadius: '8px',
+                                  fontSize: '12px',
+                                  color: '#047857',
+                                  backgroundColor: '#ECFDF5'
+                                }}
+                              >
+                                Open PDF
+                              </button>
+                            ) : (
+                              <span style={{ fontSize: '12px', color: '#9CA3AF' }}>Not available</span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              ) : (
+                <div
+                  className="text-center py-5"
+                  style={{
+                    border: '1px dashed #D1D5DB',
+                    borderRadius: '14px',
+                    color: '#6B7280'
+                  }}
+                >
+                  <p style={{ marginBottom: '6px', fontSize: '14px', color: '#111827' }}>No receipts found</p>
+                  <small>No generated receipts are available for this invoice yet.</small>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
       {view === 'list' ? (
         <>
             <div className="d-flex justify-content-between">
@@ -360,7 +735,7 @@ const AllInvoices = () => {
                                 borderRadius: '8px',
                                 boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
                                 zIndex: 10,
-                                minWidth: '150px'
+                                minWidth: '180px'
                               }}>
                                 <button
                                   onClick={() => handlePreview(invoice)}
@@ -430,6 +805,62 @@ const AllInvoices = () => {
                                   onMouseOut={(e) => e.target.style.backgroundColor = 'transparent'}
                                 >
                                   <FontAwesomeIcon icon={faMoneyBillWave} style={{color: '#10B981'}} /> Update Status
+                                </button>
+                                <button
+                                  onClick={() => handleGenerateReceipt(invoice)}
+                                  disabled={generatingReceiptId === invoice.id}
+                                  style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '8px',
+                                    width: '100%',
+                                    padding: '10px 14px',
+                                    border: 'none',
+                                    backgroundColor: 'transparent',
+                                    fontSize: '13px',
+                                    color: generatingReceiptId === invoice.id ? '#9CA3AF' : '#374151',
+                                    cursor: generatingReceiptId === invoice.id ? 'not-allowed' : 'pointer',
+                                    textAlign: 'left'
+                                  }}
+                                  onMouseOver={(e) => {
+                                    if (generatingReceiptId !== invoice.id) {
+                                      e.target.style.backgroundColor = '#F3F4F6';
+                                    }
+                                  }}
+                                  onMouseOut={(e) => {
+                                    e.target.style.backgroundColor = 'transparent';
+                                  }}
+                                >
+                                  <FontAwesomeIcon icon={faReceipt} style={{color: '#8B5CF6'}} />
+                                  {generatingReceiptId === invoice.id ? 'Generating...' : 'Generate Receipt'}
+                                </button>
+                                <button
+                                  onClick={() => handleGetReceipts(invoice)}
+                                  disabled={fetchingReceiptsInvoiceId === invoice.id}
+                                  style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '8px',
+                                    width: '100%',
+                                    padding: '10px 14px',
+                                    border: 'none',
+                                    backgroundColor: 'transparent',
+                                    fontSize: '13px',
+                                    color: fetchingReceiptsInvoiceId === invoice.id ? '#9CA3AF' : '#374151',
+                                    cursor: fetchingReceiptsInvoiceId === invoice.id ? 'not-allowed' : 'pointer',
+                                    textAlign: 'left'
+                                  }}
+                                  onMouseOver={(e) => {
+                                    if (fetchingReceiptsInvoiceId !== invoice.id) {
+                                      e.target.style.backgroundColor = '#F3F4F6';
+                                    }
+                                  }}
+                                  onMouseOut={(e) => {
+                                    e.target.style.backgroundColor = 'transparent';
+                                  }}
+                                >
+                                  <FontAwesomeIcon icon={faReceipt} style={{color: '#0273F9'}} />
+                                  {fetchingReceiptsInvoiceId === invoice.id ? 'Loading Receipts...' : 'Get Receipts'}
                                 </button>
                                 <button
                                   onClick={() => handleDelete(invoice)}
