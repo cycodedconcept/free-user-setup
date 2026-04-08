@@ -123,6 +123,7 @@ export const getProductDetails = createAsyncThunk(
         `${API_URL}/public-store/${resolvedStore}/products/${resolvedProductId}?tenant_id=${tenant_id}`,
         { headers }
       );
+      console.log("Product details response:", response.data); // Debug log
       return response.data;
     } catch (error) {
       if (error.response && error.response.data) return rejectWithValue(error.response.data);

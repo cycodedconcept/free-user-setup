@@ -2,9 +2,9 @@ import React, {useState, useEffect} from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { getCountries } from '../../../slice/countriesSlice';
 import { useDispatch, useSelector } from 'react-redux';
-import { createOnlineStore, resetStatus, updateStoreLinks, getAllServices, getCollectionForProduct, productImageForCollection } from '../../../slice/onlineStoreSlice';
+import { createOnlineStore, resetStatus, updateStoreLinks, getAllServices, getCollectionForProduct, productImageForCollection, getMyOnlineStore } from '../../../slice/onlineStoreSlice';
 import { faInfoCircle, faLink, faStore, faCube, faDatabase, faExternalLinkAlt, faEllipsisV } from '@fortawesome/free-solid-svg-icons';
-import { Flash, F, X, In, In2, Owi, Smc, Gl } from '../../../assets';
+import { Flash, F, X, In, In2, Owi, Smc } from '../../../assets';
 import Service from './Service';
 import Appearance from './Appearance';
 import Product from './Product';
@@ -13,6 +13,7 @@ import ViewStore from './ViewStore';
 import styles from "../../../styles.module.css";
 import Swal from 'sweetalert2';
 import Button from '../../../components/ui/Button';
+import { API_URL } from '../../../config/constant';
 
 const SetupStoreMain = () => {
     const dispatch = useDispatch();
@@ -25,7 +26,7 @@ const SetupStoreMain = () => {
     const [ms, setMs] = useState(true)
     const [hasCollections, setHasCollections] = useState(false);
     const primaryColor = "#0273F9";
-    const { loading, error, success, allStore, collectionProduct, collections } = useSelector((state) => state.store);
+    const { loading, error, success, allStore, collectionProduct, collections, myStore } = useSelector((state) => state.store);
 
     // Sync country with links state
     useEffect(() => {
@@ -96,6 +97,7 @@ const SetupStoreMain = () => {
     if (token) {
         dispatch(getAllServices({ token, id: getId || '7'}))
         dispatch(getCollectionForProduct({ token, id: getId || '7'}));
+        dispatch(getMyOnlineStore({ token, id: getId || '7'}))
     }
     }, [token, dispatch])
 
@@ -126,6 +128,36 @@ const SetupStoreMain = () => {
     { id: 'Shop', label: 'Shop' }
     ];
 
+    const getImageUrl = (value) => {
+    if (Array.isArray(value)) return getImageUrl(value[0]);
+    if (value && typeof value === 'object') {
+        return getImageUrl(value.url || value.secure_url || value.image_url || value.path || value.location);
+    }
+    if (typeof value !== 'string' || !value.trim()) return '';
+
+    const image = value.trim();
+    if (/^(https?:|data:|blob:|\/\/)/i.test(image)) return image;
+
+    const apiOrigin = API_URL.replace(/\/api\/v\d+\/?$/i, '');
+    return image.startsWith('/') ? `${apiOrigin}${image}` : image;
+    };
+
+    const getServiceImage = (service) => {
+    const serviceDetails = service?.StoreService || service || {};
+    return (
+        getImageUrl(serviceDetails.service_image_url) ||
+        getImageUrl(serviceDetails.service_image) ||
+        getImageUrl(serviceDetails.image_url) ||
+        getImageUrl(serviceDetails.image) ||
+        Smc
+    );
+    };
+
+    const handleServiceImageError = (event) => {
+    event.currentTarget.onerror = null;
+    event.currentTarget.src = Smc;
+    };
+
     const handleActiveTabChange = (tabName) => {
     setActiveTab(tabName);
 
@@ -149,6 +181,11 @@ const SetupStoreMain = () => {
     { id: 'customize', label: 'Customize Store', target: 'Appearance' }
     ];
 
+    const shopTabs = [
+    { label: 'Product List', target: 'Product' },
+    { label: 'Collection', target: 'Collection' }
+    ];
+
     const isTopTabActive = (tabId) => {
     if (tabId === 'services') return activeTab === 'Services';
     if (tabId === 'shop') return activeTab === 'Product' || activeTab === 'Collection';
@@ -164,7 +201,7 @@ const SetupStoreMain = () => {
                 {allStore.data.services.map((service) => (
                 <div key={service.id} className="d-flex justify-content-between px-3 py-2 rounded-pill mb-2" style={{background: '#78716C', color: '#fff'}}>
                     <div className="mt-1">
-                    <img src={Smc} alt="" style={{width: '20px'}} />
+                    <img src={getServiceImage(service)} alt="" className='rounded-circle' style={{width: '24px', height: '24px', objectFit: 'cover'}} onError={handleServiceImageError} />
                     </div>
                     <div style={{width: '70%'}}>
                     <small className="d-block" style={{fontSize: '12px'}}>{service.service_title} ({formatDuration(service.duration_minutes)}) - ₦{Number(service.price).toLocaleString()}</small>
@@ -262,95 +299,95 @@ const SetupStoreMain = () => {
     dispatch(getCountries());
     }, [dispatch]);
 
-    const countries = countryItem.data || [];
+    // const countries = countryItem.data || [];
 
-    const nigerianStates = [
-    'All States',
-    'Abia',
-    'Abuja',
-    'Adamawa',
-    'Akwa Ibom',
-    'Anambra',
-    'Bauchi',
-    'Bayelsa',
-    'Benue',
-    'Borno',
-    'Cross River',
-    'Delta',
-    'Ebonyi',
-    'Edo',
-    'Ekiti',
-    'Enugu',
-    'Gombe',
-    'Imo',
-    'Jigawa',
-    'Kaduna',
-    'Kano',
-    'Katsina',
-    'Kebbi',
-    'Kogi',
-    'Kwara',
-    'Lagos',
-    'Nasarawa',
-    'Niger',
-    'Ogun',
-    'Ondo',
-    'Osun',
-    'Oyo',
-    'Plateau',
-    'Rivers',
-    'Sokoto',
-    'Taraba',
-    'Yobe',
-    'Zamfara'
-    ];
+    // const nigerianStates = [
+    // 'All States',
+    // 'Abia',
+    // 'Abuja',
+    // 'Adamawa',
+    // 'Akwa Ibom',
+    // 'Anambra',
+    // 'Bauchi',
+    // 'Bayelsa',
+    // 'Benue',
+    // 'Borno',
+    // 'Cross River',
+    // 'Delta',
+    // 'Ebonyi',
+    // 'Edo',
+    // 'Ekiti',
+    // 'Enugu',
+    // 'Gombe',
+    // 'Imo',
+    // 'Jigawa',
+    // 'Kaduna',
+    // 'Kano',
+    // 'Katsina',
+    // 'Kebbi',
+    // 'Kogi',
+    // 'Kwara',
+    // 'Lagos',
+    // 'Nasarawa',
+    // 'Niger',
+    // 'Ogun',
+    // 'Ondo',
+    // 'Osun',
+    // 'Oyo',
+    // 'Plateau',
+    // 'Rivers',
+    // 'Sokoto',
+    // 'Taraba',
+    // 'Yobe',
+    // 'Zamfara'
+    // ];
 
-    const handleStateToggle = (state) => {
-    if (state === 'All States') {
-        if (selectedStates.includes('All States')) {
-        setSelectedStates([]);
-        } else {
-        setSelectedStates(['All States']);
-        }
-    } else {
-        if (selectedStates.includes(state)) {
-        setSelectedStates(selectedStates.filter(s => s !== state && s !== 'All States'));
-        } else {
-        const newStates = selectedStates.filter(s => s !== 'All States');
-        setSelectedStates([...newStates, state]);
-        }
-    }
-    };
+    // const handleStateToggle = (state) => {
+    // if (state === 'All States') {
+    //     if (selectedStates.includes('All States')) {
+    //     setSelectedStates([]);
+    //     } else {
+    //     setSelectedStates(['All States']);
+    //     }
+    // } else {
+    //     if (selectedStates.includes(state)) {
+    //     setSelectedStates(selectedStates.filter(s => s !== state && s !== 'All States'));
+    //     } else {
+    //     const newStates = selectedStates.filter(s => s !== 'All States');
+    //     setSelectedStates([...newStates, state]);
+    //     }
+    // }
+    // };
 
-    const getCurrentCountryFlag = () => {
-    const country = countries.find((c) => c.name === selectedCountry);
-    return country ? country.flag : '🏳️';
-    };
+    // const getCurrentCountryFlag = () => {
+    // const country = countries.find((c) => c.name === selectedCountry);
+    // return country ? country.flag : '🏳️';
+    // };
 
 
-    const [isHidden, setIsHidden] = useState(false);
-    const [socialLinks, setSocialLinks] = useState({
-    website: 'example.com',
-    instagram: '',
-    facebook: '',
-    linkedin: '',
-    x: '',
-    tiktok: ''
-    });
+    // const [isHidden, setIsHidden] = useState(false);
+    // const [socialLinks, setSocialLinks] = useState({
+    // website: 'example.com',
+    // instagram: '',
+    // facebook: '',
+    // linkedin: '',
+    // x: '',
+    // tiktok: ''
+    // });
 
-    // Sync socialLinks with links.social_links
-    useEffect(() => {
-    setLinks(prev => ({ 
-        ...prev, 
-        social_links: [{
-        facebook: socialLinks.facebook || '',
-        linkedin: socialLinks.linkedin || '',
-        x: socialLinks.x || socialLinks.twitter || '',
-        instagram: socialLinks.instagram || '',
-        tiktok: socialLinks.tiktok || ''
-        }]
-    }));
-    }, [socialLinks]);
+    // // Sync socialLinks with links.social_links
+    // useEffect(() => {
+    // setLinks(prev => ({
+    //     ...prev,
+    //     social_links: [{
+    //     facebook: socialLinks.facebook || '',
+    //     linkedin: socialLinks.linkedin || '',
+    //     x: socialLinks.x || socialLinks.twitter || '',
+    //     instagram: socialLinks.instagram || '',
+    //     tiktok: socialLinks.tiktok || ''
+    //     }]
+    // }));
+    // }, [socialLinks]);
 
     // Debug log for links state
     //   useEffect(() => {
@@ -411,12 +448,23 @@ const SetupStoreMain = () => {
     return `${hours % 1 === 0 ? hours : hours.toFixed(1)} hrs`;
     };
 
+    const storeLogo = myStore?.onlineStore?.profile_logo_url || Owi;
+    const storeDescription = myStore?.onlineStore?.store_description || 'Store Description Here...';
+
+    const buildStoreUsername = (storeName) =>
+    storeName
+        .toString()
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "");
+
     const saveContent = (e) => {
     e.preventDefault();
 
-    const { username, store_name, store_description } = online;
+    const { store_name, store_description } = online;
 
-    if (!username || !store_name || !store_description) {
+    if (!store_name || !store_description) {
         Swal.fire({
             icon: "info",
             title: "Missing Fields",
@@ -426,7 +474,11 @@ const SetupStoreMain = () => {
         return;
     }
 
-    dispatch(createOnlineStore({token, ...online}))
+    dispatch(createOnlineStore({
+        token,
+        ...online,
+        username: online.username || buildStoreUsername(store_name)
+    }))
     setFront(false)
     }
 
@@ -463,9 +515,9 @@ const SetupStoreMain = () => {
     const addLinks = (e) => {
     e.preventDefault();
 
-    const { show_location, country, state, is_location_based, allow_delivery_datetime, social_links } = links;
+    const { social_links } = links;
 
-    if (!show_location || !country || !state || !is_location_based || !allow_delivery_datetime || !social_links) {
+    if (!social_links) {
         Swal.fire({
             icon: "info",
             title: "Missing Fields",
@@ -575,31 +627,6 @@ const SetupStoreMain = () => {
                                             onChange={handleChange}
                                         />
 
-                                        <div className="my-4">
-                                            <label className="form-label" style={{color: '#1C1917'}}>
-                                                Username <span style={{color: '#78716C'}}>(for your store link)</span>
-                                            </label>
-
-                                            <div className={`d-flex overflow-hidden ${styles['store-input-wrapper']}`} style={{border: '1px solid #EEEEEE'}}>
-                                                <span className="px-3 d-flex align-items-center mx" style={{background: '#EAF4FF'}}>
-                                                mycroshop.com/
-                                                </span>
-                                                <input
-                                                type="text"
-                                                data-form="setUpStore"
-                                                className={`border-0 ${styles['input-item']} ${styles['dr-item']}`}
-                                                placeholder="yourstore"
-                                                name='username'
-                                                value={online.username}
-                                                onChange={handleChange}
-                                                />
-                                            </div>
-
-                                            <small className="mt-2 d-block" style={{color: '#78716C', fontSize: '13px'}}>
-                                                PNG, JPEG or GIF. Max 5MB.
-                                            </small>
-                                        </div>
-
                                         <label for="formGroupExampleInput" className='mb-2'>Store Description</label>
 
                                         <textarea 
@@ -613,26 +640,6 @@ const SetupStoreMain = () => {
                                         ></textarea>
 
                                         <small className="d-block" style={{color: '#909396'}}>This will appear on your store page. Keep it short and engaging</small>
-                                        <div style={{background: '#EEF8FF'}} className='p-3 mt-3 rounded'>
-                                        <h6 style={{color: '#0273F9'}} className='mx'><FontAwesomeIcon icon={faInfoCircle} style={{color: '#0273F9'}} className='me-2'/><span className='nx'>Your store link will be</span> <span className='my'>mychroshp.com/yourstore</span></h6>
-                                        </div>
-                                    </div>
-                                    <div className="text-end mt-3">
-                                        <button className={`${styles['btn-lg']} ${styles['si-btn']} px-4 py-3`}>
-                                            {
-                                                loading ?(
-                                                    <>
-                                                    <div className="spinner-border spinner-border-sm text-light" role="status">
-                                                        <span className="sr-only"></span>
-                                                    </div>
-                                                    <span>Creating... </span>
-                                                    </>
-                                                    
-                                                ): (
-                                                    'Save and Continue'
-                                                )
-                                            }
-                                        </button>
                                     </div>
                                 </form>
                                 <form onSubmit={addLinks}>
@@ -894,257 +901,6 @@ const SetupStoreMain = () => {
                                             </div>
                                         </div>
                                     </div>
-                                    <div className="container-fluid p-4 mt-4" style={{background: "#fff", border: '2px solid #EEEEEE', borderRadius: '12px'}}>
-                                        <div className="row">
-                                            <div className="col-12">
-                                            {/* Header Section */}
-                                            <div className="d-flex justify-content-between align-items-center mb-4">
-                                                <div>
-                                                <h5 className="text-dark mb-1" style={{fontSize: '17px'}}>Location</h5>
-                                                <p className="text-muted mb-0" style={{fontSize: '13px'}}>Add location to your storefront</p>
-                                                </div>
-                                                
-                                                {/* Toggle Switch */}
-                                                <div className="form-check form-switch">
-                                                <input 
-                                                    className="form-check-input"
-                                                    type="checkbox" 
-                                                    id="allowLocation"
-                                                    name="is_location_based"
-                                                    data-form="setUpLink"
-                                                    checked={links.is_location_based === 1}
-                                                    onChange={handleChange}
-                                                    style={{ 
-                                                    transform: 'scale(1.5)',
-                                                    backgroundColor: links.is_location_based === 1 ? '#000' : '#6c757d'
-                                                    }}
-                                                />
-                                                <label className="form-check-label ms-2" htmlFor="allowLocation" style={{fontSize: '14px', color: '#78716C'}}>
-                                                    Allow
-                                                </label>
-                                                </div>
-                                            </div>
-
-                                            {links.is_location_based === 1 && (
-                                                <>
-                                                {/* Country Selection */}
-                                                <div className="row mb-4">
-                                                    <div className="col-12">
-                                                        <h6 className="mb-3">Country</h6>
-                                                        <div className="dropdown" style={{background: '#FBFDFF'}}>
-                                                            <button 
-                                                            className="btn btn-white border rounded-4 w-100 d-flex justify-content-between align-items-center p-2"
-                                                            type="button" 
-                                                            data-bs-toggle="dropdown"
-                                                            style={{ 
-                                                                backgroundColor: '#FBFDFF',
-                                                                border: '1px solid #dee2e6',
-                                                                textAlign: 'left'
-                                                            }}
-                                                            >
-                                                            <div className="d-flex align-items-center">
-                                                                <span className="me-3">
-                                                                    <img
-                                                                        src={getCurrentCountryFlag()}
-                                                                        alt={`${selectedCountry} flag`}
-                                                                        className="img-fluid"
-                                                                        style={{ width: '24px', height: '16px', objectFit: 'cover' }}
-                                                                    />
-                                                                    </span>
-                                                                <span className="text-dark fw-normal">{selectedCountry}</span>
-                                                            </div>
-                                                            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                                                                <path d="M6 8L2 4H10L6 8Z" fill="#6c757d"/>
-                                                            </svg>
-                                                            </button>
-                                                            <ul className="dropdown-menu w-100"
-                                                            style={{
-                                                                maxHeight: '250px',
-                                                                overflowY: 'auto'
-                                                            }}
-                                                            >
-                                                            {countryItem.data?.map((country, index) => (
-                                                                <li key={index}>
-                                                                    <button
-                                                                    className="dropdown-item d-flex align-items-center py-2"
-                                                                    type="button"
-                                                                    onClick={() => setSelectedCountry(country.name)}
-                                                                    >
-                                                                    <span className="me-3">
-                                                                        <img
-                                                                        src={country.flag}
-                                                                        alt={`${country.name} flag`}
-                                                                        className="img-fluid"
-                                                                        style={{ width: '24px', height: '16px', objectFit: 'cover' }}
-                                                                        />
-                                                                    </span>
-                                                                    {country.name}
-                                                                    </button>
-                                                                </li>
-                                                            ))}
-
-                                                            </ul>
-                                                        </div>
-                                                    </div>
-                                                </div>
-
-                                                {/* State Selection */}
-                                                <div className="row">
-                                                    <div className="col-12">
-                                                    <h6 className="mb-3">State</h6>
-                                                    
-                                                    {/* State Dropdown */}
-                                                    <div className="position-relative" style={{background: '#FBFDFF'}}>
-                                                        <button 
-                                                        className="btn btn-white border rounded-4 w-100 d-flex justify-content-between align-items-center p-3 mb-3"
-                                                        type="button"
-                                                        onClick={() => setIsStateDropdownOpen(!isStateDropdownOpen)}
-                                                        style={{ 
-                                                            backgroundColor: '#FBFDFF',
-                                                            border: '1px solid #dee2e6',
-                                                            textAlign: 'left'
-                                                        }}
-                                                        >
-                                                        <span className="text-muted">
-                                                            {selectedStates.length === 0 ? 'Select State' : 
-                                                            selectedStates.length === 1 ? selectedStates[0] :
-                                                            `${selectedStates.length} states selected`}
-                                                        </span>
-                                                        <svg 
-                                                            width="12" 
-                                                            height="12" 
-                                                            viewBox="0 0 12 12" 
-                                                            fill="none"
-                                                            style={{ 
-                                                            transform: isStateDropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)',
-                                                            transition: 'transform 0.2s ease'
-                                                            }}
-                                                        >
-                                                            <path d="M6 8L2 4H10L6 8Z" fill="#6c757d"/>
-                                                        </svg>
-                                                        </button>
-
-                                                        {/* State Options */}
-                                                        {isStateDropdownOpen && (
-                                                        <div 
-                                                            className="bg-white border rounded-3 shadow-sm p-3"
-                                                            style={{ 
-                                                            maxHeight: '300px',
-                                                            overflowY: 'auto',
-                                                            border: '1px solid #dee2e6'
-                                                            }}
-                                                        >
-                                                            {nigerianStates.map((state, index) => (
-                                                            <div key={state} className="form-check mb-3">
-                                                                <input 
-                                                                className="form-check-input" 
-                                                                type="checkbox" 
-                                                                id={`state-${index}`}
-                                                                checked={selectedStates.includes(state)}
-                                                                onChange={() => handleStateToggle(state)}
-                                                                style={{ 
-                                                                    transform: 'scale(1.2)',
-                                                                    marginTop: '2px'
-                                                                }}
-                                                                />
-                                                                <label 
-                                                                className="form-check-label ms-3 text-dark" 
-                                                                htmlFor={`state-${index}`}
-                                                                style={{ 
-                                                                    fontSize: '16px',
-                                                                    fontWeight: selectedStates.includes(state) ? '600' : '400'
-                                                                }}
-                                                                >
-                                                                {state}
-                                                                </label>
-                                                            </div>
-                                                            ))}
-                                                        </div>
-                                                        )}
-                                                    </div>
-                                                    </div>
-                                                </div>
-
-                                                {/* Selected States Preview */}
-                                                {selectedStates.length > 0 && (
-                                                    <div className="row mt-3">
-                                                    <div className="col-12">
-                                                        <div className="bg-white p-3 rounded-3 border">
-                                                        <h6 className="text-muted mb-2">Selected States:</h6>
-                                                        <div className="d-flex flex-wrap gap-2">
-                                                            {selectedStates.map((state) => (
-                                                            <span 
-                                                                key={state}
-                                                                className="badge bg-primary rounded-pill px-3 py-2"
-                                                                style={{ fontSize: '12px' }}
-                                                            >
-                                                                {state}
-                                                                <button 
-                                                                className="btn-close btn-close-white ms-2"
-                                                                style={{ fontSize: '10px' }}
-                                                                onClick={() => handleStateToggle(state)}
-                                                                ></button>
-                                                            </span>
-                                                            ))}
-                                                        </div>
-                                                        </div>
-                                                    </div>
-                                                    </div>
-                                                )}
-                                                </>
-                                            )}
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="mt-3 p-3" style={{background: "#fff", border: '2px solid #EEEEEE', borderRadius: '12px'}}>
-                                    <div className="d-flex justify-content-between">
-                                        <div>
-                                            <h5 className="mx mb-1" style={{fontSize: '17px'}}>
-                                                Allow Delivery Date & Time on checkout
-                                            </h5>
-                                            <p className="mb-0" style={{ fontSize: '12px', color: '#78716C' }}>
-                                                Enable users to select delivery date and time during checkout
-                                            </p>
-                                        </div>
-                                        
-                                        {/* Toggle Switch */}
-                                        <div className="form-check form-switch">
-                                        <input 
-                                            className="form-check-input" 
-                                            type="checkbox" 
-                                            id="allowDeliveryDateTime"
-                                            name="allow_delivery_datetime"
-                                            data-form="setUpLink"
-                                            checked={links.allow_delivery_datetime === 1}
-                                            onChange={handleChange}
-                                            style={{ 
-                                            transform: 'scale(1.5)',
-                                            backgroundColor: links.allow_delivery_datetime === 1 ? '#000' : '#6c757d'
-                                            }}
-                                        />
-                                        <label className="form-check-label ms-2" htmlFor="allowDeliveryDateTime" style={{ color: '#78716C' }}>
-                                            Allow
-                                        </label>
-                                        </div>
-                                    </div>
-                                    </div>
-                                    <div className="text-end mt-3">
-                                        <button className={`${styles['btn-lg']} ${styles['si-btn']} px-4 py-3`}>
-                                            {
-                                                loading ?(
-                                                    <>
-                                                    <div className="spinner-border spinner-border-sm text-light" role="status">
-                                                        <span className="sr-only"></span>
-                                                    </div>
-                                                    <span>Creating... </span>
-                                                    </>
-                                                    
-                                                ): (
-                                                    'Save and Continue'
-                                                )
-                                            }
-                                        </button>
-                                    </div>
                                 </form>
                             </>
                        )}
@@ -1180,10 +936,31 @@ const SetupStoreMain = () => {
                     </div> */}
 
                     <div className="mt-4">
+                        {isTopTabActive('shop') && (
+                            <div className="d-flex mb-4" style={{border: '1px solid #EEEEEE'}}>
+                                {shopTabs.map((tab) => (
+                                    <button
+                                        key={tab.target}
+                                        type="button"
+                                        className="flex-fill bg-transparent py-3"
+                                        onClick={() => handleActiveTabChange(tab.target)}
+                                        style={{
+                                            border: 'none',
+                                            borderBottom: activeTab === tab.target ? `2px solid ${primaryColor}` : '2px solid transparent',
+                                            background: activeTab === tab.target ? '#EAF4FF' : '#fff',
+                                            color: activeTab === tab.target ? '#1C1917' : '#78716C',
+                                            fontWeight: activeTab === tab.target ? 600 : 500
+                                        }}
+                                    >
+                                        {tab.label}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
                         {activeTab === 'Services' && <Service setPer={setPer} setVog={setVog}/>}
                         {activeTab === 'Appearance' && <Appearance />}
                         {activeTab === 'Product' && <Product setProCol={setProCol}/>}
-                        {activeTab === 'Collection' && <Collection setItemData={setItemData}/>}
+                        {activeTab === 'Collection' && <Collection setItemData={setItemData} autoExpandProducts />}
                     </div>
 
                   </div>
@@ -1205,24 +982,24 @@ const SetupStoreMain = () => {
                                     <>
                                     <div style={{margin: '40% auto'}}>
                                         <div className='mb-3'>
-                                            <img src={Owi} alt="" />
+                                            <img src={storeLogo} alt="Store logo" className='rounded-pill w-25' />
                                         </div>
                                         <h5 className="my text-dark">Your Store</h5>
-                                        <p>Store Description Here...</p>
+                                        <p>{storeDescription}</p>
                                     </div>
                                     </>
                                 ) : (
                                 <>
                                 <div className="text-center mt-5 mx-3">
-                                    <img src={Owi} alt="" />
+                                    <img src={storeLogo} alt="Store logo" className='rounded-pill w-25' />
 
                                     <h5 className="my text-dark mt-3">Your Store</h5>
-                                    <small style={{color: '#78716C'}} className='mb-4 d-block'>Store Description Here...</small>
+                                    <small style={{color: '#78716C'}} className='mb-4 d-block'>{storeDescription}</small>
                                     
                                     {allStore.data?.services?.map((store) => 
                                       <div key={store.id} className="d-flex justify-content-between px-3 py-2 rounded-pill mt-2" style={{background: '#78716C', color: '#fff'}}>
                                         <div className='mt-1'>
-                                        <img src={Smc} alt="" />
+                                        <img src={getServiceImage(store)} alt="" className='rounded-circle' style={{width: '24px', height: '24px', objectFit: 'cover'}} onError={handleServiceImageError} />
                                         </div>
                                         <div style={{width: '70%'}}>
                                         <small className="d-block" style={{fontSize: '12px'}}>{store.service_title} ({formatDuration(store.duration_minutes)}) - ₦{Number(store.price).toLocaleString()} <span className='bx'>Book Now</span></small>
@@ -1240,10 +1017,10 @@ const SetupStoreMain = () => {
                             ) : (
                                 <>
                                 <div className="text-center mt-5 mx-3">
-                                    <img src={Owi} alt="" />
+                                    <img src={storeLogo} alt="Store logo" className='rounded-pill w-25' />
 
                                     <h5 className="my text-dark mt-3">Your Store</h5>
-                                    <small style={{color: '#78716C'}} className='mb-4 d-block'>Store Description Here...</small>
+                                    <small style={{color: '#78716C'}} className='mb-4 d-block'>{storeDescription}</small>
 
                                     <h6 className='bx mt-4 mb-3'>My Service Collections</h6>
                                     {allStore.data?.services?.map((store) => 
@@ -1268,10 +1045,10 @@ const SetupStoreMain = () => {
                         <>
                           <div style={{margin: '5% auto'}}>
                             <div className='mb-2'>
-                                <img src={Gl} alt="" />
+                                <img src={storeLogo} alt="Store logo" className='rounded-pill w-25' />
                             </div>
                             <h5 className="my text-dark">Your Store</h5>
-                            <p>Store Description Here...</p>
+                            <p>{storeDescription}</p>
                           </div>
                           <div className="container" style={{ maxWidth: '400px' }}>
                             {/* Tab buttons */}

@@ -6,8 +6,6 @@ import {
   setBookingPayload,
   updateBookingField,
   updateBookingMetadataField,
-  getServices,
-  getProductOnline,
   getProductDetails,
 } from "../../slice/customerFacingSlice";
 import { getStorePreview } from "../../slice/onlineStoreSlice"
@@ -27,8 +25,7 @@ import productFive from "../../assets/ph3.png";
 import productSix from "../../assets/ph.png";
 
 const EMPTY_ARRAY = [];
-const SERVICES_PAGE_LIMIT = 20;
-const PRODUCTS_PAGE_LIMIT = 20;
+const WEEKDAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 const fallbackServiceImages = [serviceOne, serviceTwo, serviceThree];
 const fallbackProductImages = [productOne, productTwo, productThree, productFour, productFive, productSix];
@@ -82,7 +79,7 @@ const normalizeAvailability = (availability) => {
       return JSON.parse(parsed);
     }
     return parsed || {};
-  } catch (error) {
+  } catch {
     return {};
   }
 };
@@ -113,6 +110,72 @@ const toTimeInputValue = (isoValue) => {
   return parts ? parts.timePart : "";
 };
 
+const createDateFromInputValue = (value) => {
+  if (!value) return null;
+  const [year, month, day] = value.split("-").map(Number);
+  if (!Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(day)) {
+    return null;
+  }
+  return new Date(year, month - 1, day);
+};
+
+const toDateOnly = (value) => {
+  const parsed = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
+};
+
+const formatDateInputValue = (date) => {
+  const normalized = toDateOnly(date);
+  if (!normalized) return "";
+  const year = normalized.getFullYear();
+  const month = String(normalized.getMonth() + 1).padStart(2, "0");
+  const day = String(normalized.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+const formatDateDisplayValue = (value) => {
+  const parsed = createDateFromInputValue(value);
+  if (!parsed) return "";
+  return parsed.toLocaleDateString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+};
+
+const shiftMonth = (date, offset) => {
+  const normalized = toDateOnly(date);
+  if (!normalized) return new Date();
+  return new Date(normalized.getFullYear(), normalized.getMonth() + offset, 1);
+};
+
+const buildCalendarDays = (monthDate) => {
+  const normalizedMonth = toDateOnly(monthDate) || new Date();
+  const startOfMonth = new Date(normalizedMonth.getFullYear(), normalizedMonth.getMonth(), 1);
+  const startWeekday = startOfMonth.getDay();
+  const firstGridDate = new Date(
+    startOfMonth.getFullYear(),
+    startOfMonth.getMonth(),
+    1 - startWeekday
+  );
+
+  return Array.from({ length: 42 }, (_, index) => {
+    const date = new Date(
+      firstGridDate.getFullYear(),
+      firstGridDate.getMonth(),
+      firstGridDate.getDate() + index
+    );
+    return {
+      date,
+      iso: formatDateInputValue(date),
+      dayLabel: date.getDate(),
+      isCurrentMonth: date.getMonth() === normalizedMonth.getMonth(),
+    };
+  });
+};
+
 const buildScheduledAt = (dateValue, timeValue) => {
   if (!dateValue || !timeValue) return "";
   const [year, month, day] = dateValue.split("-").map(Number);
@@ -138,11 +201,130 @@ const getServiceImage = (imageUrl, fallbackIndex) => {
   return trimmed;
 };
 
+const sortByOrder = (items) =>
+  [...(Array.isArray(items) ? items : EMPTY_ARRAY)].sort(
+    (a, b) => (a?.sort_order ?? 0) - (b?.sort_order ?? 0)
+  );
+
+const buildServiceDisplayItem = (service, index) => {
+  const durationLabel = formatDuration(service?.duration_minutes);
+  const priceLabel = formatNaira(service?.price);
+  const titleBase = service?.service_title || service?.title || "Service";
+
+  return {
+    id: service?.id || `service-${index}`,
+    name: titleBase,
+    title: `${titleBase}${durationLabel ? ` (${durationLabel})` : ""}${
+      priceLabel ? ` - ${priceLabel}` : ""
+    }`,
+    cta: "Book Now",
+    price: service?.price ?? null,
+    priceLabel,
+    duration: durationLabel,
+    image: getServiceImage(service?.service_image_url, index),
+    description: service?.description || "Service details available on request.",
+    time: durationLabel ? `Duration ${durationLabel}` : "Schedule on request",
+    locationType: service?.location_type,
+    availability: service?.availability,
+    category: service?.category || service?.service_category,
+    raw: service,
+  };
+};
+
+const buildProductDisplayItem = (product, index) => ({
+  id: product?.id || `product-${index}`,
+  title: product?.name || product?.product_name || product?.title || "Product",
+  description: product?.category || product?.description || "New arrival",
+  price: formatNaira(product?.price) || "Contact for price",
+  image:
+    product?.image_url ||
+    product?.image ||
+    fallbackProductImages[index % fallbackProductImages.length],
+});
+
+const buildCollectionCard = (title, items, type) => ({
+  id: `${type}-${title}`.toLowerCase().replace(/\s+/g, "-"),
+  title,
+  previewImages: items
+    .map((item) => item?.image)
+    .filter(Boolean)
+    .slice(0, 3),
+  count: `${items.length} ${items.length === 1 ? type : `${type}s`}`,
+  [type === "Service" ? "services" : "products"]: items,
+});
+
 const parseAmount = (value) => {
   if (value === null || value === undefined || value === "") return null;
   if (typeof value === "number") return Number.isFinite(value) ? value : null;
   const numeric = Number(value.toString().replace(/[^0-9.]/g, ""));
   return Number.isFinite(numeric) ? numeric : null;
+};
+
+const getVariationName = (variation) =>
+  (
+    variation?.variation_name ||
+    variation?.variation_type ||
+    "Variation"
+  )
+    .toString()
+    .trim();
+
+const getVariationOptionLabel = (option) =>
+  (
+    option?.option_display_name ||
+    option?.option_value ||
+    option?.value ||
+    ""
+  )
+    .toString()
+    .trim();
+
+const getSelectedVariationEntries = (variationGroups, selectedVariationOptions = {}) =>
+  (Array.isArray(variationGroups) ? variationGroups : [])
+    .map((variation) => {
+      const selectedOption =
+        variation?.options?.find(
+          (option) => option?.id === selectedVariationOptions?.[variation?.id]
+        ) ||
+        variation?.options?.find((option) => option?.is_default) ||
+        variation?.options?.[0] ||
+        null;
+      const optionLabel = getVariationOptionLabel(selectedOption);
+      if (!selectedOption || !optionLabel) return null;
+      return {
+        variationId: variation?.id ?? null,
+        variationName: getVariationName(variation),
+        optionId: selectedOption?.id ?? null,
+        optionLabel,
+      };
+    })
+    .filter(Boolean);
+
+const findVariationValue = (entries, keywords) => {
+  const normalizedKeywords = (Array.isArray(keywords) ? keywords : [keywords])
+    .map((keyword) => keyword?.toString().trim().toLowerCase())
+    .filter(Boolean);
+  if (!normalizedKeywords.length) return "";
+  const match = (Array.isArray(entries) ? entries : []).find((entry) => {
+    const name = entry?.variationName?.toString().trim().toLowerCase() || "";
+    return normalizedKeywords.some((keyword) => name.includes(keyword));
+  });
+  return match?.optionLabel || "";
+};
+
+const getCartItemVariantSignature = (item) => {
+  const selectedOptions = Array.isArray(item?.selectedOptions) ? item.selectedOptions : [];
+  if (selectedOptions.length) {
+    return selectedOptions
+      .map((entry) => {
+        const variationKey = entry?.variationId ?? entry?.variationName ?? "variation";
+        const optionKey = entry?.optionId ?? entry?.optionLabel ?? "";
+        return `${variationKey}:${optionKey}`;
+      })
+      .sort()
+      .join("|");
+  }
+  return [item?.size || "", item?.color || ""].join("|");
 };
 
 const resolveVariationSelection = (product, sizeValue) => {
@@ -181,7 +363,7 @@ const readCartItems = () => {
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? parsed : [];
-  } catch (error) {
+  } catch {
     return [];
   }
 };
@@ -190,17 +372,9 @@ const writeCartItems = (items) => {
   if (typeof window === "undefined") return;
   try {
     localStorage.setItem(CART_KEY, JSON.stringify(items));
-  } catch (error) {
+  } catch {
     // Ignore storage errors
   }
-};
-
-const toDateTimeInputValue = (isoValue) => {
-  if (!isoValue) return "";
-  const parsed = new Date(isoValue);
-  if (Number.isNaN(parsed.getTime())) return "";
-  const offsetMs = parsed.getTimezoneOffset() * 60000;
-  return new Date(parsed.getTime() - offsetMs).toISOString().slice(0, 16);
 };
 
 const getScheduleLabels = (scheduledAt) => {
@@ -323,6 +497,27 @@ const getServiceBookingMeta = (service) => {
 
 const CollectionDetailView = ({ collection, onBack, onSelectProduct, storeLogo, storeName }) => {
   const [showFilters, setShowFilters] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+
+  const filteredProducts = useMemo(() => {
+    const normalizedQuery = searchTerm.trim().toLowerCase();
+    if (!normalizedQuery) return collection.products;
+
+    return collection.products.filter((product) => {
+      const searchableText = [
+        product?.title,
+        product?.description,
+        product?.price,
+        product?.sku,
+        product?.category,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+
+      return searchableText.includes(normalizedQuery);
+    });
+  }, [collection.products, searchTerm]);
 
   return (
     <section className={styles.customerHomeCollectionDetail}>
@@ -353,6 +548,8 @@ const CollectionDetailView = ({ collection, onBack, onSelectProduct, storeLogo, 
             className={styles.customerHomeSearchInput}
             type="text"
             placeholder="Search products..."
+            value={searchTerm}
+            onChange={(event) => setSearchTerm(event.target.value)}
           />
         </div>
         <Button
@@ -384,7 +581,7 @@ const CollectionDetailView = ({ collection, onBack, onSelectProduct, storeLogo, 
       </div>
 
       <div className={styles.customerHomeProductGrid}>
-        {collection.products.map((product) => (
+        {filteredProducts.map((product) => (
           <Button
             className={styles.customerHomeProductCard}
             key={product.id || product.title}
@@ -407,6 +604,14 @@ const CollectionDetailView = ({ collection, onBack, onSelectProduct, storeLogo, 
           </Button>
         ))}
       </div>
+      {!filteredProducts.length && (
+        <div className={styles.customerHomeEmptyState}>
+          <p className={styles.customerHomeEmptyTitle}>No matching products</p>
+          <p className={styles.customerHomeEmptyText}>
+            Try a different product name or keyword.
+          </p>
+        </div>
+      )}
 
       {showFilters && (
         <div className={styles.customerHomeFilterOverlay} role="dialog" aria-modal="true">
@@ -473,6 +678,199 @@ const CollectionDetailView = ({ collection, onBack, onSelectProduct, storeLogo, 
   );
 };
 
+const ServiceCollectionDetailView = ({ collection, onBack, onSelectService }) => {
+  return (
+    <section className={styles.customerHomeCollectionDetail}>
+      <header className={styles.customerHomeDetailHeader}>
+        <Button
+          className={styles.customerHomeBackButton}
+          type="button"
+          onClick={onBack}
+          aria-label="Back to collections"
+          unstyled
+        >
+          ←
+        </Button>
+        <span className={styles.customerHomeDetailTitle}>{collection.title}</span>
+      </header>
+
+      <div className={styles.customerHomeCollectionMeta}>
+        <h2 className={styles.customerHomeSectionTitle}>{collection.title}</h2>
+        <span className={styles.customerHomeCollectionCountMeta}>
+          {collection.services.length} Service{collection.services.length === 1 ? "" : "s"}
+        </span>
+      </div>
+
+      <div className={styles.customerHomeServiceList}>
+        {collection.services.map((item, index) => (
+          <Button
+            className={styles.customerHomeServiceCard}
+            key={`${item.id ?? item.title ?? "service"}-${index}`}
+            type="button"
+            onClick={() => onSelectService(item)}
+            unstyled
+          >
+            <img
+              className={styles.customerHomeServiceImage}
+              src={item.image}
+              alt={item.title}
+            />
+            <div className={styles.customerHomeServiceText}>
+              <span className={styles.customerHomeServiceTitle}>{item.title}</span>
+              <span className={styles.customerHomeServiceCta}>{item.cta}</span>
+            </div>
+            <span className={styles.customerHomeServiceMenu} aria-hidden="true">
+              ...
+            </span>
+          </Button>
+        ))}
+      </div>
+    </section>
+  );
+};
+
+const ServiceDetailView = ({ service, onBack, onBook, storeName, shareOptions = [] }) => {
+  const bookingMeta = getServiceBookingMeta(service);
+  const serviceAvailability = normalizeAvailability(service?.availability);
+  const availableDayLabels = Object.entries(serviceAvailability)
+    .filter(([, details]) => details?.available)
+    .map(([day, details]) => {
+      const slots = Array.isArray(details?.time_slots) ? details.time_slots : [];
+      return {
+        day,
+        slots,
+      };
+    });
+  const serviceName = bookingMeta.name || service?.name || service?.title || "Service";
+  const servicePrice = bookingMeta.price || service?.priceLabel || formatNaira(service?.price);
+  const serviceDuration = bookingMeta.duration || service?.duration || "";
+  const locationLabel = formatLocationType(service?.locationType);
+  const description =
+    [service?.description, service?.raw?.description, service?.category]
+      .find((value) => typeof value === "string" && value.trim()) ||
+    "Service details available on request.";
+  const metaRows = [
+    { label: "Duration", value: serviceDuration || "Schedule on request" },
+    { label: "Category", value: service?.category },
+  ].filter((row) => row.value !== null && row.value !== undefined && row.value !== "");
+
+  return (
+    <section className={styles.customerHomeProductDetail}>
+      <header className={styles.customerHomeProductHeader}>
+        <Button
+          className={styles.customerHomeBackButton}
+          type="button"
+          onClick={onBack}
+          aria-label="Back to services"
+          unstyled
+        >
+          ←
+        </Button>
+        <span className={styles.customerHomeProductHeaderTitle}>
+          {storeName || "Service Details"}
+        </span>
+        <span className={styles.customerHomeHeaderSpacer} aria-hidden="true" />
+      </header>
+
+      <div className={styles.customerHomeProductMain}>
+        <div className={styles.customerHomeProductMedia}>
+          <div className={styles.customerHomeProductHero}>
+            <img src={service?.image} alt={serviceName} />
+          </div>
+        </div>
+
+        <div className={styles.customerHomeProductInfo}>
+          <div>
+            <h2 className={styles.customerHomeProductTitleLarge}>{serviceName}</h2>
+          </div>
+          <div className={styles.customerHomeProductPriceLarge}>
+            {servicePrice || "Contact for price"}
+          </div>
+          <div className={styles.customerHomeDetailDivider} />
+
+          <div className={styles.customerHomeProductMeta}>
+            {metaRows.map((row) => (
+              <div key={row.label} className={styles.customerHomeProductMetaRow}>
+                <span className={styles.customerHomeProductMetaLabel}>{row.label}</span>
+                <span className={styles.customerHomeProductMetaValue}>{row.value}</span>
+              </div>
+            ))}
+          </div>
+
+          <div className={`${styles.customerHomeDetailGroup} ${styles.customerHomeServiceDetailSection}`}>
+            <span className={styles.customerHomeDetailLabel}>About this service</span>
+            <p className={styles.customerHomeProductDescLarge}>{description}</p>
+          </div>
+
+          <div className={`${styles.customerHomeDetailGroup} ${styles.customerHomeServiceDetailSection}`}>
+            <span className={styles.customerHomeDetailLabel}>Availability</span>
+            {availableDayLabels.length ? (
+              <div className={styles.customerHomeAvailability}>
+                {availableDayLabels.map(({ day, slots }) => (
+                  <div key={day} className={styles.customerHomeAvailabilityRow}>
+                    <span className={styles.customerHomeAvailabilityDay}>{day}</span>
+                    <div className={styles.customerHomeAvailabilitySlots}>
+                      {slots.length ? (
+                        slots.map((slot) => (
+                          <span
+                            key={`${service?.id || serviceName}-${day}-${slot}`}
+                            className={styles.customerHomeAvailabilitySlot}
+                          >
+                            {slot}
+                          </span>
+                        ))
+                      ) : (
+                        <span className={styles.customerHomeAvailabilityStatus}>
+                          Available
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className={styles.customerHomeProductDescLarge}>
+                Availability will be confirmed when you book.
+              </p>
+            )}
+          </div>
+
+          <div className={`${styles.customerHomeDetailGroup} ${styles.customerHomeServiceDetailSection}`}>
+            <span className={styles.customerHomeDetailLabel}>Location</span>
+            <p className={styles.customerHomeProductDescLarge}>{locationLabel}</p>
+          </div>
+
+          <Button
+            className={styles.customerHomeAddToCartButton}
+            type="button"
+            onClick={onBook}
+            unstyled
+          >
+            Book Now
+          </Button>
+
+          {shareOptions.length > 0 && (
+            <div className={styles.customerHomeShareRow}>
+              {shareOptions.map((option) => (
+                <a
+                  key={option.id}
+                  className={`${styles.customerHomeShareButton} ${option.className}`}
+                  href={option.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label={option.label}
+                >
+                  <span className={styles.customerHomeShareIcon}>{option.icon}</span>
+                </a>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </section>
+  );
+};
+
 const ProductDetailView = ({
   product,
   onBack,
@@ -482,9 +880,40 @@ const ProductDetailView = ({
   onViewCart,
   isInCart = false,
 }) => {
-  const [selectedSize, setSelectedSize] = useState("16");
   const [quantity, setQuantity] = useState(1);
-  const [activeImage, setActiveImage] = useState(product?.image);
+  const variationGroups = useMemo(
+    () =>
+      sortByOrder(product?.variations).map((variation) => ({
+        ...variation,
+        options: sortByOrder(variation?.options).filter((option) => option?.is_available !== 0),
+      })),
+    [product?.variations]
+  );
+  const initialVariationSelections = useMemo(
+    () =>
+      variationGroups.reduce((acc, variation) => {
+        const defaultOption =
+          variation.options.find((option) => option?.is_default) || variation.options[0];
+        if (defaultOption?.id !== undefined && defaultOption?.id !== null) {
+          acc[variation.id] = defaultOption.id;
+        }
+        return acc;
+      }, {}),
+    [variationGroups]
+  );
+  const [selectedVariationOptions, setSelectedVariationOptions] = useState(
+    () => initialVariationSelections
+  );
+  const primaryVariation = variationGroups[0] || null;
+  const primarySelectedOption =
+    primaryVariation?.options.find(
+      (option) => option?.id === selectedVariationOptions?.[primaryVariation?.id]
+    ) ||
+    primaryVariation?.options[0] ||
+    null;
+  const [activeImage, setActiveImage] = useState(
+    () => primarySelectedOption?.image_url || product?.image
+  );
   const carouselRef = React.useRef(null);
   const thumbRefs = React.useRef({});
   const dragStateRef = React.useRef({
@@ -492,23 +921,24 @@ const ProductDetailView = ({
     startX: 0,
     scrollLeft: 0,
   });
-  const sizes = ["8", "16", "18"];
   const variationImages = useMemo(() => {
     const images = [];
-    if (!product?.variations?.length) return images;
-    product.variations.forEach((variation) => {
-      (variation?.options || []).forEach((option) => {
+    if (!variationGroups.length) return images;
+    variationGroups.forEach((variation) => {
+      variation.options.forEach((option) => {
         if (option?.image_url) {
           images.push({
             id: option.id || `${variation.id || variation.variation_name}-${option.option_value}`,
             src: option.image_url,
             alt: option.option_display_name || option.option_value || "Variation",
+            variationId: variation.id,
+            optionId: option.id,
           });
         }
       });
     });
     return images;
-  }, [product?.variations]);
+  }, [variationGroups]);
   const description =
     [
       product?.description,
@@ -518,10 +948,6 @@ const ProductDetailView = ({
       product?.details,
     ].find((value) => typeof value === "string" && value.trim()) ||
     "Product details available.";
-
-  useEffect(() => {
-    setActiveImage(product?.image);
-  }, [product?.image]);
 
   const scrollThumbIntoView = (thumbId) => {
     const el = thumbRefs.current?.[thumbId];
@@ -552,14 +978,43 @@ const ProductDetailView = ({
     { label: "SKU", value: product?.sku },
     { label: "Category", value: product?.category },
     { label: "Stock", value: Number.isFinite(Number(product?.stock)) ? product?.stock : null },
-    {
-      label: "Low stock",
-      value: Number.isFinite(Number(product?.lowStockThreshold))
-        ? product?.lowStockThreshold
-        : null,
-    },
     { label: "Barcode", value: product?.barcode },
   ].filter((row) => row.value !== null && row.value !== undefined && row.value !== "");
+  const baseProductPrice = parseAmount(product?.price);
+  const selectedVariationPrice = parseAmount(primarySelectedOption?.price_adjustment);
+  const resolvedVariationPrice =
+    selectedVariationPrice !== null
+      ? (baseProductPrice !== null ? baseProductPrice + selectedVariationPrice : selectedVariationPrice)
+      : baseProductPrice;
+  const resolvedVariationPriceLabel =
+    resolvedVariationPrice !== null
+      ? formatNaira(resolvedVariationPrice)
+      : product?.price || "Contact for price";
+  const selectedVariationEntries = useMemo(
+    () => getSelectedVariationEntries(variationGroups, selectedVariationOptions),
+    [variationGroups, selectedVariationOptions]
+  );
+
+  const selectedVariationPayload = primaryVariation && primarySelectedOption
+    ? {
+        label:
+          primarySelectedOption?.option_display_name ||
+          primarySelectedOption?.option_value ||
+          primaryVariation?.variation_name ||
+          "",
+        variationId: primaryVariation?.id ?? null,
+        variationOptionId: primarySelectedOption?.id ?? null,
+        priceValue: resolvedVariationPrice,
+        priceLabel: resolvedVariationPriceLabel,
+        selections: selectedVariationEntries,
+        sizeLabel:
+          findVariationValue(selectedVariationEntries, "size") ||
+          (primaryVariation?.variation_name?.toString().trim().toLowerCase().includes("size")
+            ? getVariationOptionLabel(primarySelectedOption)
+            : ""),
+        colorLabel: findVariationValue(selectedVariationEntries, ["color", "colour"]),
+      }
+    : null;
 
   return (
     <section className={styles.customerHomeProductDetail}>
@@ -597,77 +1052,85 @@ const ProductDetailView = ({
       </header>
 
       <div className={styles.customerHomeProductMain}>
-        <div className={styles.customerHomeProductHero}>
-          <img src={activeImage || product.image} alt={product.title} />
-        </div>
-        {variationImages.length ? (
-          <div className={styles.customerHomeVariationCarousel} aria-label="Product variations">
-            <Button
-              className={styles.customerHomeVariationArrow}
-              type="button"
-              aria-label="Scroll variations left"
-              onClick={() => {
-                if (!carouselRef.current) return;
-                carouselRef.current.scrollBy({ left: -220, behavior: "smooth" });
-              }}
-              unstyled
-            >
-              ‹
-            </Button>
-            <div
-              className={styles.customerHomeVariationTrack}
-              ref={carouselRef}
-              onPointerDown={handleCarouselPointerDown}
-              onPointerMove={handleCarouselPointerMove}
-              onPointerUp={handleCarouselPointerUp}
-              onPointerLeave={handleCarouselPointerUp}
-              role="listbox"
-              aria-label="Variation thumbnails"
-            >
-              {variationImages.map((image) => (
-                <Button
-                  key={image.id}
-                  className={`${styles.customerHomeVariationThumb} ${
-                    activeImage === image.src ? styles.customerHomeVariationThumbActive : ""
-                  }`}
-                  type="button"
-                  onClick={() => {
-                    setActiveImage(image.src);
-                    scrollThumbIntoView(image.id);
-                  }}
-                  ref={(el) => {
-                    if (el) {
-                      thumbRefs.current[image.id] = el;
-                    }
-                  }}
-                  unstyled
-                  role="option"
-                  aria-selected={activeImage === image.src}
-                >
-                  <img src={image.src} alt={image.alt} loading="lazy" />
-                </Button>
-              ))}
-            </div>
-            <Button
-              className={styles.customerHomeVariationArrow}
-              type="button"
-              aria-label="Scroll variations right"
-              onClick={() => {
-                if (!carouselRef.current) return;
-                carouselRef.current.scrollBy({ left: 220, behavior: "smooth" });
-              }}
-              unstyled
-            >
-              ›
-            </Button>
+        <div className={styles.customerHomeProductMedia}>
+          <div className={styles.customerHomeProductHero}>
+            <img src={activeImage || primarySelectedOption?.image_url || product.image} alt={product.title} />
           </div>
-        ) : null}
+          {variationImages.length ? (
+            <div className={styles.customerHomeVariationCarousel} aria-label="Product variations">
+              <Button
+                className={styles.customerHomeVariationArrow}
+                type="button"
+                aria-label="Scroll variations left"
+                onClick={() => {
+                  if (!carouselRef.current) return;
+                  carouselRef.current.scrollBy({ left: -220, behavior: "smooth" });
+                }}
+                unstyled
+              >
+                ‹
+              </Button>
+              <div
+                className={styles.customerHomeVariationTrack}
+                ref={carouselRef}
+                onPointerDown={handleCarouselPointerDown}
+                onPointerMove={handleCarouselPointerMove}
+                onPointerUp={handleCarouselPointerUp}
+                onPointerLeave={handleCarouselPointerUp}
+                role="listbox"
+                aria-label="Variation thumbnails"
+              >
+                {variationImages.map((image) => (
+                  <Button
+                    key={image.id}
+                    className={`${styles.customerHomeVariationThumb} ${
+                      activeImage === image.src ? styles.customerHomeVariationThumbActive : ""
+                    }`}
+                    type="button"
+                    onClick={() => {
+                      setActiveImage(image.src);
+                      if (image.variationId && image.optionId) {
+                        setSelectedVariationOptions((prev) => ({
+                          ...prev,
+                          [image.variationId]: image.optionId,
+                        }));
+                      }
+                      scrollThumbIntoView(image.id);
+                    }}
+                    ref={(el) => {
+                      if (el) {
+                        thumbRefs.current[image.id] = el;
+                      }
+                    }}
+                    unstyled
+                    role="option"
+                    aria-selected={activeImage === image.src}
+                  >
+                    <img src={image.src} alt={image.alt} loading="lazy" />
+                  </Button>
+                ))}
+              </div>
+              <Button
+                className={styles.customerHomeVariationArrow}
+                type="button"
+                aria-label="Scroll variations right"
+                onClick={() => {
+                  if (!carouselRef.current) return;
+                  carouselRef.current.scrollBy({ left: 220, behavior: "smooth" });
+                }}
+                unstyled
+              >
+                ›
+              </Button>
+            </div>
+          ) : null}
+        </div>
 
         <div className={styles.customerHomeProductInfo}>
           <div>
             <h2 className={styles.customerHomeProductTitleLarge}>{product.title}</h2>
           </div>
-          <div className={styles.customerHomeProductPriceLarge}>{product.price}</div>
+          <div className={styles.customerHomeProductPriceLarge}>{resolvedVariationPriceLabel}</div>
           <div className={styles.customerHomeDetailDivider} />
           {metaRows.length ? (
             <div className={styles.customerHomeProductMeta}>
@@ -680,11 +1143,11 @@ const ProductDetailView = ({
             </div>
           ) : null}
 
-          {product?.variations?.length ? (
+          {variationGroups.length ? (
             <div className={styles.customerHomeDetailGroup}>
-              <span className={styles.customerHomeDetailLabel}>Variations</span>
+              <span className={styles.customerHomeDetailLabel}>Options</span>
               <div className={styles.customerHomeVariationList}>
-                {product.variations.map((variation) => (
+                {variationGroups.map((variation) => (
                   <div
                     key={variation.id || variation.variation_name}
                     className={styles.customerHomeVariationGroup}
@@ -693,39 +1156,45 @@ const ProductDetailView = ({
                       {variation.variation_name || variation.variation_type || "Variation"}
                     </span>
                     <div className={styles.customerHomeVariationOptions}>
-                      {(variation.options || []).map((option) => (
-                        <span
+                      {variation.options.map((option) => {
+                        const optionLabel =
+                          option?.option_display_name || option?.option_value || "Option";
+                        const isActive = selectedVariationOptions?.[variation.id] === option?.id;
+                        const optionPrice = parseAmount(option?.price_adjustment);
+                        const optionPriceLabel =
+                          optionPrice !== null
+                            ? formatNaira(
+                                baseProductPrice !== null ? baseProductPrice + optionPrice : optionPrice
+                              )
+                            : "";
+
+                        return (
+                        <Button
                           key={option.id || option.option_value}
-                          className={styles.customerHomeVariationOption}
+                          type="button"
+                          className={`${styles.customerHomeSizeOption} ${
+                            isActive ? styles.customerHomeSizeOptionActive : ""
+                          }`}
+                          onClick={() => {
+                            setSelectedVariationOptions((prev) => ({
+                              ...prev,
+                              [variation.id]: option.id,
+                            }));
+                            if (variation.id === primaryVariation?.id) {
+                              setActiveImage(option?.image_url || product?.image);
+                            }
+                          }}
+                          unstyled
                         >
-                          {option.option_display_name || option.option_value}
-                        </span>
-                      ))}
+                          {optionPriceLabel ? `${optionLabel} · ${optionPriceLabel}` : optionLabel}
+                        </Button>
+                      )})}
                     </div>
                   </div>
                 ))}
               </div>
             </div>
           ) : null}
-
-          <div className={styles.customerHomeDetailGroup}>
-            <span className={styles.customerHomeDetailLabel}>Size</span>
-            <div className={styles.customerHomeSizeOptions}>
-              {sizes.map((size) => (
-                <Button
-                  key={size}
-                  type="button"
-                  className={`${styles.customerHomeSizeOption} ${
-                    selectedSize === size ? styles.customerHomeSizeOptionActive : ""
-                  }`}
-                  onClick={() => setSelectedSize(size)}
-                  unstyled
-                >
-                  {size}
-                </Button>
-              ))}
-            </div>
-          </div>
 
           <div className={styles.customerHomeDetailGroup}>
             <span className={styles.customerHomeDetailLabel}>Quantity</span>
@@ -753,7 +1222,7 @@ const ProductDetailView = ({
           <Button
             className={styles.customerHomeAddToCartButton}
             type="button"
-            onClick={() => onAddToCart?.(product, quantity, selectedSize)}
+            onClick={() => onAddToCart?.(product, quantity, selectedVariationPayload)}
             unstyled
           >
             {isInCart ? "Added to Cart" : "Add to Cart"}
@@ -1033,18 +1502,24 @@ const CustomersHome = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const token = localStorage.getItem("token");
-  const { content, bookingPayload, bookingLoading, bookingError, myServices, myProducts, productDetails } = useSelector(
+  const { content, bookingPayload, bookingLoading, bookingError, productDetails } = useSelector(
     (state) => state.customer
   );
   const getTenantId = JSON.parse(localStorage.getItem("user") || "null");
   let getStoreName = localStorage.getItem("storeView");
   console.log(getStoreName)
 
+  // useEffect(() => {
+  //   if (token && getTenantId?.tenantId) {
+  //     dispatch(getOnlineEcommerceStore({ token, tenant_id: getTenantId.tenantId, store: getStoreName }));
+  //   }
+  // }, [dispatch, token, getTenantId?.tenantId, getStoreName]);
+
   useEffect(() => {
     if (token && getTenantId?.tenantId) {
-      dispatch(getOnlineEcommerceStore({ token, tenant_id: getTenantId.tenantId, store: getStoreName }));
+      dispatch(getOnlineEcommerceStore({ token, tenant_id: '21', store: 'comfort' }));
     }
-  }, [dispatch, token, getTenantId?.tenantId]);
+  }, [dispatch, token, '21', 'comfort']);
 
   useEffect(() => {
     if (token) {
@@ -1057,89 +1532,45 @@ const CustomersHome = () => {
   const storeDescription = storeData?.store_description;
   const resolvedTenantId = getTenantId?.tenantId ?? null;
   const socialLinks = storeData?.social_links ?? EMPTY_ARRAY;
-  const servicesPayload = myServices?.data?.services ?? EMPTY_ARRAY;
-  const servicesPagination = myServices?.data?.pagination ?? {};
-  const rawProductsPayload =
-    myProducts?.data?.products ??
-    myProducts?.data?.items ??
-    myProducts?.data?.data ??
-    myProducts?.data ??
-    EMPTY_ARRAY;
-  const productsPayload = Array.isArray(rawProductsPayload) ? rawProductsPayload : EMPTY_ARRAY;
-  const productsPagination = myProducts?.data?.pagination ?? {};
-
-  const serviceItems = useMemo(() => {
-    const sortedServices = [...servicesPayload].sort(
-      (a, b) => (a?.sort_order ?? 0) - (b?.sort_order ?? 0)
-    );
-
-    return sortedServices.map((service, index) => {
-      const durationLabel = formatDuration(service.duration_minutes);
-      const priceLabel = formatNaira(service.price);
-      const titleBase = service.service_title || service.title || "Service";
-      return {
-        id: service.id || `service-${index}`,
-        title: `${titleBase}${durationLabel ? ` (${durationLabel})` : ""}${
-          priceLabel ? ` - ${priceLabel}` : ""
-        }`,
-        cta: "Book Now",
-        price: service.price ?? null,
-        image: getServiceImage(service.service_image_url, index),
-        description: service.description || "Service details available on request.",
-        time: durationLabel ? `Duration ${durationLabel}` : "Schedule on request",
-        locationType: service.location_type,
-        availability: service.availability,
-      };
-    });
-  }, [servicesPayload]);
-
-  const productItems = useMemo(
-    () =>
-      productsPayload.map((product, index) => {
-        const priceLabel = formatNaira(product?.price) || "Contact for price";
-        return {
-          id: product?.id || `product-${index}`,
-          title: product?.name || product?.product_name || product?.title || "Product",
-          description: product?.category || product?.description || "New arrival",
-          price: priceLabel,
-          image:
-            product?.image_url ||
-            product?.image ||
-            fallbackProductImages[index % fallbackProductImages.length],
-        };
-      }),
-    [productsPayload]
-  );
+  const toggles = content?.data?.toggles ?? {};
+  const showProducts = toggles?.show_products !== false;
+  const showServices = toggles?.show_services !== false;
+  const productCollectionsPayload = content?.data?.product_collections?.items ?? EMPTY_ARRAY;
+  const serviceCollectionsPayload = content?.data?.service_collections?.items ?? EMPTY_ARRAY;
+  const productsNotInCollections = content?.data?.products_not_in_collections?.items ?? EMPTY_ARRAY;
+  const servicesNotInCollections = content?.data?.services_not_in_collections?.items ?? EMPTY_ARRAY;
 
   const [activeTab, setActiveTab] = useState("services");
   const [selectedProduct, setSelectedProduct] = useState(null);
+  const [selectedProductCollection, setSelectedProductCollection] = useState(null);
+  const [selectedServiceCollection, setSelectedServiceCollection] = useState(null);
   const [activeService, setActiveService] = useState(null);
   const [bookingService, setBookingService] = useState(null);
   const location = useLocation();
-  const [servicesPage, setServicesPage] = useState(1);
-  const [productsPage, setProductsPage] = useState(1);
   const [bookingDate, setBookingDate] = useState("");
   const [bookingTimeSlot, setBookingTimeSlot] = useState("");
   const [availabilityError, setAvailabilityError] = useState("");
-  const totalServicePages = Math.max(1, Number(servicesPagination?.total_pages) || 1);
-  const paginationPage = Number(servicesPagination?.page) || servicesPage;
-  const totalProductPages = Math.max(1, Number(productsPagination?.total_pages) || 1);
-  const productPaginationPage = Number(productsPagination?.page) || productsPage;
   const [confirmedBooking, setConfirmedBooking] = useState(null);
   const [cancelBooking, setCancelBooking] = useState(null);
   const [cancelledBooking, setCancelledBooking] = useState(null);
-  const [bookingPaymentMethod, setBookingPaymentMethod] = useState("paystack");
   const bookingMetadata = bookingPayload?.metadata || {};
   const [cartItems, setCartItems] = useState(() => readCartItems());
   const [showScrollHint, setShowScrollHint] = useState(false);
   const scrollRef = React.useRef(null);
   const cartCount = useMemo(() => cartItems.length, [cartItems]);
-  const items = useMemo(() => serviceItems, [serviceItems]);
   const sectionTitle =
-    activeTab === "services" ? "My Service Collections" : "Sales Collection";
-  const isDetailView = activeTab === "shop" && selectedProduct;
+    activeTab === "services" ? "Service Collections" : "Sales Collection";
+  const isCollectionDetailView = Boolean(
+    (activeTab === "services" && selectedServiceCollection) ||
+      (activeTab === "shop" && selectedProductCollection)
+  );
+  const isProductDetailView = activeTab === "shop" && selectedProduct;
+  const isServiceDetailView = activeTab === "services" && activeService;
+  const isDetailView = isProductDetailView || isServiceDetailView;
+  const isNestedView = isCollectionDetailView || isDetailView;
   const bookingMeta = getServiceBookingMeta(bookingService);
-  const bookingAmount = bookingPayload?.amount ?? parseAmount(bookingMeta.price);
+  const selectedBookingAmount = parseAmount(bookingService?.price ?? bookingMeta.price);
+  const bookingAmount = selectedBookingAmount ?? bookingPayload?.amount;
   const bookingAmountLabel =
     bookingAmount !== null && bookingAmount !== undefined
       ? formatNaira(bookingAmount)
@@ -1159,6 +1590,12 @@ const CustomersHome = () => {
         .map(([day]) => day),
     [serviceAvailability]
   );
+  const todayDate = useMemo(() => toDateOnly(new Date()), []);
+  const minBookingMonth = useMemo(
+    () => new Date(todayDate.getFullYear(), todayDate.getMonth(), 1),
+    [todayDate]
+  );
+  const [visibleBookingMonth, setVisibleBookingMonth] = useState(() => minBookingMonth);
   const hasAvailability = Object.keys(serviceAvailability).length > 0;
   const selectedDayKey = bookingDate ? getWeekdayKeyFromDate(bookingDate) : "";
   const selectedDayAvailability = selectedDayKey ? serviceAvailability?.[selectedDayKey] : null;
@@ -1170,6 +1607,33 @@ const CustomersHome = () => {
       bookingTimeSlot &&
       (!hasAvailability ||
         (selectedDayAvailability?.available && availableTimeSlots.includes(bookingTimeSlot)))
+  );
+  const canGoToPreviousBookingMonth = visibleBookingMonth > minBookingMonth;
+  const bookingMonthLabel = useMemo(
+    () =>
+      visibleBookingMonth.toLocaleDateString("en-US", {
+        month: "long",
+        year: "numeric",
+      }),
+    [visibleBookingMonth]
+  );
+  const isBookingDateSelectable = React.useCallback(
+    (date) => {
+      const normalizedDate = toDateOnly(date);
+      if (!normalizedDate || normalizedDate < todayDate) return false;
+      if (!hasAvailability) return true;
+      const dayKey = getWeekdayKeyFromDate(normalizedDate);
+      return Boolean(serviceAvailability?.[dayKey]?.available);
+    },
+    [hasAvailability, serviceAvailability, todayDate]
+  );
+  const bookingCalendarDays = useMemo(
+    () =>
+      buildCalendarDays(visibleBookingMonth).map((day) => ({
+        ...day,
+        isSelectable: day.isCurrentMonth && isBookingDateSelectable(day.date),
+      })),
+    [isBookingDateSelectable, visibleBookingMonth]
   );
 
   const shareOptions = useMemo(
@@ -1186,9 +1650,59 @@ const CustomersHome = () => {
     [socialLinks]
   );
 
+  const serviceCollections = useMemo(() => {
+    const mappedCollections = sortByOrder(serviceCollectionsPayload)
+      .filter((collection) => collection?.is_visible !== false)
+      .map((collection, collectionIndex) => {
+        const services = sortByOrder(collection?.StoreCollectionServices).map((entry, index) =>
+          buildServiceDisplayItem(entry?.StoreService, index + collectionIndex)
+        );
+        return buildCollectionCard(
+          collection?.collection_name || `Service Collection ${collectionIndex + 1}`,
+          services,
+          "Service"
+        );
+      });
+
+    const ungroupedServices = sortByOrder(servicesNotInCollections).map((service, index) =>
+      buildServiceDisplayItem(service, index + mappedCollections.length)
+    );
+
+    if (ungroupedServices.length) {
+      mappedCollections.push(buildCollectionCard("Other Services", ungroupedServices, "Service"));
+    }
+
+    return mappedCollections;
+  }, [serviceCollectionsPayload, servicesNotInCollections]);
+
+  const productCollections = useMemo(() => {
+    const mappedCollections = sortByOrder(productCollectionsPayload)
+      .filter((collection) => collection?.is_visible !== false)
+      .map((collection, collectionIndex) => {
+        const products = sortByOrder(collection?.StoreCollectionProducts).map((entry, index) =>
+          buildProductDisplayItem(entry?.Product, index + collectionIndex)
+        );
+        return buildCollectionCard(
+          collection?.collection_name || `Product Collection ${collectionIndex + 1}`,
+          products,
+          "Product"
+        );
+      });
+
+    const ungroupedProducts = sortByOrder(productsNotInCollections).map((product, index) =>
+      buildProductDisplayItem(product, index + mappedCollections.length)
+    );
+
+    if (ungroupedProducts.length) {
+      mappedCollections.push(buildCollectionCard("Other Products", ungroupedProducts, "Product"));
+    }
+
+    return mappedCollections;
+  }, [productCollectionsPayload, productsNotInCollections]);
+
   const updateScrollHint = React.useCallback(() => {
     const el = scrollRef.current;
-    if (!el || isDetailView) {
+    if (!el || isNestedView) {
       setShowScrollHint(false);
       return;
     }
@@ -1196,10 +1710,14 @@ const CustomersHome = () => {
     const canScroll = maxScroll > 8;
     const atBottom = el.scrollTop >= maxScroll - 4;
     setShowScrollHint(canScroll && !atBottom);
-  }, [isDetailView]);
+  }, [isNestedView]);
+
+  const handleScrollableScroll = React.useCallback(() => {
+    updateScrollHint();
+  }, [updateScrollHint]);
 
   useEffect(() => {
-    if (isDetailView) {
+    if (isNestedView) {
       setShowScrollHint(false);
       return;
     }
@@ -1207,7 +1725,13 @@ const CustomersHome = () => {
     scrollRef.current.scrollTop = 0;
     const raf = requestAnimationFrame(() => updateScrollHint());
     return () => cancelAnimationFrame(raf);
-  }, [activeTab, isDetailView, servicesPage, productsPage, items.length, productItems.length, updateScrollHint]);
+  }, [activeTab, isNestedView, updateScrollHint]);
+
+  useEffect(() => {
+    if (!scrollRef.current || isNestedView) return;
+    const raf = requestAnimationFrame(() => updateScrollHint());
+    return () => cancelAnimationFrame(raf);
+  }, [isNestedView, serviceCollections.length, productCollections.length, updateScrollHint]);
 
   useEffect(() => {
     const handleResize = () => updateScrollHint();
@@ -1259,34 +1783,69 @@ const CustomersHome = () => {
     return cartItems.some((item) => item?.id === productId);
   }, [cartItems, detailProduct?.id, selectedProduct?.id]);
 
-  const handleAddToCart = (product, quantity, size) => {
+  const handleAddToCart = (product, quantity, selection) => {
     if (!product) return;
     const safeQuantity = Math.max(1, Number(quantity) || 1);
     const itemId = product.id || product.title || `product-${Date.now()}`;
-    const alreadyInCart = cartItems.some((item) => item?.id === itemId);
-    if (alreadyInCart) {
-      Swal.fire({
-        icon: "info",
-        title: "Already in cart",
-        text: "This product is already in your cart.",
-        confirmButtonText: "Ok",
-        confirmButtonColor: "#0273F9",
-      });
-      return;
-    }
-    const { variationId, variationOptionId } = resolveVariationSelection(product, size);
+    const normalizedSelection =
+      selection && typeof selection === "object"
+        ? selection
+        : { label: selection || "", variationId: null, variationOptionId: null };
+    const selectedOptions = Array.isArray(normalizedSelection.selections)
+      ? normalizedSelection.selections
+          .map((entry) => ({
+            variationId: entry?.variationId ?? null,
+            variationName: entry?.variationName || "Variation",
+            optionId: entry?.optionId ?? null,
+            optionLabel: entry?.optionLabel || "",
+          }))
+          .filter((entry) => entry.optionLabel)
+      : [];
+    const sizeLabel =
+      normalizedSelection.sizeLabel ||
+      findVariationValue(selectedOptions, "size") ||
+      normalizedSelection.label ||
+      "";
+    const colorLabel =
+      normalizedSelection.colorLabel || findVariationValue(selectedOptions, ["color", "colour"]);
+    const { variationId, variationOptionId } =
+      normalizedSelection.variationId || normalizedSelection.variationOptionId
+        ? {
+            variationId: normalizedSelection.variationId ?? null,
+            variationOptionId: normalizedSelection.variationOptionId ?? null,
+          }
+        : resolveVariationSelection(product, normalizedSelection.label);
     const nextItem = {
       id: itemId,
       product_id: product.id ?? product.product_id ?? null,
       title: product.title || "Product",
       image: product.image,
-      priceLabel: product.price || "",
-      unitPrice: parseAmount(product.price),
-      size: size || "",
+      priceLabel: normalizedSelection.priceLabel || product.price || "",
+      unitPrice:
+        normalizedSelection.priceValue !== undefined && normalizedSelection.priceValue !== null
+          ? normalizedSelection.priceValue
+          : parseAmount(product.price),
+      size: sizeLabel,
+      color: colorLabel,
+      selectedOptions,
       variation_id: variationId,
       variation_option_id: variationOptionId,
       quantity: safeQuantity,
     };
+    const nextItemSignature = getCartItemVariantSignature(nextItem);
+    const alreadyInCart = cartItems.some(
+      (item) => item?.id === itemId && getCartItemVariantSignature(item) === nextItemSignature
+    );
+    if (alreadyInCart) {
+      Swal.fire({
+        icon: "info",
+        title: "Already in cart",
+        text: "This product with the selected options is already in your cart.",
+        confirmButtonText: "Ok",
+        confirmButtonColor: "#0273F9",
+      });
+      return;
+    }
 
     setCartItems((prev) => {
       const items = Array.isArray(prev) ? [...prev] : [];
@@ -1300,68 +1859,63 @@ const CustomersHome = () => {
     navigate("/customer/checkout");
   };
 
-  useEffect(() => {
-    if (resolvedTenantId && activeTab === "services") {
-      dispatch(
-        getServices({
-          tenant_id: resolvedTenantId,
-          page: servicesPage,
-          limit: SERVICES_PAGE_LIMIT,
-          token,
-          store: getStoreName
-        })
-      );
-    }
-  }, [dispatch, resolvedTenantId, servicesPage, activeTab, token, getStoreName]);
+  // useEffect(() => {
+  //   if (!resolvedTenantId || activeTab !== "shop" || !selectedProduct?.id) return;
+  //   dispatch(
+  //     getProductDetails({
+  //       tenant_id: resolvedTenantId,
+  //       token,
+  //       store: getStoreName,
+  //       productId: selectedProduct.id,
+  //     })
+  //   );
+  // }, [dispatch, resolvedTenantId, activeTab, selectedProduct, token, getStoreName]);
 
-  useEffect(() => {
-    if (resolvedTenantId && activeTab === "shop") {
-      dispatch(
-        getProductOnline({
-          tenant_id: resolvedTenantId,
-          page: productsPage,
-          limit: PRODUCTS_PAGE_LIMIT,
-          token,
-          store: getStoreName
-        })
-      );
-    }
-  }, [dispatch, resolvedTenantId, productsPage, activeTab, token, getStoreName]);
+
+  // useEffect(() => {
+  //   if (showServices) {
+  //     setActiveTab((current) => (current === "services" || !showProducts ? "services" : current));
+  //     return;
+  //   }
+  //   if (showProducts) {
+  //     setActiveTab("shop");
+  //   }
+  // }, [showProducts, showServices]);
+
+  // useEffect(() => {
+  //   if (resolvedTenantId) {
+  //     dispatch(updateBookingField({ field: "tenant_id", value: resolvedTenantId }));
+  //   }
+  // }, [dispatch, resolvedTenantId]);
 
   useEffect(() => {
     if (!resolvedTenantId || activeTab !== "shop" || !selectedProduct?.id) return;
     dispatch(
       getProductDetails({
-        tenant_id: resolvedTenantId,
+        tenant_id: '21',
         token,
-        store: getStoreName,
+        store: 'comfort',
         productId: selectedProduct.id,
       })
     );
-  }, [dispatch, resolvedTenantId, activeTab, selectedProduct, token, getStoreName]);
+  }, [dispatch, '21', activeTab, selectedProduct, token, 'comfort']);
+
 
   useEffect(() => {
-    setServicesPage(1);
-    setProductsPage(1);
-  }, [resolvedTenantId]);
-
-  useEffect(() => {
-    if (servicesPage > totalServicePages) {
-      setServicesPage(totalServicePages);
+    if (showServices) {
+      setActiveTab((current) => (current === "services" || !showProducts ? "services" : current));
+      return;
     }
-  }, [servicesPage, totalServicePages]);
-
-  useEffect(() => {
-    if (productsPage > totalProductPages) {
-      setProductsPage(totalProductPages);
+    if (showProducts) {
+      setActiveTab("shop");
     }
-  }, [productsPage, totalProductPages]);
+  }, [showProducts, showServices]);
 
   useEffect(() => {
     if (resolvedTenantId) {
-      dispatch(updateBookingField({ field: "tenant_id", value: resolvedTenantId }));
+      dispatch(updateBookingField({ field: "tenant_id", value: '21' }));
     }
-  }, [dispatch, resolvedTenantId]);
+  }, [dispatch, '21']);
 
   useEffect(() => {
     if (!bookingPayload?.callback_url) {
@@ -1379,7 +1933,7 @@ const CustomersHome = () => {
       const sessionFlag = sessionStorage.getItem(SHOW_BOOKING_KEY) === "true";
       const localFlag = localStorage.getItem(SHOW_BOOKING_KEY) === "true";
       shouldShow = queryFlag || sessionFlag || localFlag;
-    } catch (error) {
+    } catch {
       shouldShow = false;
     }
     if (!shouldShow) return;
@@ -1397,7 +1951,7 @@ const CustomersHome = () => {
           locationType: pending.locationType || "in_person",
         });
       }
-    } catch (error) {
+    } catch {
       // Ignore parsing/storage errors
     } finally {
       try {
@@ -1405,7 +1959,7 @@ const CustomersHome = () => {
         localStorage.removeItem(PENDING_BOOKING_KEY);
         sessionStorage.removeItem(SHOW_BOOKING_KEY);
         sessionStorage.removeItem(PENDING_BOOKING_KEY);
-      } catch (error) {
+      } catch {
         // Ignore storage errors
       }
     }
@@ -1441,6 +1995,7 @@ const CustomersHome = () => {
       setBookingDate("");
       setBookingTimeSlot("");
       setAvailabilityError("");
+      setVisibleBookingMonth(minBookingMonth);
       return;
     }
     if (bookingMetadata?.scheduled_at) {
@@ -1450,7 +2005,9 @@ const CustomersHome = () => {
       setBookingDate("");
       setBookingTimeSlot("");
     }
-  }, [bookingService, bookingMetadata?.scheduled_at]);
+    const visibleDate = createDateFromInputValue(toDateInputValue(bookingMetadata?.scheduled_at)) || todayDate;
+    setVisibleBookingMonth(new Date(visibleDate.getFullYear(), visibleDate.getMonth(), 1));
+  }, [bookingService, bookingMetadata?.scheduled_at, minBookingMonth, todayDate]);
 
   useEffect(() => {
     if (!bookingDate || !bookingTimeSlot) {
@@ -1466,12 +2023,13 @@ const CustomersHome = () => {
       setAvailabilityError("");
       return;
     }
-    if (!selectedDayAvailability?.available) {
+    const selectedDate = createDateFromInputValue(bookingDate);
+    if (!selectedDate || !isBookingDateSelectable(selectedDate) || !selectedDayAvailability?.available) {
       setAvailabilityError("Selected day is not available for this service.");
       return;
     }
     setAvailabilityError("");
-  }, [bookingDate, selectedDayAvailability]);
+  }, [bookingDate, hasAvailability, isBookingDateSelectable, selectedDayAvailability]);
 
   const handleBookService = async () => {
     if (!bookingService) return;
@@ -1523,7 +2081,7 @@ const CustomersHome = () => {
           sessionStorage.setItem(PAYMENT_CONTEXT_KEY, "booking");
           localStorage.removeItem(SHOW_BOOKING_KEY);
           sessionStorage.removeItem(SHOW_BOOKING_KEY);
-        } catch (error) {
+        } catch {
           // Ignore storage errors
         }
         window.location.assign(authorizationUrl);
@@ -1573,7 +2131,6 @@ const CustomersHome = () => {
 
   const resetBookingForm = () => {
     resetBookingSchedule();
-    setBookingPaymentMethod("paystack");
     dispatch(updateBookingMetadataField({ field: "customer_name", value: "" }));
     dispatch(updateBookingMetadataField({ field: "customer_email", value: "" }));
     dispatch(updateBookingMetadataField({ field: "customer_phone", value: "" }));
@@ -1586,10 +2143,10 @@ const CustomersHome = () => {
     <div className={styles.customerHomePage}>
       <div
         className={`${styles.customerHomeContent} ${
-          isDetailView ? styles.customerHomeContentDetail : ""
-        } ${activeTab === "shop" && !isDetailView ? styles.customerHomeContentShop : ""}`}
+          isNestedView ? styles.customerHomeContentDetail : ""
+        } ${activeTab === "shop" && !isNestedView ? styles.customerHomeContentShop : ""}`}
       >
-        {!isDetailView && (
+        {!isNestedView && (
           <section className={styles.customerHomeProfile}>
             <img className={styles.customerHomeAvatar} src={storeLogo} alt={storeName} />
             <h1 className={styles.customerHomeTitle}>{storeName}</h1>
@@ -1605,7 +2162,7 @@ const CustomersHome = () => {
           </section>
         )}
 
-        {!isDetailView && (
+        {!isNestedView && showServices && showProducts && (
           <div className={styles.customerHomeSegment} role="tablist" aria-label="Store sections">
             <Button
               className={`${styles.customerHomeSegmentButton} ${
@@ -1617,6 +2174,8 @@ const CustomersHome = () => {
               onClick={() => {
                 setActiveTab("services");
                 setSelectedProduct(null);
+                setSelectedProductCollection(null);
+                setSelectedServiceCollection(null);
                 setActiveService(null);
                 setBookingService(null);
                 resetBookingSchedule();
@@ -1634,6 +2193,9 @@ const CustomersHome = () => {
               aria-selected={activeTab === "shop"}
               onClick={() => {
                 setActiveTab("shop");
+                setSelectedProductCollection(null);
+                setSelectedServiceCollection(null);
+                setSelectedProduct(null);
                 setActiveService(null);
                 setBookingService(null);
                 resetBookingSchedule();
@@ -1647,39 +2209,71 @@ const CustomersHome = () => {
 
         <div
           className={`${styles.customerHomeScrollable} ${
-            isDetailView ? styles.customerHomeScrollableDetail : ""
+            isNestedView ? styles.customerHomeScrollableDetail : ""
           }`}
           ref={scrollRef}
-          onScroll={(event) => {
-            updateScrollHint();
-          }}
+          onScroll={handleScrollableScroll}
         >
-          {activeTab === "services" ? (
+          {!showServices && !showProducts ? (
+            <div className={styles.customerHomeEmptyState}>
+              <p className={styles.customerHomeEmptyTitle}>Nothing to display</p>
+              <p className={styles.customerHomeEmptyText}>
+                This store has hidden both products and services for now.
+              </p>
+            </div>
+          ) : activeTab === "services" && showServices ? (
+            activeService ? (
+              <ServiceDetailView
+                key={activeService?.id || activeService?.title || "service-detail"}
+                service={activeService}
+                storeName={storeName}
+                shareOptions={shareOptions}
+                onBack={() => setActiveService(null)}
+                onBook={() => {
+                  setBookingService(activeService);
+                  resetBookingSchedule();
+                }}
+              />
+            ) : selectedServiceCollection ? (
+              <ServiceCollectionDetailView
+                collection={selectedServiceCollection}
+                onBack={() => setSelectedServiceCollection(null)}
+                onSelectService={(service) => setActiveService(service)}
+              />
+            ) : (
             <>
               <h2 className={styles.customerHomeSectionTitle}>{sectionTitle}</h2>
 
-              {items.length ? (
-                <div className={styles.customerHomeServiceList}>
-                  {items.map((item, index) => (
+              {serviceCollections.length ? (
+                <div className={styles.customerHomeCollections}>
+                  {serviceCollections.map((collection) => (
                     <Button
-                      className={styles.customerHomeServiceCard}
-                      key={`${item.id ?? item.title ?? "service"}-${index}`}
+                      className={styles.customerHomeCollectionBlock}
+                      key={collection.title}
                       type="button"
-                      onClick={() => setActiveService(item)}
+                      onClick={() => setSelectedServiceCollection(collection)}
                       unstyled
                     >
-                      <img
-                        className={styles.customerHomeServiceImage}
-                        src={item.image}
-                        alt={item.title}
-                      />
-                      <div className={styles.customerHomeServiceText}>
-                        <span className={`${styles.customerHomeServiceTitle}`}>{item.title}</span>
-                        <span className={styles.customerHomeServiceCta}>{item.cta}</span>
+                      <h3 className={styles.customerHomeCollectionSectionTitle}>
+                        {collection.title}
+                      </h3>
+                      <div className={styles.customerHomeCollectionCard}>
+                        <div className={styles.customerHomeCollectionImages}>
+                          {collection.previewImages.map((image, index) => (
+                            <div
+                              className={styles.customerHomeCollectionImageWrap}
+                              key={`${collection.title}-service-preview-${index}`}
+                            >
+                              <img
+                                className={styles.customerHomeCollectionImage}
+                                src={image}
+                                alt={collection.title}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                        <span className={styles.customerHomeCollectionCount}>{collection.count}</span>
                       </div>
-                      <span className={styles.customerHomeServiceMenu} aria-hidden="true">
-                        ...
-                      </span>
                     </Button>
                   ))}
                 </div>
@@ -1691,36 +2285,13 @@ const CustomersHome = () => {
                   </p>
                 </div>
               )}
-              <div className={styles.customerHomePagination}>
-                <span className={styles.customerHomePaginationMeta}>
-                  Page {paginationPage} of {totalServicePages}
-                </span>
-                <div className={styles.customerHomePaginationControls}>
-                  <Button
-                    className={styles.customerHomePaginationButton}
-                    type="button"
-                    onClick={() => setServicesPage((prev) => Math.max(1, prev - 1))}
-                    disabled={paginationPage <= 1}
-                    unstyled
-                  >
-                    Previous
-                  </Button>
-                  <Button
-                    className={styles.customerHomePaginationButton}
-                    type="button"
-                    onClick={() =>
-                      setServicesPage((prev) => Math.min(totalServicePages, prev + 1))
-                    }
-                    disabled={paginationPage >= totalServicePages}
-                    unstyled
-                  >
-                    Next
-                  </Button>
-                </div>
-              </div>
             </>
+            )
           ) : selectedProduct ? (
             <ProductDetailView
+              key={`${detailProduct?.id || selectedProduct?.id || "product-detail"}-${
+                detailProduct?.variations?.length || selectedProduct?.variations?.length || 0
+              }-${detailProduct?.image || selectedProduct?.image || ""}`}
               product={detailProduct || selectedProduct}
               onBack={() => setSelectedProduct(null)}
               storeName={storeName}
@@ -1729,29 +2300,47 @@ const CustomersHome = () => {
               onViewCart={handleViewCart}
               isInCart={isDetailProductInCart}
             />
+          ) : selectedProductCollection ? (
+            <CollectionDetailView
+              key={selectedProductCollection?.id || selectedProductCollection?.title || "product-collection"}
+              collection={selectedProductCollection}
+              onBack={() => setSelectedProductCollection(null)}
+              onSelectProduct={(product) => setSelectedProduct(product)}
+              storeLogo={storeLogo}
+              storeName={storeName}
+            />
           ) : (
             <div className={styles.customerHomeCollections}>
-              {productItems.length ? (
-                <div className={styles.customerHomeProductGrid}>
-                  {productItems.map((product) => (
+              <h2 className={styles.customerHomeSectionTitle}>{sectionTitle}</h2>
+              {productCollections.length ? (
+                <div className={styles.customerHomeCollections}>
+                  {productCollections.map((collection) => (
                     <Button
-                      className={styles.customerHomeProductCard}
-                      key={product.id || product.title}
+                      className={styles.customerHomeCollectionBlock}
+                      key={collection.title}
                       type="button"
-                      onClick={() => setSelectedProduct(product)}
+                      onClick={() => setSelectedProductCollection(collection)}
                       unstyled
                     >
-                      <div className={styles.customerHomeProductImageWrap}>
-                        <img
-                          className={styles.customerHomeProductImage}
-                          src={product.image}
-                          alt={product.title}
-                        />
-                      </div>
-                      <div className={styles.customerHomeProductBody}>
-                        <h3 className={styles.customerHomeProductTitle}>{product.title}</h3>
-                        <p className={styles.customerHomeProductDesc}>{product.description}</p>
-                        <span className={styles.customerHomeProductPrice}>{product.price}</span>
+                      <h3 className={styles.customerHomeCollectionSectionTitle}>
+                        {collection.title}
+                      </h3>
+                      <div className={styles.customerHomeCollectionCard}>
+                        <div className={styles.customerHomeCollectionImages}>
+                          {collection.previewImages.map((image, index) => (
+                            <div
+                              className={styles.customerHomeCollectionImageWrap}
+                              key={`${collection.title}-product-preview-${index}`}
+                            >
+                              <img
+                                className={styles.customerHomeCollectionImage}
+                                src={image}
+                                alt={collection.title}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                        <span className={styles.customerHomeCollectionCount}>{collection.count}</span>
                       </div>
                     </Button>
                   ))}
@@ -1764,104 +2353,14 @@ const CustomersHome = () => {
                   </p>
                 </div>
               )}
-              <div className={styles.customerHomePagination}>
-                <span className={styles.customerHomePaginationMeta}>
-                  Page {productPaginationPage} of {totalProductPages}
-                </span>
-                <div className={styles.customerHomePaginationControls}>
-                  <Button
-                    className={styles.customerHomePaginationButton}
-                    type="button"
-                    onClick={() => setProductsPage((prev) => Math.max(1, prev - 1))}
-                    disabled={productPaginationPage <= 1}
-                    unstyled
-                  >
-                    Previous
-                  </Button>
-                  <Button
-                    className={styles.customerHomePaginationButton}
-                    type="button"
-                    onClick={() =>
-                      setProductsPage((prev) => Math.min(totalProductPages, prev + 1))
-                    }
-                    disabled={productPaginationPage >= totalProductPages}
-                    unstyled
-                  >
-                    Next
-                  </Button>
-                </div>
-              </div>
             </div>
           )}
-          {!isDetailView && showScrollHint && (
+          {!isNestedView && showScrollHint && (
             <div className={styles.customerHomeScrollHint} aria-hidden="true">
               <span className={styles.customerHomeScrollHintArrow}>↓</span>
             </div>
           )}
         </div>
-
-        {activeService && activeTab === "services" && (
-          <div className={styles.customerHomeServiceOverlay} role="dialog" aria-modal="true">
-            <Button
-              className={styles.customerHomeServiceBackdrop}
-              type="button"
-              aria-label="Close service"
-              onClick={() => setActiveService(null)}
-              unstyled
-            />
-            <div className={styles.customerHomeServiceSheet}>
-              <div className={styles.customerHomeServiceSheetHeader}>
-                <span className={styles.customerHomeServiceSheetTitle}>Service</span>
-                <Button
-                  className={styles.customerHomeServiceSheetClose}
-                  type="button"
-                  aria-label="Close"
-                  onClick={() => setActiveService(null)}
-                  unstyled
-                >
-                  ×
-                </Button>
-              </div>
-
-              <div className={styles.customerHomeServiceSheetCard}>
-                <h3 className={styles.customerHomeServiceSheetHeading}>{activeService.title}</h3>
-                <p className={styles.customerHomeServiceSheetDesc}>
-                  {activeService.description}
-                </p>
-                <p className={styles.customerHomeServiceSheetTime}>{activeService.time}</p>
-                <Button
-                  className={styles.customerHomeServiceSheetAction}
-                  type="button"
-                  onClick={() => {
-                    setBookingService(activeService);
-                    resetBookingSchedule();
-                    setActiveService(null);
-                  }}
-                  unstyled
-                >
-                  Book Now
-                </Button>
-              </div>
-
-              {shareOptions.length > 0 && (
-                <div className={styles.customerHomeShareRow}>
-                  {shareOptions.map((option) => (
-                    <a
-                      key={option.id}
-                      className={`${styles.customerHomeShareButton} ${option.className}`}
-                      href={option.url}
-                      target="_blank"
-                      rel="noreferrer"
-                      aria-label={option.label}
-                    >
-                      <span className={styles.customerHomeShareIcon}>{option.icon}</span>
-                    </a>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
 
         {bookingService && (
           <div className={styles.customerHomeBookingOverlay} role="dialog" aria-modal="true">
@@ -1972,20 +2471,71 @@ const CustomersHome = () => {
                   <div className={styles.customerHomeBookingInputWrap}>
                     <input
                       className={styles.customerHomeBookingInput}
-                      type="date"
-                      value={bookingDate}
-                      onChange={(event) => {
-                        const value = event.target.value;
-                        setBookingDate(value);
-                        setBookingTimeSlot("");
-                        if (hasAvailability) {
-                          const dayKey = getWeekdayKeyFromDate(value);
-                          if (!serviceAvailability?.[dayKey]?.available) {
-                            setAvailabilityError("Selected day is not available for this service.");
-                          }
-                        }
-                      }}
+                      type="text"
+                      value={bookingDate ? formatDateDisplayValue(bookingDate) : ""}
+                      placeholder={
+                        hasAvailability ? "Select an available date" : "Select a booking date"
+                      }
+                      readOnly
                     />
+                  </div>
+                  <div className={styles.customerHomeBookingCalendar}>
+                    <div className={styles.customerHomeBookingCalendarHeader}>
+                      <Button
+                        className={styles.customerHomeBookingCalendarNav}
+                        type="button"
+                        onClick={() => setVisibleBookingMonth((prev) => shiftMonth(prev, -1))}
+                        disabled={!canGoToPreviousBookingMonth}
+                        unstyled
+                      >
+                        ‹
+                      </Button>
+                      <span className={styles.customerHomeBookingCalendarMonth}>
+                        {bookingMonthLabel}
+                      </span>
+                      <Button
+                        className={styles.customerHomeBookingCalendarNav}
+                        type="button"
+                        onClick={() => setVisibleBookingMonth((prev) => shiftMonth(prev, 1))}
+                        unstyled
+                      >
+                        ›
+                      </Button>
+                    </div>
+                    <div className={styles.customerHomeBookingCalendarWeekdays}>
+                      {WEEKDAY_LABELS.map((day) => (
+                        <span key={day} className={styles.customerHomeBookingCalendarWeekday}>
+                          {day}
+                        </span>
+                      ))}
+                    </div>
+                    <div className={styles.customerHomeBookingCalendarGrid}>
+                      {bookingCalendarDays.map((day) => {
+                        const isSelected = bookingDate === day.iso;
+                        return (
+                          <Button
+                            key={day.iso}
+                            className={`${styles.customerHomeBookingCalendarDay} ${
+                              !day.isCurrentMonth ? styles.customerHomeBookingCalendarDayMuted : ""
+                            } ${
+                              day.isSelectable ? styles.customerHomeBookingCalendarDayAvailable : ""
+                            } ${
+                              isSelected ? styles.customerHomeBookingCalendarDaySelected : ""
+                            }`}
+                            type="button"
+                            disabled={!day.isSelectable}
+                            onClick={() => {
+                              setBookingDate(day.iso);
+                              setBookingTimeSlot("");
+                              setAvailabilityError("");
+                            }}
+                            unstyled
+                          >
+                            {day.dayLabel}
+                          </Button>
+                        );
+                      })}
+                    </div>
                   </div>
                 </label>
                 <label className={styles.customerHomeBookingInputLabel}>
@@ -2023,25 +2573,6 @@ const CustomersHome = () => {
                 {availabilityError && (
                   <p className={styles.customerHomeBookingSubtle}>{availabilityError}</p>
                 )}
-                <label className={styles.customerHomeBookingInputLabel}>
-                  Timezone <span className={styles.customerHomeBookingRequired}>*</span>
-                  <div className={styles.customerHomeBookingInputWrap}>
-                    <input
-                      className={styles.customerHomeBookingInput}
-                      type="text"
-                      placeholder="Africa/Lagos"
-                      value={bookingMetadata.timezone || ""}
-                      onChange={(event) =>
-                        dispatch(
-                          updateBookingMetadataField({
-                            field: "timezone",
-                            value: event.target.value,
-                          })
-                        )
-                      }
-                    />
-                  </div>
-                </label>
                 <label className={styles.customerHomeBookingInputLabel}>
                   Location Type <span className={styles.customerHomeBookingRequired}>*</span>
                   <div className={styles.customerHomeBookingInputWrap}>
@@ -2150,24 +2681,17 @@ const CustomersHome = () => {
               <div className={styles.customerHomeBookingSection}>
                 <h3 className={styles.customerHomeBookingSectionTitle}>Payment</h3>
                 <p className={styles.customerHomeBookingSubtle}>
-                  Select a payment method
+                  Pay securely with Paystack
                 </p>
                 <div className={styles.customerHomeBookingTotalRow}>
                   <span>Total</span>
                   <span>{bookingAmountLabel}</span>
                 </div>
-                <p className={styles.customerHomeBookingSubtle}>
-                  Select a payment method
-                </p>
-                <div className={styles.customerHomeBookingPaymentOptions}>
+                <div className={styles.customerHomeBookingPaymentRow}>
                   <Button
-                    className={`${styles.customerHomeBookingPaymentButton} ${
-                      bookingPaymentMethod === "paystack"
-                        ? styles.customerHomeBookingPaymentActive
-                        : ""
-                    }`}
+                    className={`${styles.customerHomeBookingPaymentButton} ${styles.customerHomeBookingPaymentActive}`}
                     type="button"
-                    onClick={() => setBookingPaymentMethod("paystack")}
+                    aria-pressed="true"
                     unstyled
                   >
                     <span className={styles.customerHomeBookingPaymentDot} aria-hidden="true" />
@@ -2179,22 +2703,13 @@ const CustomersHome = () => {
                     />
                   </Button>
                   <Button
-                    className={`${styles.customerHomeBookingPaymentButton} ${
-                      bookingPaymentMethod === "flutterwave"
-                        ? styles.customerHomeBookingPaymentActive
-                        : ""
-                    }`}
+                    className={`${styles.customerHomeBookingSubmit} ${styles.customerHomeBookingSubmitInline}`}
                     type="button"
-                    onClick={() => setBookingPaymentMethod("flutterwave")}
+                    onClick={handleBookService}
+                    disabled={bookingLoading || !isScheduleValid}
                     unstyled
                   >
-                    <span className={styles.customerHomeBookingPaymentDot} aria-hidden="true" />
-                    <img
-                      className={styles.customerHomeBookingPaymentLogo}
-                      src="https://upload.wikimedia.org/wikipedia/commons/9/9e/Flutterwave_Logo.png"
-                      alt="Flutterwave"
-                      loading="lazy"
-                    />
+                    {bookingLoading ? "Booking..." : "Pay and Book Appointment"}
                   </Button>
                 </div>
                 {bookingError && (
@@ -2204,17 +2719,8 @@ const CustomersHome = () => {
                       : bookingError?.message || "Unable to book this service right now."}
                   </p>
                 )}
-                <Button
-                  className={styles.customerHomeBookingSubmit}
-                  type="button"
-                  onClick={handleBookService}
-                  disabled={bookingLoading || !isScheduleValid}
-                  unstyled
-                >
-                  {bookingLoading ? "Booking..." : "Pay and Book Appointment"}
-                </Button>
                 <p className={styles.customerHomeBookingFinePrint}>
-                  By clicking on any of the payment methods, you agree to make your
+                  By clicking the Paystack payment button, you agree to make your
                   purchase from {storeName} as merchant of record for this transaction.
                 </p>
               </div>

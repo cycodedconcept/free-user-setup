@@ -837,6 +837,46 @@
   gap: 18px;
 }
 
+.customerHomeCollectionSections {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.customerHomeCollectionSection {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.customerHomeCollectionSectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.customerHomeCollectionSectionTitle {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+  color: #2e2a28;
+}
+
+.customerHomeCollectionSectionCount {
+  font-size: 13px;
+  font-weight: 600;
+  color: #7c7471;
+}
+
+.customerHomeCollectionLoading {
+  margin: 4px 0 0;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: #7c7471;
+}
+
 .customerHomeCollectionBlock {
   display: flex;
   flex-direction: column;
@@ -846,31 +886,30 @@
   padding: 0;
   cursor: pointer;
   text-align: center;
+  gap: 10px;
 }
 
 .customerHomeCollectionCard {
   width: 100%;
-  background: #7b7370;
-  border-radius: 16px;
-  padding: 14px 16px 16px;
-  box-shadow: 0 12px 22px rgba(46, 42, 40, 0.12);
+  background: #8d8582;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  border-radius: 8px;
+  padding: 12px 12px 14px;
 }
 
 .customerHomeCollectionImages {
   display: flex;
   gap: 12px;
-  justify-content: center;
-  align-items: center;
+  justify-content: space-between;
+  align-items: stretch;
   flex-wrap: nowrap;
 }
 
 .customerHomeCollectionImageWrap {
-  background: #ffffff;
-  border-radius: 14px;
-  padding: 6px;
-  width: 100%;
-  max-width: 110px;
+  border-radius: 8px;
+  flex: 1 1 0;
   aspect-ratio: 1 / 1;
+  overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -879,15 +918,15 @@
 .customerHomeCollectionImage {
   width: 100%;
   height: 100%;
-  border-radius: 10px;
   object-fit: cover;
 }
 
 .customerHomeCollectionCount {
-  margin-top: 10px;
+  display: block;
+  margin-top: 12px;
   color: #f5f0ee;
-  font-weight: 600;
-  font-size: 16px;
+  font-weight: 500;
+  font-size: 15px;
 }
 
 .customerHomeCollectionDetail {
@@ -1177,6 +1216,13 @@
   color: #2e2a28;
 }
 
+.customerHomeHeaderSpacer {
+  width: 36px;
+  height: 36px;
+  display: inline-block;
+  flex: 0 0 36px;
+}
+
 .customerHomeCartButton {
   position: relative;
   width: 36px;
@@ -1212,6 +1258,12 @@
   gap: 18px;
 }
 
+.customerHomeProductMedia {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
 .customerHomeProductHero {
   width: 100%;
   border-radius: 18px;
@@ -1227,7 +1279,6 @@
 }
 
 .customerHomeVariationCarousel {
-  margin-top: 12px;
   display: grid;
   grid-template-columns: auto 1fr auto;
   align-items: center;
@@ -1401,6 +1452,11 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+
+.customerHomeServiceDetailSection + .customerHomeServiceDetailSection {
+  border-top: 1px solid #e5dfdd;
+  padding-top: 16px;
 }
 
 .customerHomeDetailLabel {
@@ -1812,6 +1868,10 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
+  border: 1px solid #e4dfdd;
+  border-radius: 18px;
+  padding: 20px;
+  background: #faf6f5;
 }
 
 .customerCheckoutRight {
@@ -1931,7 +1991,7 @@
   font-size: 14px;
 }
 
-.customerCheckoutPaymentOptions {
+.customerCheckoutPaymentActions {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
@@ -1947,7 +2007,7 @@
   align-items: center;
   justify-content: center;
   gap: 12px;
-  cursor: pointer;
+  cursor: default;
 }
 
 .customerCheckoutPaymentLogo {
@@ -1988,6 +2048,9 @@
   font-size: 16px;
   font-weight: 700;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .customerCheckoutPaymentNote {
@@ -2447,6 +2510,93 @@
   pointer-events: none;
 }
 
+.customerHomeBookingCalendar {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 4px;
+  padding: 14px;
+  border: 1px solid #ece6e4;
+  border-radius: 16px;
+  background: #faf7f6;
+}
+
+.customerHomeBookingCalendarHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.customerHomeBookingCalendarNav {
+  width: 34px;
+  height: 34px;
+  border: 1px solid #d9d2cf;
+  border-radius: 999px;
+  background: #fff;
+  color: #2e2a28;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.customerHomeBookingCalendarNav:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.customerHomeBookingCalendarMonth {
+  font-size: 15px;
+  font-weight: 600;
+  color: #2e2a28;
+}
+
+.customerHomeBookingCalendarWeekdays {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.customerHomeBookingCalendarWeekday {
+  text-align: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: #8b8482;
+}
+
+.customerHomeBookingCalendarGrid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.customerHomeBookingCalendarDay {
+  border: 1px solid #e2dcda;
+  border-radius: 12px;
+  min-height: 40px;
+  background: #f1ecea;
+  color: #b3aaa7;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: not-allowed;
+}
+
+.customerHomeBookingCalendarDayMuted {
+  opacity: 0.35;
+}
+
+.customerHomeBookingCalendarDayAvailable {
+  background: #fff;
+  color: #2e2a28;
+  cursor: pointer;
+}
+
+.customerHomeBookingCalendarDaySelected {
+  background: #2e2a28;
+  border-color: #2e2a28;
+  color: #fff;
+}
+
 .customerHomeBookingSplit {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2475,6 +2625,13 @@
 .customerHomeBookingPaymentOptions {
   display: flex;
   gap: 12px;
+}
+
+.customerHomeBookingPaymentRow {
+  display: grid;
+  grid-template-columns: minmax(150px, 0.8fr) minmax(180px, 1.2fr);
+  gap: 12px;
+  align-items: stretch;
 }
 
 .customerHomeBookingPaymentButton {
@@ -2531,6 +2688,12 @@
   font-weight: 700;
   cursor: pointer;
   width: 100%;
+}
+
+.customerHomeBookingSubmitInline {
+  margin-top: 0;
+  height: 100%;
+  min-height: 48px;
 }
 
 .customerHomeBookingFinePrint {
@@ -2962,6 +3125,10 @@
     flex-direction: column;
   }
 
+  .customerHomeBookingPaymentRow {
+    grid-template-columns: 1fr;
+  }
+
   .customerHomeConfirmCard {
     width: 100%;
     height: 100%;
@@ -3009,8 +3176,9 @@
 
 .customerHomeShareRow {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 8px;
+  flex-wrap: wrap;
 }
 
 .customerHomeShareButton {
@@ -3018,7 +3186,7 @@
   flex-direction: column;
   align-items: center;
   gap: 8px;
-  flex: 1;
+  flex: 0 0 auto;
   border: none;
   background: transparent;
   cursor: pointer;
@@ -3150,6 +3318,14 @@
     grid-template-columns: 1.1fr 1fr;
     gap: 32px;
     align-items: start;
+  }
+
+  .customerHomeProductMedia {
+    grid-column: 1;
+  }
+
+  .customerHomeProductInfo {
+    grid-column: 2;
   }
 
   .customerHomeProductHero img {

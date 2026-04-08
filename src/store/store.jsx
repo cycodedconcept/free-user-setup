@@ -7,6 +7,7 @@ import paymentReducer from '../slice/paymentSlice'
 import customerReducer from '../slice/customerFacingSlice'
 import domainReducer from "../slice/domainSlice"
 import orderReducer from "../slice/order"
+import inventoryReducer from "../slice/inventory"
 
 const store = configureStore({
   reducer: {
@@ -17,7 +18,8 @@ const store = configureStore({
     payment: paymentReducer,
     customer: customerReducer,
     domain: domainReducer,
-    order: orderReducer
+    order: orderReducer,
+    inventory: inventoryReducer
   },
 });
 

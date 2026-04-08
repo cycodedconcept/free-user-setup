@@ -6,7 +6,7 @@ import { faTimes, faPen, faPlus, faTableColumns, faThumbtack, faTrashCan, faElli
 import styles from "../../../styles.module.css";
 import Swal from 'sweetalert2';
 
-const Collection = ({setItemData}) => {
+const Collection = ({setItemData, autoExpandProducts = false}) => {
   const dispatch = useDispatch();
   let token = localStorage.getItem("token");
   let getId = localStorage.getItem("itemId");
@@ -138,6 +138,36 @@ const Collection = ({setItemData}) => {
       setItemData(false);
     }
   }, [])
+
+  useEffect(() => {
+    if (!autoExpandProducts || !token || !Array.isArray(colData) || colData.length === 0) {
+      return;
+    }
+
+    setVisibleCollections(prev => {
+      const next = { ...prev };
+      colData.forEach(collection => {
+        if (collection?.id && next[collection.id] === undefined) {
+          next[collection.id] = true;
+        }
+      });
+      return next;
+    });
+
+    colData.forEach(async (collection) => {
+      if (!collection?.id || collectionServices[collection.id]) return;
+
+      try {
+        const response = await dispatch(productImageForCollection({token, id: collection.id})).unwrap();
+        setCollectionServices(prev => ({
+          ...prev,
+          [collection.id]: response.data?.collection?.StoreCollectionProducts || []
+        }));
+      } catch (error) {
+        console.error('Error fetching collection products:', error);
+      }
+    });
+  }, [autoExpandProducts, colData, token, dispatch])
 
   const addCollection = async (e) => {
     e.preventDefault();

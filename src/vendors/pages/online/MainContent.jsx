@@ -7,6 +7,8 @@ import GeneralSettings from "../settings/GeneralSettings";
 import Home from "../dashboard/Home";
 import Domain from "../domain/Domain";
 import Product from "../product/Product";
+import InventoryProduct from "../inventory/Product";
+import InventoryCollection from "../inventory/Collection";
 
 const MainContent = ({ activeTab, setActiveTab }) => {
   const noPaddingTabs = ["crm-ai-assistant"];
@@ -29,6 +31,12 @@ const MainContent = ({ activeTab, setActiveTab }) => {
         )}
         {activeTab === "products" && (
           <Product setActiveTab={setActiveTab} />
+        )}
+        {activeTab === "inventory-products" && (
+          <InventoryProduct setActiveTab={setActiveTab} />
+        )}
+        {activeTab === "inventory-collection" && (
+          <InventoryCollection setActiveTab={setActiveTab} />
         )}
         {activeTab === "orders" && (
           <Orders setActiveTab={setActiveTab} />

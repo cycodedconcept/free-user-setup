@@ -17,7 +17,7 @@ const readCartItems = () => {
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? parsed : [];
-  } catch (error) {
+  } catch {
     return [];
   }
 };
@@ -26,15 +26,54 @@ const writeCartItems = (items) => {
   if (typeof window === "undefined") return;
   try {
     localStorage.setItem(CART_KEY, JSON.stringify(items));
-  } catch (error) {
+  } catch {
     // Ignore storage errors
   }
+};
+
+const getCartItemVariantSignature = (item) => {
+  const selectedOptions = Array.isArray(item?.selectedOptions) ? item.selectedOptions : [];
+  if (selectedOptions.length) {
+    return selectedOptions
+      .map((entry) => {
+        const variationKey = entry?.variationId ?? entry?.variationName ?? "variation";
+        const optionKey = entry?.optionId ?? entry?.optionLabel ?? "";
+        return `${variationKey}:${optionKey}`;
+      })
+      .sort()
+      .join("|");
+  }
+  return [item?.size || "", item?.color || ""].join("|");
+};
+
+const getCartItemKey = (item) =>
+  `${item?.id ?? "item"}::${getCartItemVariantSignature(item) || "default"}`;
+
+const getCartItemOptions = (item) => {
+  const selectedOptions = Array.isArray(item?.selectedOptions)
+    ? item.selectedOptions
+        .map((entry) => ({
+          label: entry?.variationName || "Option",
+          value: entry?.optionLabel || "",
+        }))
+        .filter((entry) => entry.value)
+    : [];
+  if (selectedOptions.length) return selectedOptions;
+
+  const fallbackOptions = [];
+  if (item?.size) {
+    fallbackOptions.push({ label: "Size", value: item.size });
+  }
+  if (item?.color) {
+    fallbackOptions.push({ label: "Color", value: item.color });
+  }
+  return fallbackOptions;
 };
 
 const normalizeCartItems = (items) => {
   const map = new Map();
   (Array.isArray(items) ? items : []).forEach((item) => {
-    const key = `${item?.id ?? "item"}::${item?.size ?? ""}`;
+    const key = getCartItemKey(item);
     const existing = map.get(key);
     if (existing) {
       map.set(key, {
@@ -89,7 +128,6 @@ const Checkout = () => {
   const tenantId = user?.tenantId ?? null;
   const [cartItems, setCartItems] = useState(() => readCartItems());
   const [showOrderSummary, setShowOrderSummary] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState("paystack");
   const [billing, setBilling] = useState({
     firstName: "",
     lastName: "",
@@ -100,8 +138,7 @@ const Checkout = () => {
     city: "",
     phone: "",
   });
-  const [idempotencyKey, setIdempotencyKey] = useState("");
-  const sizes = ["8", "16", "18"];
+  const [idempotencyKey] = useState(() => generateIdempotencyKey(12));
   const cartCount = useMemo(() => cartItems.length, [cartItems]);
   const cartSubtotal = useMemo(
     () =>
@@ -111,10 +148,6 @@ const Checkout = () => {
       ),
     [cartItems]
   );
-
-  useEffect(() => {
-    setIdempotencyKey(generateIdempotencyKey(12));
-  }, []);
 
   useEffect(() => {
     if (!storeData && token && tenantId && resolvedStoreSlug) {
@@ -134,29 +167,24 @@ const Checkout = () => {
 
   const handleClearCart = () => updateCart(() => []);
 
-  const handleRemoveItem = (itemId, size) => {
+  const handleRemoveItem = (itemId, itemSignature) => {
     updateCart((prev) =>
-      prev.filter((item) => !(item.id === itemId && (item.size || "") === (size || "")))
+      prev.filter(
+        (item) =>
+          !(
+            item.id === itemId &&
+            getCartItemVariantSignature(item) === itemSignature
+          )
+      )
     );
   };
 
-  const handleQuantityChange = (itemId, size, delta) => {
+  const handleQuantityChange = (itemId, itemSignature, delta) => {
     updateCart((prev) =>
       prev.map((item) => {
-        if (item.id === itemId && (item.size || "") === (size || "")) {
+        if (item.id === itemId && getCartItemVariantSignature(item) === itemSignature) {
           const nextQuantity = Math.max(1, (Number(item.quantity) || 1) + delta);
           return { ...item, quantity: nextQuantity };
-        }
-        return item;
-      })
-    );
-  };
-
-  const handleSizeChange = (itemId, size, nextSize) => {
-    updateCart((prev) =>
-      prev.map((item) => {
-        if (item.id === itemId && (item.size || "") === (size || "")) {
-          return { ...item, size: nextSize };
         }
         return item;
       })
@@ -338,114 +366,88 @@ const Checkout = () => {
             <div className={styles.customerCheckoutBody}>
               <div className={styles.customerCheckoutLeft}>
                 {cartItems.length ? (
-                  cartItems.map((item) => (
-                    <section
-                      className={styles.customerCheckoutItem}
-                      key={`${item.id}-${item.size || "default"}`}
-                    >
-                      <img
-                        className={styles.customerCheckoutItemImage}
-                        src={item.image}
-                        alt={item.title}
-                      />
-                      <div className={styles.customerCheckoutItemInfo}>
-                        <div className={styles.customerCheckoutItemTop}>
-                          <div>
-                            <h2 className={styles.customerCheckoutItemTitle}>{item.title}</h2>
-                            <span className={styles.customerCheckoutItemPrice}>
-                              {item.priceLabel || formatNaira(item.unitPrice) || "Contact for price"}
-                            </span>
-                          </div>
-                          <Button
-                            className={styles.customerCheckoutTrash}
-                            type="button"
-                            aria-label="Remove"
-                            onClick={() => handleRemoveItem(item.id, item.size)}
-                            unstyled
-                          >
-                            <svg
-                              viewBox="0 0 24 24"
-                              width="18"
-                              height="18"
-                              fill="none"
-                              stroke="currentColor"
+                  cartItems.map((item) => {
+                    const itemSignature = getCartItemVariantSignature(item);
+                    const itemOptions = getCartItemOptions(item);
+                    return (
+                      <section className={styles.customerCheckoutItem} key={getCartItemKey(item)}>
+                        <img
+                          className={styles.customerCheckoutItemImage}
+                          src={item.image}
+                          alt={item.title}
+                        />
+                        <div className={styles.customerCheckoutItemInfo}>
+                          <div className={styles.customerCheckoutItemTop}>
+                            <div>
+                              <h2 className={styles.customerCheckoutItemTitle}>{item.title}</h2>
+                              <span className={styles.customerCheckoutItemPrice}>
+                                {item.priceLabel || formatNaira(item.unitPrice) || "Contact for price"}
+                              </span>
+                            </div>
+                            <Button
+                              className={styles.customerCheckoutTrash}
+                              type="button"
+                              aria-label="Remove"
+                              onClick={() => handleRemoveItem(item.id, itemSignature)}
+                              unstyled
                             >
-                              <path d="M3 6h18" strokeWidth="2" strokeLinecap="round" />
-                              <path d="M8 6V4h8v2" strokeWidth="2" strokeLinecap="round" />
-                              <path d="M6 6l1 14h10l1-14" strokeWidth="2" strokeLinecap="round" />
-                            </svg>
-                          </Button>
-                        </div>
-
-                        <div className={styles.customerCheckoutQuantity}>
-                          <Button
-                            className={styles.customerCheckoutQtyButton}
-                            type="button"
-                            onClick={() => handleQuantityChange(item.id, item.size, -1)}
-                            unstyled
-                          >
-                            −
-                          </Button>
-                          <span className={styles.customerCheckoutQtyValue}>{item.quantity}</span>
-                          <Button
-                            className={styles.customerCheckoutQtyButton}
-                            type="button"
-                            onClick={() => handleQuantityChange(item.id, item.size, 1)}
-                            unstyled
-                          >
-                            +
-                          </Button>
-                        </div>
-
-                        <div className={styles.customerCheckoutSizeBlock}>
-                          <span className={styles.customerCheckoutLabel}>Size</span>
-                          <div className={styles.customerCheckoutSizeOptions}>
-                            {sizes.map((option) => (
-                              <Button
-                                key={option}
-                                className={`${styles.customerCheckoutSizeOption} ${
-                                  (item.size || "16") === option
-                                    ? styles.customerCheckoutSizeActive
-                                    : ""
-                                }`}
-                                type="button"
-                                onClick={() => handleSizeChange(item.id, item.size, option)}
-                                unstyled
+                              <svg
+                                viewBox="0 0 24 24"
+                                width="18"
+                                height="18"
+                                fill="none"
+                                stroke="currentColor"
                               >
-                                {option}
-                              </Button>
-                            ))}
+                                <path d="M3 6h18" strokeWidth="2" strokeLinecap="round" />
+                                <path d="M8 6V4h8v2" strokeWidth="2" strokeLinecap="round" />
+                                <path d="M6 6l1 14h10l1-14" strokeWidth="2" strokeLinecap="round" />
+                              </svg>
+                            </Button>
                           </div>
+
+                          <div className={styles.customerCheckoutQuantity}>
+                            <Button
+                              className={styles.customerCheckoutQtyButton}
+                              type="button"
+                              onClick={() => handleQuantityChange(item.id, itemSignature, -1)}
+                              unstyled
+                            >
+                              −
+                            </Button>
+                            <span className={styles.customerCheckoutQtyValue}>{item.quantity}</span>
+                            <Button
+                              className={styles.customerCheckoutQtyButton}
+                              type="button"
+                              onClick={() => handleQuantityChange(item.id, itemSignature, 1)}
+                              unstyled
+                            >
+                              +
+                            </Button>
+                          </div>
+
+                          {itemOptions.length ? (
+                            <div className={styles.customerCheckoutSizeBlock}>
+                              <span className={styles.customerCheckoutLabel}>Options</span>
+                              <div className={styles.customerCheckoutSizeOptions}>
+                                {itemOptions.map((option) => (
+                                  <span
+                                    className={styles.customerCheckoutSizeOption}
+                                    key={`${option.label}-${option.value}`}
+                                  >
+                                    {option.label}: {option.value}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          ) : null}
                         </div>
-                      </div>
-                    </section>
-                  ))
+                      </section>
+                    );
+                  })
                 ) : (
                   <p className={styles.customerCheckoutEmpty}>Your cart is empty.</p>
                 )}
 
-                <section className={styles.customerCheckoutDelivery}>
-                  <h2 className={styles.customerCheckoutSectionTitle}>Delivery Date</h2>
-
-                  <label className={styles.customerCheckoutInputLabel}>
-                    Choose Delivery Date
-                    <div className={styles.customerCheckoutInputWrap}>
-                      <input type="date" />
-                    </div>
-                  </label>
-
-                  <label className={styles.customerCheckoutInputLabel}>
-                    Select Delivery Time
-                    <div className={styles.customerCheckoutInputWrap}>
-                      <select className={styles.customerCheckoutSelect}>
-                        <option value="08:00-10:00">08:00 - 10:00</option>
-                        <option value="10:00-12:00">10:00 - 12:00</option>
-                        <option value="12:00-14:00">12:00 - 14:00</option>
-                        <option value="14:00-16:00">14:00 - 16:00</option>
-                      </select>
-                    </div>
-                  </label>
-                </section>
               </div>
 
               <aside className={styles.customerCheckoutRight}>
@@ -475,35 +477,43 @@ const Checkout = () => {
             <section className={styles.customerCheckoutOrderSummary}>
               <h2 className={styles.customerCheckoutSectionTitle}>Order Summary</h2>
               {cartItems.length ? (
-                cartItems.map((item) => (
-                  <div
-                    className={styles.customerCheckoutSummaryCard}
-                    key={`${item.id}-${item.size || "default"}-summary`}
-                  >
-                    <img
-                      className={styles.customerCheckoutSummaryImage}
-                      src={item.image}
-                      alt={item.title}
-                    />
-                    <div className={styles.customerCheckoutSummaryDetails}>
-                      <h3>{item.title}</h3>
-                      <div className={styles.customerCheckoutSummaryMeta}>
-                        <span>Size:</span>
-                        <span>{item.size || "N/A"}</span>
-                      </div>
-                      <div className={styles.customerCheckoutSummaryMeta}>
-                        <span>Quantity:</span>
-                        <span>{item.quantity}</span>
-                      </div>
-                      <div className={styles.customerCheckoutSummaryMeta}>
-                        <span>Total</span>
-                        <span>
-                          {formatNaira((Number(item.unitPrice) || 0) * (Number(item.quantity) || 0))}
-                        </span>
+                cartItems.map((item) => {
+                  const itemOptions = getCartItemOptions(item);
+                  return (
+                    <div
+                      className={styles.customerCheckoutSummaryCard}
+                      key={`${getCartItemKey(item)}-summary`}
+                    >
+                      <img
+                        className={styles.customerCheckoutSummaryImage}
+                        src={item.image}
+                        alt={item.title}
+                      />
+                      <div className={styles.customerCheckoutSummaryDetails}>
+                        <h3>{item.title}</h3>
+                        {itemOptions.map((option) => (
+                          <div
+                            className={styles.customerCheckoutSummaryMeta}
+                            key={`${option.label}-${option.value}-summary`}
+                          >
+                            <span>{option.label}:</span>
+                            <span>{option.value}</span>
+                          </div>
+                        ))}
+                        <div className={styles.customerCheckoutSummaryMeta}>
+                          <span>Quantity:</span>
+                          <span>{item.quantity}</span>
+                        </div>
+                        <div className={styles.customerCheckoutSummaryMeta}>
+                          <span>Total</span>
+                          <span>
+                            {formatNaira((Number(item.unitPrice) || 0) * (Number(item.quantity) || 0))}
+                          </span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))
+                  );
+                })
               ) : (
                 <p className={styles.customerCheckoutEmpty}>Your cart is empty.</p>
               )}
@@ -588,15 +598,6 @@ const Checkout = () => {
                     onChange={(event) => updateBillingField("phone", event.target.value)}
                   />
                 </label>
-                <label>
-                  Idempotency Key
-                  <input
-                    type="text"
-                    placeholder="Idempotency Key"
-                    value={idempotencyKey}
-                    readOnly
-                  />
-                </label>
               </form>
             </section>
 
@@ -625,15 +626,11 @@ const Checkout = () => {
             <section className={styles.customerCheckoutPayment}>
               <h2 className={styles.customerCheckoutSectionTitle}>Payment</h2>
               <p className={styles.customerCheckoutPaymentHint}>Select a payment Method</p>
-              <div className={styles.customerCheckoutPaymentOptions}>
-                <Button
-                  className={`${styles.customerCheckoutPaymentOption} ${
-                    paymentMethod === "paystack" ? styles.customerCheckoutPaymentActive : ""
-                  }`}
-                  type="button"
-                  onClick={() => setPaymentMethod("paystack")}
+              <div className={styles.customerCheckoutPaymentActions}>
+                <div
+                  className={`${styles.customerCheckoutPaymentOption} ${styles.customerCheckoutPaymentActive}`}
                   aria-label="Paystack"
-                  unstyled
+                  role="img"
                 >
                   <span className={styles.customerCheckoutRadio} />
                   <img
@@ -642,50 +639,33 @@ const Checkout = () => {
                     alt="Paystack"
                     loading="lazy"
                   />
-                </Button>
+                </div>
+
                 <Button
-                  className={`${styles.customerCheckoutPaymentOption} ${
-                    paymentMethod === "flutterwave" ? styles.customerCheckoutPaymentActive : ""
-                  }`}
+                  className={styles.customerCheckoutPayButton}
                   type="button"
-                  onClick={() => setPaymentMethod("flutterwave")}
-                  aria-label="Flutterwave"
+                  onClick={handleCheckoutOrder}
+                  disabled={checkoutLoading}
                   unstyled
                 >
-                  <span className={styles.customerCheckoutRadio} />
-                  <img
-                    className={styles.customerCheckoutPaymentLogo}
-                    src="https://upload.wikimedia.org/wikipedia/commons/9/9e/Flutterwave_Logo.png"
-                    alt="Flutterwave"
-                    loading="lazy"
-                  />
+                  {checkoutLoading ? (
+                    <>
+                      <span
+                        className="spinner-border spinner-border-sm"
+                        role="status"
+                        aria-hidden="true"
+                        style={{ marginRight: "8px" }}
+                      />
+                      Processing...
+                    </>
+                  ) : (
+                    "Pay and Place Order"
+                  )}
                 </Button>
               </div>
-
-              <Button
-                className={styles.customerCheckoutPayButton}
-                type="button"
-                onClick={handleCheckoutOrder}
-                disabled={checkoutLoading}
-                unstyled
-              >
-                {checkoutLoading ? (
-                  <>
-                    <span
-                      className="spinner-border spinner-border-sm"
-                      role="status"
-                      aria-hidden="true"
-                      style={{ marginRight: "8px" }}
-                    />
-                    Processing...
-                  </>
-                ) : (
-                  "Pay and Place Order"
-                )}
-              </Button>
               <p className={styles.customerCheckoutPaymentNote}>
-                By clicking on “Pay and Place Order”, you agree to make your purchase from My
-                Awesome as merchant of record for this transaction
+                By clicking on “Pay and Place Order”, you agree to make your purchase from{" "}
+                {storeName} as merchant of record for this transaction
               </p>
             </section>
           </>

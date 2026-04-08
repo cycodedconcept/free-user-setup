@@ -1497,17 +1497,6 @@ useEffect(() => {
                                         </div>
                                     </>
                                 ) : ('')}
-                                
-
-                                <div className="d-flex justify-content-between mt-4">
-                                    <button className="btn mx" style={{color: '#78716C'}}>Previous</button>
-                                    <div className="d-flex justify-content-between gap-3">
-                                        <button className={`${styles['sk-btn']} mx`}>Skip</button>
-                                        {call && (
-                                        <button className={`${styles['si-btn']} px-3 mx`}>Save and Continue</button>
-                                        )}
-                                    </div>
-                                </div>
                             </div>
                         </div>
                     </div>
@@ -1679,20 +1668,6 @@ useEffect(() => {
                         )}
                         </>
                     )}
-
-
-
-                    <div className="d-flex justify-content-between mt-4">
-                        <button className="btn mx" style={{color: '#78716C'}}>Previous</button>
-                        <div className="d-flex gap-3">
-                            <button className={styles['sk-btn']}>Skip</button>
-                            {col && (
-                                <>
-                                <button className={`${styles['si-btn']} px-3 mx`}>Save and Continue</button>
-                                </>
-                            )}
-                        </div>
-                    </div>
                 </>
             )}
             
@@ -2490,4 +2465,3 @@ useEffect(() => {
 }
 
 export default Service
-
