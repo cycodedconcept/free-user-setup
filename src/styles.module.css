@@ -3518,7 +3518,7 @@ body.modal-open {
   /* box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); */
   font-family: sans-serif;
   max-width: 600px;
-  margin: 20px auto;
+  margin: 20px auto 20px 12px;
   border: 2px solid #eee;
 }
 
@@ -3529,8 +3529,9 @@ body.modal-open {
 }
 
 .sid {
-  left: -10px;
-  top: 100%;
+  left: 8px;
+  top: 50%;
+  transform: translateY(-50%);
 }
 
 .sido {
@@ -3540,6 +3541,10 @@ body.modal-open {
 
 .vala {
   padding: 20px 35px 0;
+}
+
+.vala2 {
+  padding: 20px 5px 0;
 }
 
 .description {
@@ -3675,6 +3680,50 @@ input:checked + .slider:before {
   transform: rotate(45deg);
 }
 
+.service-picker-checkbox {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 22px;
+  height: 22px;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 999px;
+  background: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  margin-top: 4px;
+}
+
+.service-picker-checkbox::after {
+  content: "";
+  width: 6px;
+  height: 10px;
+  border: solid #ffffff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg) scale(0.9);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  margin-top: -1px;
+}
+
+.service-picker-checkbox:checked {
+  background: #0273F9;
+  border-color: #0273F9;
+  box-shadow: 0 0 0 3px rgba(2, 115, 249, 0.14);
+}
+
+.service-picker-checkbox:checked::after {
+  opacity: 1;
+}
+
+.service-picker-checkbox:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
 .glow-checkbox {
   appearance: none;
   width: 20px;
@@ -3699,6 +3748,46 @@ input:checked + .slider:before {
   position: absolute;
   top: 0;
   left: 2px;
+}
+
+.collection-picker-checkbox {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  border: 1.5px solid #bfdbfe;
+  background: #ffffff;
+  cursor: pointer;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.collection-picker-checkbox::after {
+  content: "";
+  position: absolute;
+  width: 6px;
+  height: 11px;
+  border: solid #0f172a;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg) scale(0.9);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  margin-top: -1px;
+}
+
+.collection-picker-checkbox:checked {
+  background: #0273F9;
+  border-color: #0273F9;
+  box-shadow: 0 8px 18px rgba(2, 115, 249, 0.24);
+}
+
+.collection-picker-checkbox:checked::after {
+  opacity: 1;
 }
 
 

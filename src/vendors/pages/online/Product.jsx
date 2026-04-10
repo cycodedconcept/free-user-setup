@@ -1,13 +1,155 @@
 
 import React, { useState, useEffect, useRef } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faTimes, faPen, faTrashCan, faThumbtack, faCaretDown } from '@fortawesome/free-solid-svg-icons';
+import { faTimes, faPen, faTrashCan, faThumbtack, faCaretDown, faPlus } from '@fortawesome/free-solid-svg-icons';
 import { useDispatch, useSelector } from 'react-redux';
-import { createProduct, getAllProductForCollection, updateProduct, deleteProductFromStore, publishProductToStore, unpublishProductToStore } from '../../../slice/onlineStoreSlice';
-import { Ac } from '../../../assets';
+import { createProduct, getAllProductForCollection, getProductDetails, updateProduct, deleteProductFromStore, publishProductToStore, unpublishProductToStore } from '../../../slice/onlineStoreSlice';
+import { getImageSrc } from '../../../utils/getImageSrc';
 import styles from "../../../styles.module.css";
 import Swal from 'sweetalert2';
 import Pagination from '../../../components/Pagination'
+
+const normalizeOption = (option = {}) => ({
+  value: option?.value ?? option?.option_value ?? '',
+  price: option?.price ?? option?.price_adjustment ?? '',
+  stock: option?.stock ?? '',
+  image_url: option?.image_url ?? '',
+});
+
+const parseMaybeJson = (value) => {
+  if (typeof value !== 'string') {
+    return value;
+  }
+
+  try {
+    return JSON.parse(value);
+  } catch {
+    return value;
+  }
+};
+
+const normalizeVariation = (variation = {}) => ({
+  variation_name: variation?.variation_name ?? variation?.name ?? '',
+  variation_type: variation?.variation_type ?? variation?.type ?? '',
+  is_required:
+    variation?.is_required === true ||
+    variation?.is_required === 1 ||
+    variation?.is_required === '1' ||
+    variation?.is_required === 'true',
+  options: Array.isArray(parseMaybeJson(variation?.options ?? variation?.variation_options ?? variation?.values))
+    ? parseMaybeJson(variation?.options ?? variation?.variation_options ?? variation?.values).map(normalizeOption)
+    : [],
+});
+
+const resolveProductVariations = (product = {}) => {
+  const variationSource =
+    product?.variations ??
+    product?.product_variations ??
+    product?.variation_groups ??
+    product?.variant_groups ??
+    [];
+
+  const parsedVariations = parseMaybeJson(variationSource);
+
+  if (!Array.isArray(parsedVariations)) {
+    return [];
+  }
+
+  return parsedVariations.map(normalizeVariation).filter((variation) => {
+    return variation.variation_name || variation.variation_type || variation.options.length > 0;
+  });
+};
+
+const formatMoneyValue = (value) => {
+  const amount = Number(value) || 0;
+  return amount.toLocaleString('en-NG');
+};
+
+const buildVariantPreviewRows = (variationList = [], baseSku = '', basePrice = '') => {
+  const validVariations = variationList
+    .map(normalizeVariation)
+    .filter((variation) => variation.options.length > 0);
+
+  if (validVariations.length < 2) {
+    return [];
+  }
+
+  const baseAmount = Number(basePrice) || 0;
+  const safeSku = (baseSku || 'SKU').trim().toUpperCase();
+
+  return validVariations.reduce((rows, variation) => {
+    if (rows.length === 0) {
+      return variation.options.map((option) => ({
+        labels: [option.value],
+        skuParts: [String(option.value || '').slice(0, 3).toUpperCase()],
+        price: baseAmount + (Number(option.price) || 0),
+        stock: Number(option.stock) || 0,
+      }));
+    }
+
+    return rows.flatMap((row) =>
+      variation.options.map((option) => ({
+        labels: [...row.labels, option.value],
+        skuParts: [...row.skuParts, String(option.value || '').slice(0, 3).toUpperCase()],
+        price: row.price + (Number(option.price) || 0),
+        stock: Math.min(row.stock, Number(option.stock) || 0),
+      }))
+    );
+  }, []).map((row) => ({
+    combination: row.labels.join(' / '),
+    sku: `${safeSku}-${row.skuParts.join('-')}`,
+    price: row.price,
+    stock: row.stock,
+  }));
+};
+
+const applyProductDetailsToForm = ({
+  product,
+  setEditingProductId,
+  setProductForm,
+  setSelectedCategory,
+  setCategoryInput,
+  setIm,
+  setVariations,
+  setShowVariationSection,
+  setCurrentVariation,
+  setCurrentOption,
+  setEditMode,
+  setMode
+}) => {
+  const productVariations = resolveProductVariations(product);
+  const resolvedImageUrl = product?.image_url || product?.product_image || '';
+
+  setEditingProductId(product?.id || null);
+  setProductForm({
+    name: product?.name || '',
+    sku: product?.sku || '',
+    description: product?.description || '',
+    price: product?.price || '',
+    stock: product?.stock || '',
+    image_url: resolvedImageUrl,
+    expiry_date: product?.expiry_date || '',
+    low_stock_threshold: product?.low_stock_threshold || '10',
+    is_active: product?.is_active !== false && product?.is_active !== 0,
+    is_published: product?.is_published === true || product?.is_published === 1,
+    is_featured:
+      product?.is_featured === true ||
+      product?.is_featured === 1 ||
+      product?.featured === true ||
+      product?.featured === 1
+  });
+
+  const resolvedCategory = product?.category || product?.Category?.name || '';
+  setSelectedCategory(resolvedCategory);
+  setCategoryInput(resolvedCategory);
+  setIm({ profile: resolvedImageUrl || null, cover: null });
+  setVariations(productVariations);
+  setShowVariationSection(productVariations.length > 0);
+  setCurrentVariation({variation_name: '', variation_type: '', is_required: false, options: []});
+  setCurrentOption({value: '', price: '', stock: '', image_url: ''});
+  setEditMode(true);
+  setMode(true);
+};
 
 const Product = ({setProCol}) => {
   const dispatch = useDispatch();
@@ -33,6 +175,7 @@ const Product = ({setProCol}) => {
   const [currentVariation, setCurrentVariation] = useState({
     variation_name: '',
     variation_type: '',
+    is_required: false,
     options: []
   });
   const [currentOption, setCurrentOption] = useState({
@@ -46,7 +189,13 @@ const Product = ({setProCol}) => {
     sku: '',
     description: '',
     price: '',
-    stock: ''
+    stock: '',
+    image_url: '',
+    expiry_date: '',
+    low_stock_threshold: '10',
+    is_active: true,
+    is_published: false,
+    is_featured: false
   });
   const [showVariationSection, setShowVariationSection] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
@@ -60,11 +209,16 @@ const Product = ({setProCol}) => {
     const file = e.target.files[0];
     if (file) {
       const reader = new FileReader();
-      reader.onloadend = () =>
+      reader.onloadend = () => {
         setIm((prev) => ({
           ...prev,
           [key]: reader.result,
         }));
+        setProductForm((prev) => ({
+          ...prev,
+          image_url: '',
+        }));
+      };
       reader.readAsDataURL(file);
     }
   };
@@ -118,37 +272,71 @@ const Product = ({setProCol}) => {
       sku: '',
       description: '',
       price: '',
-      stock: ''
+      stock: '',
+      image_url: '',
+      expiry_date: '',
+      low_stock_threshold: '10',
+      is_active: true,
+      is_published: false,
+      is_featured: false
     });
     setSelectedCategory('');
     setCategoryInput('');
     setIm({profile: null, cover: null});
     setVariations([]);
-    setCurrentVariation({variation_name: '', variation_type: '', options: []});
+    setCurrentVariation({variation_name: '', variation_type: '', is_required: false, options: []});
     setCurrentOption({value: '', price: '', stock: '', image_url: ''});
     setShowVariationSection(false);
   }
 
-  const openEditProduct = (product) => {
-    setEditingProductId(product.id);
-    setProductForm({
-      name: product.name,
-      sku: product.sku,
-      description: product.description,
-      price: product.price || '',
-      stock: product.stock || ''
-    });
-    setSelectedCategory(product.category || '');
-    setCategoryInput(product.category || '');
-    if (product.image_url) {
-      setIm({...im, profile: product.image_url});
+  const openEditProduct = async (product) => {
+    const productId = product?.id;
+
+    if (!productId || !token) {
+      return;
     }
-    // Load variations if product has them
-    if (product.variations && Array.isArray(product.variations) && product.variations.length > 0) {
-      setVariations(product.variations);
-      setShowVariationSection(true);
+
+    try {
+      Swal.fire({
+        title: 'Loading Product...',
+        text: 'Please wait while we fetch the product details.',
+        allowOutsideClick: false,
+        showConfirmButton: false,
+        didOpen: () => {
+          Swal.showLoading();
+        },
+      });
+
+      const response = await dispatch(
+        getProductDetails({ token, id: getId || '7', productId })
+      ).unwrap();
+
+      const detailedProduct = response?.data?.product || product;
+
+      applyProductDetailsToForm({
+        product: detailedProduct,
+        setEditingProductId,
+        setProductForm,
+        setSelectedCategory,
+        setCategoryInput,
+        setIm,
+        setVariations,
+        setShowVariationSection,
+        setCurrentVariation,
+        setCurrentOption,
+        setEditMode,
+        setMode
+      });
+
+      Swal.close();
+    } catch (submitError) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Unable to Load Product',
+        text: submitError?.message || submitError?.error || 'We could not load the product details for editing.',
+        confirmButtonColor: '#0273F9'
+      });
     }
-    setEditMode(true);
   }
 
   const handleCategorySelect = (category) => {
@@ -193,6 +381,10 @@ const Product = ({setProCol}) => {
     setCurrentVariation({...currentVariation, variation_type: e.target.value});
   };
 
+  const handleVariationRequiredChange = (e) => {
+    setCurrentVariation({...currentVariation, is_required: e.target.checked});
+  };
+
   const handleOptionValueChange = (e) => {
     setCurrentOption({...currentOption, value: e.target.value});
   };
@@ -224,7 +416,12 @@ const Product = ({setProCol}) => {
       });
       setCurrentOption({value: '', price: '', stock: '', image_url: ''});
     } else {
-      alert('Please fill in all required fields: Option Value, Price, and Stock');
+      Swal.fire({
+        icon: 'info',
+        title: 'Variation option',
+        text: 'Please fill in option value, price adjustment, and stock before adding the option.',
+        confirmButtonColor: '#0273F9'
+      });
     }
   };
 
@@ -238,7 +435,14 @@ const Product = ({setProCol}) => {
   const addVariation = () => {
     if (currentVariation.variation_name && currentVariation.variation_type && currentVariation.options.length > 0) {
       setVariations([...variations, currentVariation]);
-      setCurrentVariation({variation_name: '', variation_type: '', options: []});
+      setCurrentVariation({variation_name: '', variation_type: '', is_required: false, options: []});
+    } else {
+      Swal.fire({
+        icon: 'info',
+        title: 'Variation',
+        text: 'Add a variation name, variation type, and at least one option value first.',
+        confirmButtonColor: '#0273F9'
+      });
     }
   };
 
@@ -269,19 +473,14 @@ const Product = ({setProCol}) => {
       ...productForm,
       name,
       sku: newSKU,
-      description: '',
-      price: '',
-      stock: '',
-      category: '',
-      image_url: '',
     });
   };
 
   const handleProductFormChange = (e) => {
-    const { name, value } = e.target;
+    const { name, value, type, checked } = e.target;
     setProductForm({
       ...productForm,
-      [name]: value
+      [name]: type === 'checkbox' ? checked : value
     });
   };
 
@@ -295,35 +494,34 @@ const Product = ({setProCol}) => {
       });
     } else {
       // Closing variation section - reset variation data
-      setCurrentVariation({variation_name: '', variation_type: '', options: []});
+      setCurrentVariation({variation_name: '', variation_type: '', is_required: false, options: []});
       setCurrentOption({value: '', price: '', stock: '', image_url: ''});
     }
     setShowVariationSection(!showVariationSection);
   };
 
-  const calculateTotalPrice = () => {
-    let total = 0;
-    variations.forEach(variation => {
-      variation.options.forEach(option => {
-        total += parseFloat(option.price) || 0;
-      });
-    });
-    return total;
-  };
-
-  const calculateTotalStock = () => {
-    let total = 0;
-    variations.forEach(variation => {
-      variation.options.forEach(option => {
-        total += parseInt(option.stock) || 0;
-      });
-    });
-    return total;
-  };
-
   const hasVariations = variations.length > 0;
-  const totalPrice = hasVariations ? calculateTotalPrice() : 0;
-  const totalStock = hasVariations ? calculateTotalStock() : 0;
+  const variantPreviewRows = buildVariantPreviewRows(variations, productForm.sku, productForm.price);
+  const normalizedVariations = variations.map(normalizeVariation);
+
+  useEffect(() => {
+    if (!variations.length) {
+      return;
+    }
+
+    const variationImageDebug = variations.flatMap((variation, variationIndex) =>
+      (Array.isArray(variation?.options) ? variation.options : []).map((option, optionIndex) => ({
+        variationIndex,
+        variationName: variation?.variation_name || '',
+        optionIndex,
+        optionValue: option?.value || '',
+        rawImageUrl: option?.image_url || '',
+        resolvedImageSrc: getImageSrc(option?.image_url || ''),
+      }))
+    );
+
+    console.log('Variation image debug', variationImageDebug);
+  }, [variations]);
 
   // const createProduct = () => {
   //   setProd(false)
@@ -368,8 +566,8 @@ const Product = ({setProCol}) => {
     e.preventDefault();
 
     // Check if variations exist - if yes, price/stock can be 0
-    const priceValid = hasVariations || (productForm.price !== '' && productForm.price !== 0);
-    const stockValid = hasVariations || (productForm.stock !== '' && productForm.stock !== 0);
+    const priceValid = hasVariations || productForm.price !== '';
+    const stockValid = hasVariations || productForm.stock !== '';
 
     if (!productForm.name || !productForm.sku || !productForm.description || !selectedCategory || !priceValid || !stockValid) {
       Swal.fire({
@@ -388,30 +586,33 @@ const Product = ({setProCol}) => {
     formData.append('price', productForm.price);
     formData.append('stock', productForm.stock);
     formData.append('category', selectedCategory);
+    formData.append('low_stock_threshold', productForm.low_stock_threshold || '10');
+    formData.append('is_active', productForm.is_active ? 1 : 0);
+    formData.append('is_published', productForm.is_published ? 1 : 0);
+    formData.append('is_featured', productForm.is_featured ? 1 : 0);
+
+    if (productForm.expiry_date) {
+      formData.append('expiry_date', productForm.expiry_date);
+    }
     
     // Append product image if available - convert base64 to File
-    if (im.profile) {
+    if (im.profile && im.profile.startsWith('data:')) {
       const imageFile = base64ToFile(im.profile, `product-${productForm.sku}.jpg`);
       formData.append('product_image', imageFile);
     }
+
+    const resolvedImageUrl =
+      productForm.image_url.trim() ||
+      (im.profile && !im.profile.startsWith('data:') ? im.profile : '');
+
+    if (resolvedImageUrl) {
+      formData.append('image_url', resolvedImageUrl);
+    }
     
     // Append variations as JSON string
-    if (variations.length > 0) {
-      formData.append('variations', JSON.stringify(variations));
+    if (normalizedVariations.length > 0) {
+      formData.append('variations', JSON.stringify(normalizedVariations));
     }
-    
-    console.log('FormData contents:');
-    for (let [key, value] of formData.entries()) {
-      console.log(`${key}:`, value instanceof File ? `File: ${value.name} (${value.type})` : value);
-    }
-    
-    Swal.fire({
-      icon: "success",
-      title: "Valid Input!",
-      text: editMode ? "Product is being updated..." : "Product is being created...",
-      timer: 1500,
-      showConfirmButton: false,
-    });
 
     try {
       Swal.fire({
@@ -446,7 +647,13 @@ const Product = ({setProCol}) => {
           sku: '',
           description: '',
           price: '',
-          stock: ''
+          stock: '',
+          image_url: '',
+          expiry_date: '',
+          low_stock_threshold: '10',
+          is_active: true,
+          is_published: false,
+          is_featured: false
         })
         setCurrentOption({
           value: '',
@@ -457,6 +664,7 @@ const Product = ({setProCol}) => {
         setCurrentVariation({
           variation_name: '',
           variation_type: '',
+          is_required: false,
           options: []
         })
         setVariations([]);
@@ -650,6 +858,650 @@ const Product = ({setProCol}) => {
     }
   }
 
+  const renderProductModal = () => {
+    if (!mode && !editMode) {
+      return null;
+    }
+
+    const modalTitle = editMode ? 'Edit Product' : 'Add New Product';
+    const submitLabel = editMode ? 'Update Product' : 'Save Product';
+
+    return (
+      <div
+        className={styles['modal-overlay']}
+        onClick={hideModal}
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}
+      >
+        <div
+          className={styles['modal-content2']}
+          style={{
+            background: '#fff',
+            borderRadius: '12px',
+            width: '90%',
+            maxWidth: '900px',
+            maxHeight: '90vh',
+            overflow: 'auto'
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="d-flex justify-content-between align-items-center p-3">
+            <div>
+              <h6 className="mb-1">{modalTitle}</h6>
+            </div>
+            <FontAwesomeIcon icon={faTimes} onClick={hideModal} style={{ cursor: 'pointer' }} />
+          </div>
+
+          <div className={styles['modal-body']}>
+            <form onSubmit={addProductToStore} className="p-3">
+              <div
+                className="p-3 mb-4"
+                style={{ border: '1px solid #EEEEEE', borderRadius: '12px', background: '#FAFAFA' }}
+              >
+                <div className="mb-3">
+                  <h6 className="mb-1">Basic Information</h6>
+                  <small style={{ color: '#78716C' }}>
+                    Add the main product details customers will see before purchase.
+                  </small>
+                </div>
+
+                <div className="row">
+                  <div className="col-md-6">
+                    <div className="mb-3">
+                      <label className="form-label" style={{ fontSize: '15px' }}>
+                        Product Name <span className="text-danger">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        className={styles['input-item']}
+                        placeholder="e.g. Nike Air Max"
+                        value={productForm.name}
+                        onChange={handleProductNameChange}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="col-md-6">
+                    <div className="mb-3">
+                      <label className="form-label" style={{ fontSize: '15px' }}>
+                        SKU <span className="text-danger">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        className={styles['input-item']}
+                        placeholder="e.g. NIKE-BLK-M"
+                        value={productForm.sku}
+                        readOnly
+                        style={{ backgroundColor: '#f5f5f5', color: '#666' }}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="col-12">
+                    <div className="mb-3">
+                      <label className="form-label" style={{ fontSize: '15px' }}>
+                        Description <span className="text-danger">*</span>
+                      </label>
+                      <textarea
+                        className={styles['input-item']}
+                        placeholder="Short product description"
+                        style={{ minHeight: '100px' }}
+                        name="description"
+                        value={productForm.description}
+                        onChange={handleProductFormChange}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="col-md-6">
+                    <div className="mb-3">
+                      <label className="form-label" style={{ fontSize: '15px' }}>Category</label>
+                      <div style={{ position: 'relative' }}>
+                        <input
+                          type="text"
+                          className={styles['input-item']}
+                          placeholder="e.g. Sneakers"
+                          value={categoryInput}
+                          onChange={handleCategoryInputChange}
+                          onFocus={handleCategoryInputFocus}
+                          onBlur={handleCategoryInputBlur}
+                          style={{ width: '100%', paddingRight: '35px' }}
+                        />
+                        <FontAwesomeIcon
+                          icon={faCaretDown}
+                          style={{
+                            position: 'absolute',
+                            right: '12px',
+                            top: '50%',
+                            transform: 'translateY(-50%)',
+                            color: '#78716C',
+                            pointerEvents: 'none',
+                            fontSize: '16px'
+                          }}
+                        />
+                        {showCategoryDropdown && filteredCategories.length > 0 && (
+                          <div style={{
+                            position: 'absolute',
+                            top: '100%',
+                            left: 0,
+                            right: 0,
+                            backgroundColor: '#fff',
+                            border: '1px solid #ddd',
+                            borderTop: 'none',
+                            borderRadius: '0 0 8px 8px',
+                            maxHeight: '150px',
+                            overflowY: 'auto',
+                            zIndex: 10,
+                            boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+                          }}>
+                            {filteredCategories.map((cat, idx) => (
+                              <div
+                                key={idx}
+                                onClick={() => handleCategorySelect(cat)}
+                                style={{
+                                  padding: '10px 12px',
+                                  cursor: 'pointer',
+                                  backgroundColor: selectedCategory === cat ? '#E8F4FF' : '#fff',
+                                  borderBottom: '1px solid #f0f0f0',
+                                  color: selectedCategory === cat ? '#0273F9' : '#333',
+                                  fontWeight: selectedCategory === cat ? '500' : 'normal'
+                                }}
+                              >
+                                {cat}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="col-md-6">
+                    <div className="mb-3">
+                      <label className="form-label" style={{ fontSize: '15px' }}>
+                        Expiry Date <small style={{ color: '#78716C' }}>(optional)</small>
+                      </label>
+                      <input
+                        type="date"
+                        className={styles['input-item']}
+                        name="expiry_date"
+                        value={productForm.expiry_date}
+                        onChange={handleProductFormChange}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="col-md-6">
+                    <div className="mb-1 d-flex justify-content-between align-items-center">
+                      <label className="form-label mb-0" style={{ fontSize: '15px' }}>
+                        Base Price {!hasVariations && <span className="text-danger">*</span>}
+                      </label>
+                      <small style={{ color: '#78716C' }}>Leave blank if using variations</small>
+                    </div>
+                    <div className="mb-3">
+                      <input
+                        type="number"
+                        className={styles['input-item']}
+                        placeholder="0.00"
+                        name="price"
+                        value={productForm.price}
+                        onChange={handleProductFormChange}
+                        step="0.01"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="col-md-6">
+                    <div className="mb-1 d-flex justify-content-between align-items-center">
+                      <label className="form-label mb-0" style={{ fontSize: '15px' }}>
+                        Base Stock {!hasVariations && <span className="text-danger">*</span>}
+                      </label>
+                      <small style={{ color: '#78716C' }}>Leave blank if using variations</small>
+                    </div>
+                    <div className="mb-3">
+                      <input
+                        type="number"
+                        className={styles['input-item']}
+                        placeholder="0"
+                        name="stock"
+                        value={productForm.stock}
+                        onChange={handleProductFormChange}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="col-md-6">
+                    <div className="mb-3">
+                      <label className="form-label" style={{ fontSize: '15px' }}>
+                        Low Stock Alert Threshold
+                      </label>
+                      <input
+                        type="number"
+                        className={styles['input-item']}
+                        placeholder="10"
+                        name="low_stock_threshold"
+                        value={productForm.low_stock_threshold}
+                        onChange={handleProductFormChange}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="col-md-6">
+                    <div className="mb-3">
+                      <label className="form-label d-block" style={{ fontSize: '15px' }}>
+                        Product Status
+                      </label>
+                      <div className="d-flex flex-wrap gap-4 mt-2">
+                        <div className="d-flex align-items-center gap-2">
+                          <label className={styles.switch}>
+                            <input
+                              type="checkbox"
+                              name="is_active"
+                              checked={!!productForm.is_active}
+                              onChange={handleProductFormChange}
+                            />
+                            <span className={styles.slider}></span>
+                          </label>
+                          <small style={{ color: '#141B34' }}>Active</small>
+                        </div>
+                        <div className="d-flex align-items-center gap-2">
+                          <label className={styles.switch}>
+                            <input
+                              type="checkbox"
+                              name="is_published"
+                              checked={!!productForm.is_published}
+                              onChange={handleProductFormChange}
+                            />
+                            <span className={styles.slider}></span>
+                          </label>
+                          <small style={{ color: '#141B34' }}>Published</small>
+                        </div>
+                        <div className="d-flex align-items-center gap-2">
+                          <label className={styles.switch}>
+                            <input
+                              type="checkbox"
+                              name="is_featured"
+                              checked={!!productForm.is_featured}
+                              onChange={handleProductFormChange}
+                            />
+                            <span className={styles.slider}></span>
+                          </label>
+                          <small style={{ color: '#141B34' }}>Featured</small>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="col-12">
+                    <div className="mb-3">
+                      <label className="form-label" style={{ fontSize: '15px' }}>Product Image</label>
+                      <div style={dropStyles.container}>
+                        <button
+                          type="button"
+                          onClick={() => triggerInput(profileInputRef)}
+                          style={dropStyles.imageWrapperButton}
+                        >
+                          <div style={dropStyles.imageCircle}>
+                            {im.profile ? (
+                              <img src={getImageSrc(im.profile)} alt="Preview" style={dropStyles.previewImage} />
+                            ) : (
+                              <div style={dropStyles.placeholderWrap}>
+                                <FontAwesomeIcon icon={faPlus} style={{ fontSize: '24px', color: '#78716C' }} />
+                              </div>
+                            )}
+                          </div>
+                          <p className="mb-1" style={{ fontSize: '14px', color: '#141B34', fontWeight: 500 }}>
+                            Click to upload or drag image here
+                          </p>
+                          <small style={{ color: '#78716C' }}>
+                            Recommended: Square image, at least 300x300px
+                          </small>
+                        </button>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          ref={profileInputRef}
+                          onChange={(e) => handleImageChange(e, 'profile')}
+                          style={{ display: 'none' }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div
+                className="p-3 mb-4"
+                style={{ border: '1px solid #EEEEEE', borderRadius: '12px' }}
+              >
+                <div className="d-flex justify-content-between align-items-start mb-3">
+                  <div>
+                    <h6 className="mb-1">Variations</h6>
+                    <small style={{ color: '#78716C' }}>
+                      Optional, for example Color, Size, Material, or Weight.
+                    </small>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={toggleVariationSection}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: '#0273F9',
+                      cursor: 'pointer',
+                      fontSize: '14px',
+                      fontWeight: 500
+                    }}
+                  >
+                    {showVariationSection ? 'Hide Variations' : '+ Add Variation'}
+                  </button>
+                </div>
+
+                {showVariationSection && (
+                  <div
+                    className="p-3 mb-3"
+                    style={{ border: '1px solid #EEEEEE', borderRadius: '12px', background: '#FAFAFA' }}
+                  >
+                    <div className="row">
+                      <div className="col-md-5">
+                        <div className="mb-3">
+                          <label className="form-label" style={{ fontSize: '13px' }}>Variation Name</label>
+                          <input
+                            type="text"
+                            className={styles['input-item']}
+                            placeholder="Color"
+                            value={currentVariation.variation_name}
+                            onChange={handleVariationNameChange}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="col-md-4">
+                        <div className="mb-3">
+                          <label className="form-label" style={{ fontSize: '13px' }}>Variation Type</label>
+                          <input
+                            type="text"
+                            className={styles['input-item']}
+                            placeholder="color"
+                            value={currentVariation.variation_type}
+                            onChange={handleVariationTypeChange}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="col-md-3 d-flex align-items-center">
+                        <label className={styles['custom-checkbox-wrapper']} style={{ marginTop: '10px' }}>
+                          <input
+                            type="checkbox"
+                            className={styles['custom-checkbox']}
+                            checked={!!currentVariation.is_required}
+                            onChange={handleVariationRequiredChange}
+                          />
+                          <span className={styles.checkmark}></span>
+                          <small style={{ color: '#141B34' }}>Required</small>
+                        </label>
+                      </div>
+                    </div>
+
+                    <div className="mb-2">
+                      <small style={{ color: '#78716C' }}>
+                        Each option can optionally have an image.
+                      </small>
+                    </div>
+
+                    <div className="row">
+                      <div className="col-md-3">
+                        <div className="mb-3">
+                          <label className="form-label" style={{ fontSize: '12px' }}>Option Value</label>
+                          <input
+                            type="text"
+                            className={styles['input-item']}
+                            placeholder="Black"
+                            value={currentOption.value}
+                            onChange={handleOptionValueChange}
+                            style={{ fontSize: '12px' }}
+                          />
+                        </div>
+                      </div>
+                      <div className="col-md-3">
+                        <div className="mb-3">
+                          <label className="form-label" style={{ fontSize: '12px' }}>Price Adj.</label>
+                          <input
+                            type="number"
+                            className={styles['input-item']}
+                            placeholder="0.00"
+                            value={currentOption.price}
+                            onChange={handleOptionPriceChange}
+                            step="0.01"
+                            style={{ fontSize: '12px' }}
+                          />
+                        </div>
+                      </div>
+                      <div className="col-md-2">
+                        <div className="mb-3">
+                          <label className="form-label" style={{ fontSize: '12px' }}>Stock</label>
+                          <input
+                            type="number"
+                            className={styles['input-item']}
+                            placeholder="0"
+                            value={currentOption.stock}
+                            onChange={handleOptionStockChange}
+                            style={{ fontSize: '12px' }}
+                          />
+                        </div>
+                      </div>
+                      <div className="col-md-4">
+                        <div className="mb-3">
+                          <label className="form-label" style={{ fontSize: '12px' }}>Option Image</label>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            ref={optionImageRef}
+                            onChange={handleOptionImageChange}
+                            style={{ fontSize: '12px' }}
+                            className={styles['input-item']}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="d-flex justify-content-between align-items-center mb-3">
+                      <button type="button" onClick={addOption} className={`${styles['sk-btn']} me-2`}>
+                        + Add
+                      </button>
+                      <small style={{ color: '#78716C' }}>
+                        {currentVariation.options.length} option{currentVariation.options.length === 1 ? '' : 's'} added
+                      </small>
+                    </div>
+
+                    {currentVariation.options.length > 0 && (
+                      <div className="row">
+                        {currentVariation.options.map((option, index) => (
+                          <div className="col-md-6 mb-3" key={`${option.value}-${index}`}>
+                            <div
+                              className="p-3 h-100"
+                              style={{ border: '1px solid #E5E7EB', borderRadius: '10px', background: '#fff' }}
+                            >
+                              <div className="d-flex justify-content-between align-items-start gap-3">
+                                <div className="d-flex gap-3">
+                                  <div
+                                    style={{
+                                      width: '48px',
+                                      height: '48px',
+                                      borderRadius: '8px',
+                                      overflow: 'hidden',
+                                      background: '#F3F4F6',
+                                      flexShrink: 0
+                                    }}
+                                  >
+                                    {option.image_url ? (
+                                      <img src={getImageSrc(option.image_url)} alt={option.value} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                    ) : null}
+                                  </div>
+                                  <div>
+                                    <p className="mb-1" style={{ fontWeight: 600, color: '#141B34' }}>{option.value}</p>
+                                    <small className="d-block" style={{ color: '#78716C' }}>
+                                      Price adj.: ₦{formatMoneyValue(option.price)}
+                                    </small>
+                                    <small className="d-block" style={{ color: '#78716C' }}>
+                                      Stock: {Number(option.stock) || 0}
+                                    </small>
+                                  </div>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => removeOption(index)}
+                                  style={{ background: 'none', border: 'none', color: '#DC2626', cursor: 'pointer' }}
+                                >
+                                  ×
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    <button type="button" onClick={addVariation} className={styles['si-btn']}>
+                      Add Variation
+                    </button>
+                  </div>
+                )}
+
+                {normalizedVariations.length > 0 && (
+                  <div className="mb-3">
+                    {normalizedVariations.map((variation, idx) => (
+                      <div
+                        key={`${variation.variation_name}-${idx}`}
+                        className="p-3 mb-3"
+                        style={{ border: '1px solid #EEEEEE', borderRadius: '12px', background: '#FAFAFA' }}
+                      >
+                        <div className="d-flex justify-content-between align-items-start mb-3">
+                          <div>
+                            <p className="mb-1" style={{ fontWeight: 600, color: '#141B34' }}>
+                              {variation.variation_name}
+                            </p>
+                            <small style={{ color: '#78716C' }}>
+                              {variation.variation_type} · {variation.is_required ? 'Required' : 'Optional'}
+                            </small>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => removeVariation(idx)}
+                            style={{ background: 'none', border: 'none', color: '#DC2626', cursor: 'pointer', fontSize: '18px' }}
+                          >
+                            ×
+                          </button>
+                        </div>
+
+                        {variation.options.map((option, optionIdx) => (
+                          <div key={`${variation.variation_name}-${option.value}-${optionIdx}`} className="d-flex justify-content-between align-items-center py-2" style={{ borderTop: optionIdx === 0 ? 'none' : '1px solid #E5E7EB' }}>
+                            <div className="d-flex align-items-center gap-3">
+                              <div
+                                style={{
+                                  width: '36px',
+                                  height: '36px',
+                                  borderRadius: '8px',
+                                  overflow: 'hidden',
+                                  background: '#fff',
+                                  border: '1px solid #E5E7EB'
+                                }}
+                              >
+                                {option.image_url ? (
+                                  <img src={getImageSrc(option.image_url)} alt={option.value} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                ) : null}
+                              </div>
+                              <small style={{ color: '#141B34' }}>{option.value}</small>
+                            </div>
+                            <div className="text-end">
+                              <small className="d-block" style={{ color: '#78716C' }}>
+                                Price adj.: ₦{formatMoneyValue(option.price)}
+                              </small>
+                              <small className="d-block" style={{ color: '#78716C' }}>
+                                Stock: {Number(option.stock) || 0}
+                              </small>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <div
+                  className="p-3"
+                  style={{ border: '1px solid #EEEEEE', borderRadius: '12px', background: '#FAFAFA' }}
+                >
+                  <h6 className="mb-1">Variants Preview</h6>
+                  <small style={{ color: '#78716C' }}>
+                    Variants are generated automatically when you have 2+ variations.
+                  </small>
+
+                  {variantPreviewRows.length > 0 ? (
+                    <div className="table-responsive mt-3">
+                      <table className="table table-sm align-middle mb-0">
+                        <thead>
+                          <tr>
+                            <th>Combination</th>
+                            <th>SKU</th>
+                            <th>Price</th>
+                            <th>Stock</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {variantPreviewRows.map((variant) => (
+                            <tr key={variant.sku}>
+                              <td>{variant.combination}</td>
+                              <td>{variant.sku}</td>
+                              <td>₦{formatMoneyValue(variant.price)}</td>
+                              <td>{variant.stock}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <p className="mb-0 mt-3" style={{ fontSize: '13px', color: '#78716C' }}>
+                      Add at least two variations to preview generated combinations here.
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <div className="text-end pb-3">
+                <button className={`${styles['sk-btn']} me-2`} onClick={hideModal} type="button">
+                  Cancel
+                </button>
+                <button className={`${styles['si-btn']} btn-lg px-5 py-3`} type="submit">
+                  {loading ? (
+                    <>
+                      <div className="spinner-border spinner-border-sm text-light" role="status">
+                        <span className="sr-only"></span>
+                      </div>
+                      <span>{editMode ? 'Updating...' : 'Saving...'}</span>
+                    </>
+                  ) : (
+                    submitLabel
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <>
       
@@ -696,7 +1548,7 @@ const Product = ({setProCol}) => {
                 <div className="col-12 col-sm-6 col-md-6 col-lg-4 mb-4" key={product.id}>
                   <div className="item-section" style={{height: '280px', display: 'flex', flexDirection: 'column', overflow: 'hidden', borderRadius: '8px'}}>
                     <div className="item-img" style={{flex: '0 0 180px', overflow: 'hidden'}}>
-                      <img src={product.image_url} alt="" className='w-100' style={{height: '100%', objectFit: 'cover'}}/>
+                      <img src={getImageSrc(product.image_url)} alt="" className='w-100' style={{height: '100%', objectFit: 'cover'}}/>
                     </div>
                     <div className="item-body p-2" style={{flex: '1', border: "1px solid #eee", borderTop: 'none', overflow: 'auto'}}>
                       <div className="d-flex justify-content-between align-items-start">
@@ -758,625 +1610,7 @@ const Product = ({setProCol}) => {
         </>
         )}
 
-        {mode && (
-          <>
-            <div className={styles['modal-overlay']} onClick={hideModal} style={{
-              position: 'fixed',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              backgroundColor: 'rgba(0,0,0,0.5)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              zIndex: 1000
-            }}>
-              <div className={styles['modal-content2']} style={{
-                background: '#fff',
-                borderRadius: '12px',
-                width: '90%',
-                maxWidth: '800px',
-                maxHeight: '90vh',
-                overflow: 'auto'
-              }} onClick={(e) => e.stopPropagation()}>
-                  <div className="d-flex justify-content-between p-3">
-                    <h6>Add New Product</h6>
-                    <FontAwesomeIcon icon={faTimes} onClick={hideModal} style={{cursor: 'pointer'}}/>
-                  </div>
-                  <div>
-                    <div className={`${styles['modal-body']} p-3`}>
-                      <form onSubmit={addProductToStore}>
-                        <div className="row">
-                          <div className="col-md-6">
-                            <div className="mb-3">
-                              <label className="form-label" style={{fontSize: '15px'}}>Product Name <span className='text-danger'>*</span></label>
-                              <input 
-                                type="text" 
-                                className={styles['input-item']} 
-                                placeholder="Product name"
-                                value={productForm.name}
-                                onChange={handleProductNameChange}
-                              />
-                            </div>
-                          </div>
-                          <div className="col-md-6">
-                            <div className="mb-3">
-                              <label className="form-label" style={{fontSize: '15px'}}>Stock Keeping Unit(SKU)</label>
-                              <input 
-                                type="text" 
-                                className={styles['input-item']} 
-                                placeholder="Auto-generated"
-                                value={productForm.sku}
-                                readOnly
-                                style={{backgroundColor: '#f5f5f5', color: '#666'}}
-                              />
-                            </div>
-                          </div>
-                          <div className="col-md-12">
-                            <div className="mb-3">
-                              <label className='mb-2' style={{fontSize: '15px'}}>Product Description</label>
-                              <textarea className={styles['input-item']} placeholder="Provide Product description" style={{height: '100px'}} name="description" value={productForm.description} onChange={handleProductFormChange}></textarea>
-                            </div>
-                          </div>
-                          <div className="col-md-6">
-                            <div className="mb-3">
-                              <label className="form-label" style={{fontSize: '15px'}}>Product Price <span className='text-danger'>*</span></label>
-                              <input 
-                                type="number" 
-                                className={styles['input-item']} 
-                                placeholder="0" 
-                                name="price" 
-                                value={productForm.price} 
-                                onChange={handleProductFormChange}
-                                step="0.01"
-                              />
-                            </div>
-                          </div>
-                          <div className="col-md-6">
-                            <div className="mb-3">
-                              <label className="form-label" style={{fontSize: '15px'}}>Stock</label>
-                              <input 
-                                type="number" 
-                                className={styles['input-item']} 
-                                placeholder="0" 
-                                name="stock" 
-                                value={productForm.stock} 
-                                onChange={handleProductFormChange}
-                              />
-                            </div>
-                          </div>
-                          
-                          <div className="col-md-12">
-                            <div className="mb-3">
-                              <label className="form-label" style={{fontSize: '15px'}}>Category</label>
-                              <div style={{position: 'relative'}}>
-                                <input 
-                                  type="text" 
-                                  className={styles['input-item']} 
-                                  placeholder="Select or type category" 
-                                  value={categoryInput}
-                                  onChange={handleCategoryInputChange}
-                                  onFocus={handleCategoryInputFocus}
-                                  onBlur={handleCategoryInputBlur}
-                                  style={{width: '100%', paddingRight: '35px'}}
-                                />
-                                <FontAwesomeIcon 
-                                  icon={faCaretDown} 
-                                  style={{
-                                    position: 'absolute',
-                                    right: '12px',
-                                    top: '50%',
-                                    transform: 'translateY(-50%)',
-                                    color: '#78716C',
-                                    pointerEvents: 'none',
-                                    fontSize: '16px'
-                                  }}
-                                />
-                                {showCategoryDropdown && filteredCategories.length > 0 && (
-                                  <div style={{
-                                    position: 'absolute',
-                                    top: '100%',
-                                    left: 0,
-                                    right: 0,
-                                    backgroundColor: '#fff',
-                                    border: '1px solid #ddd',
-                                    borderTop: 'none',
-                                    borderRadius: '0 0 8px 8px',
-                                    maxHeight: '150px',
-                                    overflowY: 'auto',
-                                    zIndex: 10,
-                                    boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
-                                  }}>
-                                    {filteredCategories.map((cat, idx) => (
-                                      <div
-                                        key={idx}
-                                        onClick={() => handleCategorySelect(cat)}
-                                        style={{
-                                          padding: '10px 12px',
-                                          cursor: 'pointer',
-                                          backgroundColor: selectedCategory === cat ? '#E8F4FF' : '#fff',
-                                          borderBottom: '1px solid #f0f0f0',
-                                          color: selectedCategory === cat ? '#0273F9' : '#333',
-                                          fontWeight: selectedCategory === cat ? '500' : 'normal'
-                                        }}
-                                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = selectedCategory === cat ? '#E8F4FF' : '#f9f9f9'}
-                                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = selectedCategory === cat ? '#E8F4FF' : '#fff'}
-                                      >
-                                        {cat}
-                                      </div>
-                                    ))}
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="col-md-12">
-                            <label className="form-label" style={{fontSize: '15px'}}>Product Image</label>
-                            <div style={dropStyles.container}>
-                              <label htmlFor="imageUpload" style={dropStyles.imageWrapper}>
-                                  <div style={dropStyles.imageCircle} onClick={() => triggerInput(profileInputRef)}>
-                                  {im.profile ? (
-                                    <img src={im.profile} alt="Preview" style={dropStyles.previewImage} />
-                                  ) : (
-                                    <div style={dropStyles.placeholderCircle} />
-                                  )}
-                      
-                                  </div>
-                      
-                                  <input
-                                    type="file"
-                                    accept="image/*"
-                                    ref={profileInputRef}
-                                    onChange={(e) => handleImageChange(e, "profile")}
-                                    style={{ display: "none" }}
-                                  />
-                                  <button style={dropStyles.uploadBtn} onClick={() => triggerInput(profileInputRef)} type='button'>
-                                    <img src={Ac} alt="" style={{width: '15%'}} className='me-2'/>
-                                    Upload Image
-                                  </button>
-                              </label>
-                              <p style={dropStyles.note}>Recommended: Square image, at least 300×300px</p>
-                            </div>
-                          </div>
-                        </div>
-
-
-                        <div className="col-md-12">
-                            <button 
-                              type="button" 
-                              onClick={toggleVariationSection}
-                              style={{
-                                background: 'none',
-                                border: 'none',
-                                color: '#0273F9',
-                                cursor: 'pointer',
-                                fontSize: '15px',
-                                padding: '8px 0',
-                                fontWeight: '500'
-                              }}
-                            >
-                              {showVariationSection ? '− Hide Variations' : '+ Add Variations'}
-                            </button>
-                          </div>
-
-                          
-                        {showVariationSection && (
-                        <div className="rounded-3 mt-4" style={{border: '1px solid #eee'}}>
-                          <small className="d-block mx p-2">Variation (Optional)</small>
-
-                          <hr className='m-0' style={{border: '1px solid #eee'}}/>
-
-                          {/* Current Variation Input Section */}
-                          <div className="m-3 p-3" style={{border: '1px solid #eee', background: '#fafafa'}}>
-                            <h6 className="mb-3">Add Variation</h6>
-                            <div className="row">
-                              <div className="col-md-6">
-                                <div className="mb-3">
-                                  <label className="form-label" style={{fontSize: '13px'}}>Variant Name</label>
-                                  <input 
-                                    type="text" 
-                                    className={styles['input-item']} 
-                                    placeholder="e.g., Color, Size" 
-                                    value={currentVariation.variation_name}
-                                    onChange={handleVariationNameChange}
-                                  />
-                                </div>
-                              </div>
-                              <div className="col-md-6">
-                                <div className="mb-3">
-                                  <label className="form-label" style={{fontSize: '13px'}}>Variant Type</label>
-                                  <select 
-                                    className={styles['input-item']} 
-                                    style={{fontSize: '13px'}}
-                                    value={currentVariation.variation_type}
-                                    onChange={handleVariationTypeChange}
-                                  >
-                                    <option value="">--select type--</option>
-                                    <option value="color">Color</option>
-                                    <option value="size">Size</option>
-                                    <option value="material">Material</option>
-                                  </select>
-                                </div>
-                              </div>
-                            </div>
-
-                            {/* Option Input Section */}
-                            <hr className="my-3" style={{border: '1px solid #ddd'}}/>
-                            <h6 className="mb-3">Add Option Values</h6>
-                            <div className="row">
-                              <div className="col-md-3">
-                                <div className="mb-3">
-                                  <label className="form-label" style={{fontSize: '12px'}}>Option Value</label>
-                                  <input 
-                                    type="text" 
-                                    className={styles['input-item']} 
-                                    placeholder="e.g., Red, Large" 
-                                    value={currentOption.value}
-                                    onChange={handleOptionValueChange}
-                                    style={{fontSize: '12px'}}
-                                  />
-                                </div>
-                              </div>
-                              <div className="col-md-3">
-                                <div className="mb-3">
-                                  <label className="form-label" style={{fontSize: '12px'}}>Price</label>
-                                  <input 
-                                    type="number" 
-                                    className={styles['input-item']} 
-                                    placeholder="0.00" 
-                                    value={currentOption.price}
-                                    onChange={handleOptionPriceChange}
-                                    step="0.01"
-                                    style={{fontSize: '12px'}}
-                                  />
-                                </div>
-                              </div>
-                              <div className="col-md-2">
-                                <div className="mb-3">
-                                  <label className="form-label" style={{fontSize: '12px'}}>Stock</label>
-                                  <input 
-                                    type="number" 
-                                    className={styles['input-item']} 
-                                    placeholder="0" 
-                                    value={currentOption.stock}
-                                    onChange={handleOptionStockChange}
-                                    style={{fontSize: '12px'}}
-                                  />
-                                </div>
-                              </div>
-                              <div className="col-md-4">
-                                <div className="mb-3">
-                                  <label className="form-label" style={{fontSize: '12px'}}>Option Image</label>
-                                  <input 
-                                    type="file" 
-                                    accept="image/*" 
-                                    ref={optionImageRef}
-                                    onChange={handleOptionImageChange}
-                                    style={{fontSize: '12px'}}
-                                    className={styles['input-item']}
-                                  />
-                                </div>
-                              </div>
-                            </div>
-                            <div className="mb-3">
-                              <button 
-                                type="button" 
-                                onClick={addOption}
-                                className={`${styles['sk-btn']} me-2`}
-                                style={{fontSize: '13px'}}
-                              >
-                                Add Option
-                              </button>
-                            </div>
-
-                            {/* Display Current Options */}
-                            {currentVariation.options.length > 0 && (
-                              <div className="mb-3">
-                                <h6 className="mb-2" style={{fontSize: '13px'}}>Options Added:</h6>
-                                <div style={{display: 'flex', flexWrap: 'wrap', gap: '8px'}}>
-                                  {currentVariation.options.map((opt, idx) => (
-                                    <div key={idx} style={{
-                                      background: '#E8F4FF',
-                                      border: '1px solid #0273F9',
-                                      borderRadius: '6px',
-                                      padding: '8px 12px',
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      gap: '8px',
-                                      fontSize: '12px'
-                                    }}>
-                                      <span>{opt.value} - ${opt.price} (Stock: {opt.stock})</span>
-                                      <button 
-                                        type="button" 
-                                        onClick={() => removeOption(idx)}
-                                        style={{background: 'none', border: 'none', color: '#DC2626', cursor: 'pointer', padding: 0}}
-                                      >
-                                        ✕
-                                      </button>
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
-
-                            <div className="mt-3">
-                              <button 
-                                type="button" 
-                                onClick={addVariation}
-                                className={`${styles['si-btn']}`}
-                                style={{fontSize: '13px'}}
-                              >
-                                Add Variation
-                              </button>
-                            </div>
-                          </div>
-
-                          {/* Display Added Variations */}
-                          {variations.length > 0 && (
-                            <div className="m-3 p-3" style={{background: '#fafafa'}}>
-                              <h6 className="mb-3">Variations Added:</h6>
-                              {variations.map((variation, idx) => (
-                                <div key={idx} style={{
-                                  background: '#fff',
-                                  border: '1px solid #ddd',
-                                  borderRadius: '8px',
-                                  padding: '12px',
-                                  marginBottom: '10px'
-                                }}>
-                                  <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px'}}>
-                                    <div>
-                                      <strong style={{fontSize: '14px'}}>{variation.variation_name}</strong>
-                                      <span style={{fontSize: '12px', color: '#666', marginLeft: '10px'}}>Type: {variation.variation_type}</span>
-                                    </div>
-                                    <button 
-                                      type="button" 
-                                      onClick={() => removeVariation(idx)}
-                                      style={{background: 'none', border: 'none', color: '#DC2626', cursor: 'pointer', fontSize: '18px'}}
-                                    >
-                                      ✕
-                                    </button>
-                                  </div>
-                                  <div style={{fontSize: '12px'}}>
-                                    <strong>Options:</strong>
-                                    <ul style={{marginTop: '5px', paddingLeft: '20px'}}>
-                                      {variation.options.map((opt, optIdx) => (
-                                        <li key={optIdx}>{opt.value} - ${opt.price} (Stock: {opt.stock})</li>
-                                      ))}
-                                    </ul>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                        )}
-                        <div className="mt-3">
-                          <label className="form-label" style={{fontSize: '15px'}}>Image Url <span className='text-danger'>*</span></label>
-                          <input type="text" className={styles['input-item']} placeholder="Enter Image url" value={productForm.image_url} onChange={handleProductNameChange}/>
-                        </div>
-                        <div className="text-end mt-4 m-4">
-                          <button className={`${styles['sk-btn']} me-2`}>Cancel</button>
-                          <button className={`${styles['si-btn']} btn-lg px-5 py-3`}>
-                            {
-                              loading ?(
-                                  <>
-                                  <div className="spinner-border spinner-border-sm text-light" role="status">
-                                      <span className="sr-only"></span>
-                                  </div>
-                                  <span>Creating... </span>
-                                  </>
-                                  
-                              ): (
-                                  'Add Product'
-                              )
-                            }
-                          </button>
-                        </div>
-                      </form>
-                    </div>
-                  </div>
-              </div>
-          </div>
-          </>
-        )}
-
-        {editMode && (
-          <>
-            <div className={styles['modal-overlay']} onClick={hideModal} style={{
-              position: 'fixed',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              backgroundColor: 'rgba(0,0,0,0.5)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              zIndex: 1000
-            }}>
-              <div className={styles['modal-content2']} style={{
-                background: '#fff',
-                borderRadius: '12px',
-                width: '90%',
-                maxWidth: '800px',
-                maxHeight: '90vh',
-                overflow: 'auto'
-              }} onClick={(e) => e.stopPropagation()}>
-                  <div className="d-flex justify-content-between p-3">
-                    <h6>Edit Product</h6>
-                    <FontAwesomeIcon icon={faTimes} onClick={hideModal} style={{cursor: 'pointer'}}/>
-                  </div>
-                  <div>
-                    <div className={`${styles['modal-body']} p-3`}>
-                      <form onSubmit={addProductToStore}>
-                        <div className="row">
-                          <div className="col-md-6">
-                            <div className="mb-3">
-                              <label className="form-label" style={{fontSize: '15px'}}>Product Name <span className='text-danger'>*</span></label>
-                              <input 
-                                type="text" 
-                                className={styles['input-item']}
-                                placeholder="Product name"
-                                value={productForm.name}
-                                onChange={handleProductNameChange}
-                              />
-                            </div>
-                          </div>
-                          <div className="col-md-6">
-                            <div className="mb-3">
-                              <label className="form-label" style={{fontSize: '15px'}}>Stock Keeping Unit(SKU)</label>
-                              <input 
-                                type="text" 
-                                className={styles['input-item']} 
-                                placeholder="Auto-generated"
-                                value={productForm.sku}
-                                readOnly
-                                style={{backgroundColor: '#f5f5f5', color: '#666'}}
-                              />
-                            </div>
-                          </div>
-                          <div className="col-md-12">
-                            <div className="mb-3">
-                              <label className='mb-2' style={{fontSize: '15px'}}>Product Description</label>
-                              <textarea className={styles['input-item']} placeholder="Provide Product description" style={{height: '100px'}} name="description" value={productForm.description} onChange={handleProductFormChange}></textarea>
-                            </div>
-                          </div>
-                          <div className="col-md-6">
-                            <div className="mb-3">
-                              <label className="form-label" style={{fontSize: '15px'}}>Product Price <span className='text-danger'>*</span></label>
-                              <input 
-                                type="number" 
-                                className={styles['input-item']} 
-                                placeholder="0" 
-                                name="price" 
-                                value={productForm.price} 
-                                onChange={handleProductFormChange}
-                                step="0.01"
-                              />
-                            </div>
-                          </div>
-                          <div className="col-md-6">
-                            <div className="mb-3">
-                              <label className="form-label" style={{fontSize: '15px'}}>Stock</label>
-                              <input 
-                                type="number" 
-                                className={styles['input-item']} 
-                                placeholder="0" 
-                                name="stock" 
-                                value={productForm.stock} 
-                                onChange={handleProductFormChange}
-                              />
-                            </div>
-                          </div>
-                          
-                          <div className="col-md-12">
-                            <div className="mb-3">
-                              <label className="form-label" style={{fontSize: '15px'}}>Category</label>
-                              <div style={{position: 'relative'}}>
-                                <input 
-                                  type="text" 
-                                  className={styles['input-item']} 
-                                  placeholder="Select or type category" 
-                                  value={categoryInput}
-                                  onChange={handleCategoryInputChange}
-                                  onFocus={handleCategoryInputFocus}
-                                  onBlur={handleCategoryInputBlur}
-                                  style={{width: '100%', paddingRight: '35px'}}
-                                />
-                                <FontAwesomeIcon 
-                                  icon={faCaretDown} 
-                                  style={{
-                                    position: 'absolute',
-                                    right: '12px',
-                                    top: '50%',
-                                    transform: 'translateY(-50%)',
-                                    color: '#78716C',
-                                    pointerEvents: 'none',
-                                    fontSize: '16px'
-                                  }}
-                                />
-                                {showCategoryDropdown && filteredCategories.length > 0 && (
-                                  <div style={{
-                                    position: 'absolute',
-                                    top: '100%',
-                                    left: 0,
-                                    right: 0,
-                                    backgroundColor: '#fff',
-                                    border: '1px solid #ddd',
-                                    borderTop: 'none',
-                                    borderRadius: '0 0 8px 8px',
-                                    maxHeight: '150px',
-                                    overflowY: 'auto',
-                                    zIndex: 10,
-                                    boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
-                                  }}>
-                                    {filteredCategories.map((cat, idx) => (
-                                      <div
-                                        key={idx}
-                                        onClick={() => handleCategorySelect(cat)}
-                                        style={{
-                                          padding: '10px 12px',
-                                          cursor: 'pointer',
-                                          backgroundColor: selectedCategory === cat ? '#E8F4FF' : '#fff',
-                                          borderBottom: '1px solid #f0f0f0',
-                                          color: selectedCategory === cat ? '#0273F9' : '#333',
-                                          fontWeight: selectedCategory === cat ? '500' : 'normal'
-                                        }}
-                                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = selectedCategory === cat ? '#E8F4FF' : '#f9f9f9'}
-                                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = selectedCategory === cat ? '#E8F4FF' : '#fff'}
-                                      >
-                                        {cat}
-                                      </div>
-                                    ))}
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="col-md-12">
-                            <label className="form-label" style={{fontSize: '15px'}}>Product Image</label>
-                            <div style={dropStyles.container}>
-                              <label htmlFor="imageUpload" style={dropStyles.imageWrapper}>
-                                  <div style={dropStyles.imageCircle} onClick={() => triggerInput(profileInputRef)}>
-                                  {im.profile ? (
-                                    <img src={im.profile} alt="Preview" style={dropStyles.previewImage} />
-                                  ) : (
-                                    <div style={dropStyles.placeholderCircle} />
-                                  )}
-                      
-                                  </div>
-                      
-                                  <input
-                                    type="file"
-                                    accept="image/*"
-                                    ref={profileInputRef}
-                                    onChange={(e) => handleImageChange(e, "profile")}
-                                    style={{ display: "none" }}
-                                  />
-                                  <button style={dropStyles.uploadBtn} onClick={() => triggerInput(profileInputRef)} type='button'>
-                                    <img src={Ac} alt="" style={{width: '15%'}} className='me-2'/>
-                                    Upload Image
-                                  </button>
-                              </label>
-                              <p style={dropStyles.note}>Recommended: Square image, at least 300×300px</p>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="text-end mt-4 m-4">
-                          <button className={`${styles['sk-btn']} me-2`} onClick={hideModal} type="button">Cancel</button>
-                          <button className={`${styles['si-btn']} btn-lg px-5 py-3`} type="submit">Update Product</button>
-                        </div>
-                      </form>
-                    </div>
-                  </div>
-              </div>
-          </div>
-          </>
-        )}
+        {renderProductModal()}
 
       <style jsx>{`
         .card-section:hover .product-image {
@@ -1464,9 +1698,12 @@ const dropStyles = {
     textAlign: "center",
     backgroundColor: "#fff",
   },
-  imageWrapper: {
+  imageWrapperButton: {
     cursor: "pointer",
     display: "inline-block",
+    border: "none",
+    background: "transparent",
+    padding: 0,
   },
   imageCircle: {
     width: "200px",
@@ -1482,24 +1719,13 @@ const dropStyles = {
     height: "100%",
     objectFit: "cover",
   },
-  placeholderCircle: {
+  placeholderWrap: {
     width: "100%",
     height: "100%",
-    backgroundColor: "#D9D9D9",
-  },
-  uploadBtn: {
-    padding: "8px 16px",
-    backgroundColor: "#fff",
-    border: "1px solid #EEEEEE",
-    borderRadius: "8px",
-    fontSize: "14px",
-    cursor: "pointer",
-    color: '#0273F9'
-  },
-  note: {
-    fontSize: "12px",
-    color: "#78716C",
-    marginTop: "1rem",
+    backgroundColor: "#F3F4F6",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
   },
 };
 

@@ -1,14 +1,15 @@
 import React, {useState, useEffect} from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faExternalLinkAlt, faTimes, faCog, faClock, faImage, faTrashCan, faPen, faEllipsisV, faTableColumns, faThumbtack, faPlus } from '@fortawesome/free-solid-svg-icons';
+import { faExternalLinkAlt, faTimes, faTrashCan, faPen, faEllipsisV, faThumbtack, faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
 import { useDispatch, useSelector } from 'react-redux';
-import { createService, updateService, getAllServices, deleteService, getAllCollection, 
-    createCollection, resetStatus, addServiceToCollection, getServiceCollection, addBulkServicesToCollection, 
-    updateServiceInCollection, deleteServiceInCollection, updateCollection, deleteCollection } from '../../../slice/onlineStoreSlice';
+import { createService, updateService, updateServiceSortOrder, updateServiceVisibility, updateCollectionSortOrder, getAllServices, deleteService, getAllCollection, setServicesOrder,
+    createCollection, resetStatus, getServiceCollection, 
+    updateServiceInCollection, deleteServiceInCollection, updateCollection, updateCollectionVisibility, deleteCollection } from '../../../slice/onlineStoreSlice';
 import styles from "../../../styles.module.css";
 import Swal from 'sweetalert2';
 import axios from 'axios';
 import { API_URL } from '../../../config/constant';
+import { Smc } from '../../../assets';
 
 
 
@@ -41,9 +42,10 @@ const Service = ({setPer, setVog}) => {
   const [astc, setAstc] = useState(false);
   const [visibleCollections, setVisibleCollections] = useState({});
   const [collectionServices, setCollectionServices] = useState({});
-  const [bulkService, setBulkService] = useState(false);
-  const [serlist, setSerList] = useState('')
   const [ditem, setDitem] = useState({});
+  const [selectedCollectionId, setSelectedCollectionId] = useState(null);
+  const [selectedCollectionName, setSelectedCollectionName] = useState('');
+  const [existingCollectionServiceIds, setExistingCollectionServiceIds] = useState([]);
   const [pinnedServices, setPinnedServices] = useState({});
   const [upSer, setUpSer] = useState(false);
   const [sid, setSid] = useState('');
@@ -85,14 +87,6 @@ const Service = ({setPer, setVog}) => {
     is_visible: false
   })
 
-  const [serCollection, setSerCollection] = useState({
-    service_id: '',
-    is_pinned: '',
-    sort_order: ''
-  })
-
-
-
   useEffect(() => {
     if (token) {
         dispatch(getAllServices({ token, id: getId || '7'}))
@@ -108,24 +102,160 @@ const Service = ({setPer, setVog}) => {
   // Update servicesList when allStore changes
   useEffect(() => {
     if (Array.isArray(allStore?.data?.services)) {
-      setServicesList([...allStore.data.services]);
+      const sortedServices = [...allStore.data.services].sort(
+        (a, b) => (Number(a?.sort_order) || 0) - (Number(b?.sort_order) || 0)
+      );
+      setServicesList(sortedServices);
     }
 
     if (Array.isArray(collections?.data?.collections)) {
-        setCollectionList([...collections.data.collections])
+        const sortedCollections = [...collections.data.collections].sort(
+            (a, b) => (Number(a?.sort_order) || 0) - (Number(b?.sort_order) || 0)
+        );
+        setCollectionList(sortedCollections)
         setItem(false)
     }
   }, [allStore, collections]);
 
-  // Parse services from localStorage and update serlist count
-  useEffect(() => {
-    const services = JSON.parse(localStorage.getItem('services'));
-    if (Array.isArray(services)) {
-      setSerList(services.length);
-    }
-  }, []);
+  const serviceForCollection = Array.isArray(servicesList) ? servicesList : [];
 
-  const serviceForCollection = JSON.parse(localStorage.getItem('services')) || []
+  const getImageUrl = (value) => {
+    if (Array.isArray(value)) return getImageUrl(value[0]);
+    if (value && typeof value === 'object') {
+      return getImageUrl(value.url || value.secure_url || value.image_url || value.path || value.location);
+    }
+    if (typeof value !== 'string' || !value.trim()) return '';
+
+    const image = value.trim();
+    if (/^(https?:|data:|blob:|\/\/)/i.test(image)) return image;
+
+    const apiOrigin = API_URL.replace(/\/api\/v\d+\/?$/i, '');
+    return image.startsWith('/') ? `${apiOrigin}${image}` : image;
+  };
+
+  const getServiceImage = (service) => {
+    const serviceDetails = service?.StoreService || service || {};
+
+    return (
+      getImageUrl(serviceDetails.service_image_url) ||
+      getImageUrl(serviceDetails.service_image) ||
+      getImageUrl(serviceDetails.image_url) ||
+      getImageUrl(serviceDetails.image) ||
+      Smc
+    );
+  };
+
+  const formatServicePrice = (service) => {
+    const serviceDetails = service?.StoreService || service || {};
+    const amount = Number(serviceDetails?.price ?? 0);
+
+    if (!Number.isFinite(amount) || amount <= 0) {
+      return 'Free';
+    }
+
+    return `₦${amount.toLocaleString('en-NG')}`;
+  };
+
+  const handleServiceImageError = (event) => {
+    event.currentTarget.onerror = null;
+    event.currentTarget.src = Smc;
+  };
+
+  const isServiceVisible = (value) => value === true || value === 1 || value === '1';
+  const isCollectionVisible = (value) => value === true || value === 1 || value === '1';
+
+  const handleServiceVisibilityToggle = async (serviceId, checked) => {
+    const previousList = [...servicesList];
+    const updatedServices = servicesList.map((service) =>
+      service.id === serviceId ? { ...service, is_visible: checked } : service
+    );
+
+    setServicesList(updatedServices);
+    dispatch(setServicesOrder(updatedServices));
+
+    try {
+      await dispatch(
+        updateServiceVisibility({
+          token,
+          serviceId,
+          is_visible: checked
+        })
+      ).unwrap();
+
+      Swal.fire({
+        icon: 'success',
+        title: 'Visibility updated',
+        text: `Service is now ${checked ? 'visible' : 'hidden'}.`,
+        confirmButtonColor: '#0273F9'
+      });
+    } catch (error) {
+      setServicesList(previousList);
+      dispatch(setServicesOrder(previousList));
+
+      let errorMessage = 'Failed to update service visibility';
+
+      if (error && typeof error === 'object') {
+        if (Array.isArray(error)) {
+          errorMessage = error.map(item => item.message).join(', ');
+        } else if (error.message) {
+          errorMessage = error.message;
+        }
+      }
+
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: errorMessage,
+        confirmButtonColor: '#0273F9'
+      });
+    }
+  };
+
+  const handleCollectionVisibilityToggle = async (collection) => {
+    const nextVisibility = isCollectionVisible(collection?.is_visible) ? 0 : 1;
+    const previousCollections = [...collectionList];
+    const updatedCollections = collectionList.map((item) =>
+      item.id === collection.id ? { ...item, is_visible: nextVisibility } : item
+    );
+
+    setCollectionList(updatedCollections);
+
+    try {
+      await dispatch(
+        updateCollectionVisibility({
+          token,
+          id: collection.id,
+          is_visible: nextVisibility
+        })
+      ).unwrap();
+
+      Swal.fire({
+        icon: 'success',
+        title: nextVisibility === 1 ? 'Collection Visible' : 'Collection Invisible',
+        text: `${collection.collection_name || 'Collection'} is now ${nextVisibility === 1 ? 'visible' : 'invisible'}.`,
+        confirmButtonColor: '#0273F9'
+      });
+    } catch (toggleError) {
+      setCollectionList(previousCollections);
+
+      let errorMessage = 'Failed to update collection visibility';
+
+      if (toggleError && typeof toggleError === 'object') {
+        if (Array.isArray(toggleError)) {
+          errorMessage = toggleError.map(item => item.message).join(', ');
+        } else if (toggleError.message) {
+          errorMessage = toggleError.message;
+        }
+      }
+
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: errorMessage,
+        confirmButtonColor: '#0273F9'
+      });
+    }
+  };
 
 
 
@@ -145,7 +275,35 @@ const Service = ({setPer, setVog}) => {
     setDragOverIndex(null);
   };
 
-  const handleDrop = (e, dropIndex) => {
+  const persistServiceOrder = async (orderedServices) => {
+    const temporaryOffset = orderedServices.length + 100;
+
+    for (let index = 0; index < orderedServices.length; index += 1) {
+      const service = orderedServices[index];
+
+      await dispatch(
+        updateServiceSortOrder({
+          token,
+          serviceId: service.id,
+          sort_order: temporaryOffset + index
+        })
+      ).unwrap();
+    }
+
+    for (let index = 0; index < orderedServices.length; index += 1) {
+      const service = orderedServices[index];
+
+      await dispatch(
+        updateServiceSortOrder({
+          token,
+          serviceId: service.id,
+          sort_order: index + 1
+        })
+      ).unwrap();
+    }
+  };
+
+  const handleDrop = async (e, dropIndex) => {
     e.preventDefault();
     setDragOverIndex(null);
 
@@ -154,13 +312,55 @@ const Service = ({setPer, setVog}) => {
       return;
     }
 
-    // Reorder services
+    const previousList = [...servicesList];
     const newList = [...servicesList];
     const draggedItem = newList[draggedService];
+
     newList.splice(draggedService, 1);
     newList.splice(dropIndex, 0, draggedItem);
+
     setServicesList(newList);
     setDraggedService(null);
+
+    const reorderedServices = newList.map((service, index) => ({
+      ...service,
+      sort_order: index + 1
+    }));
+
+    dispatch(setServicesOrder(reorderedServices));
+
+    try {
+      await persistServiceOrder(reorderedServices);
+
+      Swal.fire({
+        icon: 'success',
+        title: 'Service moved',
+        text: `${draggedItem.service_title} moved to position ${dropIndex + 1}.`,
+        confirmButtonColor: '#0273F9'
+      });
+    } catch (error) {
+      setServicesList(previousList);
+
+      let errorMessage = 'Failed to move service';
+
+      if (error && typeof error === 'object') {
+        if (Array.isArray(error)) {
+          errorMessage = error.map(item => item.message).join(', ');
+        } else if (error.message) {
+          errorMessage = error.message;
+        }
+      }
+
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: errorMessage,
+        confirmButtonColor: '#0273F9'
+      });
+
+      dispatch(setServicesOrder(previousList));
+      dispatch(getAllServices({ token, id: getId || '7' }));
+    }
   };
 
   const handleDragEnd = () => {
@@ -184,7 +384,35 @@ const Service = ({setPer, setVog}) => {
     setDragOverCollectionIndex(null);
   };
 
-  const handleCollectionDrop = (e, dropIndex) => {
+  const persistCollectionOrder = async (orderedCollections) => {
+    const temporaryOffset = orderedCollections.length + 100;
+
+    for (let index = 0; index < orderedCollections.length; index += 1) {
+      const collection = orderedCollections[index];
+
+      await dispatch(
+        updateCollectionSortOrder({
+          token,
+          id: collection.id,
+          sort_order: temporaryOffset + index
+        })
+      ).unwrap();
+    }
+
+    for (let index = 0; index < orderedCollections.length; index += 1) {
+      const collection = orderedCollections[index];
+
+      await dispatch(
+        updateCollectionSortOrder({
+          token,
+          id: collection.id,
+          sort_order: index + 1
+        })
+      ).unwrap();
+    }
+  };
+
+  const handleCollectionDrop = async (e, dropIndex) => {
     e.preventDefault();
     setDragOverCollectionIndex(null);
 
@@ -193,53 +421,60 @@ const Service = ({setPer, setVog}) => {
       return;
     }
 
-    // Reorder collections
+    const previousCollections = [...collectionList];
     const newList = [...collectionList];
     const draggedItem = newList[draggedCollection];
     newList.splice(draggedCollection, 1);
     newList.splice(dropIndex, 0, draggedItem);
-    setCollectionList(newList);
+
+    const reorderedCollections = newList.map((collection, index) => ({
+      ...collection,
+      sort_order: index + 1
+    }));
+
+    setCollectionList(reorderedCollections);
     setDraggedCollection(null);
+
+    localStorage.setItem('allcollections', JSON.stringify(reorderedCollections));
+
+    try {
+      await persistCollectionOrder(reorderedCollections);
+
+      Swal.fire({
+        icon: 'success',
+        title: 'Collection moved',
+        text: `${draggedItem.collection_name} moved to position ${dropIndex + 1}.`,
+        confirmButtonColor: '#0273F9'
+      });
+    } catch (error) {
+      setCollectionList(previousCollections);
+      localStorage.setItem('allcollections', JSON.stringify(previousCollections));
+
+      let errorMessage = 'Failed to move collection';
+
+      if (error && typeof error === 'object') {
+        if (Array.isArray(error)) {
+          errorMessage = error.map(item => item.message).join(', ');
+        } else if (error.message) {
+          errorMessage = error.message;
+        }
+      }
+
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: errorMessage,
+        confirmButtonColor: '#0273F9'
+      });
+
+      dispatch(getAllCollection({ token, id: getId || '7' }));
+    }
   };
 
   const handleCollectionDragEnd = () => {
     setDraggedCollection(null);
     setDragOverCollectionIndex(null);
   };
-
-  // Save order to backend
-  const saveServiceOrder = async () => {
-    try {
-      const updatePromises = servicesList.map((service, index) =>
-        axios.put(
-          `${API_URL}/stores/online/${getId || '7'}/services/${service.id}`,
-          { sort_order: index },
-          {
-            headers: {
-              Authorization: `Bearer ${token}`
-            }
-          }
-        )
-      );
-
-      await Promise.all(updatePromises);
-      
-      Swal.fire({
-        icon: 'success',
-        title: 'Success!',
-        text: 'Service order updated successfully',
-      });
-
-      dispatch(getAllServices({ token, id: getId || '7' }));
-    } catch (error) {
-      Swal.fire({
-        icon: 'error',
-        title: 'Error',
-        text: 'Failed to update service order',
-      });
-    }
-  };
-
 
   const handleChange = (e) => {
     const { name, value, type, checked, dataset } = e.target;
@@ -382,8 +617,11 @@ useEffect(() => {
     setCurrentSelectedDay('Mon')
     setCurrentSelectedTime('')
     setAstc(false);
-    setBulkService(false);
     setUpSer(false)
+    setDitem({})
+    setSelectedCollectionId(null)
+    setSelectedCollectionName('')
+    setExistingCollectionServiceIds([])
   }
 
     const [availabilitySlots, setAvailabilitySlots] = useState({});
@@ -892,87 +1130,54 @@ useEffect(() => {
         }
     }, [success, error, dispatch])
 
-    const showCollect = (id) => {
-        console.log(id)
-        localStorage.setItem("colId", id)
-        setAstc(true)
-    }
+    const showCollect = async (collection) => {
+        const collectionId = collection?.id;
 
-    const serviceAddedToCollection = async (e) => {
-        e.preventDefault();
-        let getColId = localStorage.getItem("colId")
-
-        const { service_id, is_pinned, sort_order } = serCollection;
-
-        if (!service_id) {
-            Swal.fire({
-                icon: "info",
-                title: "Missing Fields",
-                text: "Please fill in all fields",
-                confirmButtonColor: '#0273F9'
-            });
+        if (!collectionId) {
             return;
         }
 
-        const dataSend = {
-            service_id,
-            is_pinned,
-            sort_order
-        };
+        setSelectedCollectionId(collectionId);
+        setSelectedCollectionName(collection.collection_name || '');
+        setAstc(true);
 
+        try {
+            const cachedServices = collectionServices[collectionId];
+            let currentCollectionServices = Array.isArray(cachedServices) ? cachedServices : null;
 
-        dispatch(addServiceToCollection({token, id: getColId, ...dataSend}))
-    }
+            if (!currentCollectionServices) {
+                const response = await dispatch(getServiceCollection({ token, id: collectionId })).unwrap();
+                currentCollectionServices = response.data?.services || [];
+                setCollectionServices(prev => ({
+                    ...prev,
+                    [collectionId]: currentCollectionServices
+                }));
+            }
 
-    useEffect(() => {
-        if (success) {
+            const existingIds = currentCollectionServices.map((item) => String(item.id));
+
+            setExistingCollectionServiceIds(existingIds);
+            setDitem(
+                existingIds.reduce((acc, id) => {
+                    acc[id] = true;
+                    return acc;
+                }, {})
+            );
+        } catch (fetchError) {
+            setExistingCollectionServiceIds([]);
+            setDitem({});
+
             Swal.fire({
-                icon: 'success',
-                title: "added successful",
-                text: success.message,
-                confirmButtonColor: "#0273F9",
-            }).then(async () => {
-                dispatch(resetStatus());
-                dispatch(getAllCollection({ token, id: getId || '7'}))
-                
-                // Refresh services for the current collection
-                let getColId = localStorage.getItem("colId")
-                if (getColId) {
-                    try {
-                        const response = await dispatch(getServiceCollection({ token, id: getColId })).unwrap();
-                        setCollectionServices(prev => ({
-                            ...prev,
-                            [getColId]: response.data?.services || []
-                        }));
-                    } catch (error) {
-                        console.error('Error refreshing collection services:', error);
-                    }
-                }
-                
-                hideModal();
-                setSerCollection({
-                    service_id: '',
-                    is_pinned: '',
-                    sort_order: ''
-                })
-            })
-        }
-
-        if (error) {
-            Swal.fire({
-                icon: "error",
-                title: "failed to add service collection",
-                text: error.message,
-                confirmButtonColor: "#0273F9",
-            }).then(() => {
-                dispatch(resetStatus());
+                icon: 'error',
+                title: 'Error',
+                text: 'Failed to load collection services.',
+                confirmButtonColor: '#0273F9'
             });
         }
-    }, [success, error, dispatch])
+    }
 
-    const handleCollectionCheckbox = async (e, id) => {
-        const isChecked = e.target.checked;
-        console.log('Collection ID:', id);
+    const handleCollectionCheckbox = async (id) => {
+        const isChecked = !visibleCollections[id];
         setVisibleCollections(prev => ({
             ...prev,
             [id]: isChecked
@@ -992,31 +1197,43 @@ useEffect(() => {
         }
     }
 
-    const handleCheckService = (e, id) => {
-        const isChecked = e.target.checked;
+    const handleCheckService = (serviceId) => {
+        if (existingCollectionServiceIds.includes(String(serviceId))) {
+            return;
+        }
+
         setDitem(prev => ({
             ...prev,
-            [id]: isChecked
+            [serviceId]: !prev[serviceId]
         }))
-    }
-
-    const setBulk = (id) => {
-        setBulkService(true);
-        localStorage.setItem("colId", id)
     }
 
     const bulkItemService = async (e) => {
         e.preventDefault();
-        let getColId = localStorage.getItem("colId")
-        
-        // Extract selected service IDs from ditem object
-        const selectedServiceIds = Object.keys(ditem).filter(key => ditem[key] === true);
-        
+
+        if (!selectedCollectionId) {
+            return;
+        }
+
+        const existingIdsSet = new Set(existingCollectionServiceIds.map(String));
+        const selectedServiceIds = Object.keys(ditem).filter((key) => ditem[key] === true);
+        const newServiceIds = selectedServiceIds.filter((id) => !existingIdsSet.has(String(id)));
+
         if (selectedServiceIds.length === 0) {
             Swal.fire({
                 icon: "info",
                 title: "No Services Selected",
                 text: "Please select at least one service",
+                confirmButtonColor: '#0273F9'
+            });
+            return;
+        }
+
+        if (newServiceIds.length === 0) {
+            Swal.fire({
+                icon: "info",
+                title: "No New Services",
+                text: "All selected services are already in this collection.",
                 confirmButtonColor: '#0273F9'
             });
             return;
@@ -1032,34 +1249,67 @@ useEffect(() => {
             },
         });
 
-        dispatch(addBulkServicesToCollection({token, id: getColId, service_ids: selectedServiceIds }))
-    }
+        try {
+            const response = await axios.post(
+                `${API_URL}/stores/collections/${selectedCollectionId}/services/bulk`,
+                { service_ids: newServiceIds },
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`
+                    }
+                }
+            );
 
-    useEffect(() => {
-        if (success) {
+            const refreshedServices = await dispatch(
+                getServiceCollection({ token, id: selectedCollectionId })
+            ).unwrap();
+
+            setCollectionServices(prev => ({
+                ...prev,
+                [selectedCollectionId]: refreshedServices.data?.services || []
+            }));
+
+            setCollectionList(prev => prev.map((collection) => {
+                if (collection.id !== selectedCollectionId) {
+                    return collection;
+                }
+
+                return {
+                    ...collection,
+                    totalItems: Number(collection.totalItems || 0) + newServiceIds.length
+                };
+            }));
+
+            setExistingCollectionServiceIds(prev => [...new Set([...prev, ...newServiceIds.map(String)])]);
+
+            dispatch(resetStatus());
+            hideModal();
+
             Swal.fire({
                 icon: "success",
-                title: "added successfull",
-                text: success.message,
+                title: "Services Added",
+                text: response.data?.message || "Services added to collection successfully.",
                 confirmButtonColor: "#0273F9",
-            }).then(() => {
-                dispatch(resetStatus());
-                dispatch(getAllCollection({ token, id: getId || '7'}))
-                hideModal();
-            })
-        }
+            });
+        } catch (bulkError) {
+            let errorMessage = "Failed to add services to collection";
 
-        if (error) {
+            if (bulkError && typeof bulkError === "object") {
+                if (bulkError.response?.data?.message) {
+                    errorMessage = bulkError.response.data.message;
+                } else if (bulkError.message) {
+                    errorMessage = bulkError.message;
+                }
+            }
+
             Swal.fire({
                 icon: "error",
-                title: "failed to add bulk services",
-                text: error.message,
+                title: "Error",
+                text: errorMessage,
                 confirmButtonColor: "#0273F9",
-            }).then(() => {
-                dispatch(resetStatus());
             });
         }
-    }, [success, error, dispatch])
+    }
 
     const openEditCollection = (collection) => {
         // Prefill form with collection data from localStorage
@@ -1112,7 +1362,7 @@ useEffect(() => {
     }
 
     useEffect(() => {
-        if (success) {
+        if (success && editItem) {
             Swal.fire({
                 icon: "success",
                 title: "updated successfull",
@@ -1255,7 +1505,7 @@ useEffect(() => {
             })
         }
 
-        if (error) {
+        if (error && editItem) {
             Swal.fire({
                 icon: "error",
                 title: "failed to update collection",
@@ -1416,13 +1666,14 @@ useEffect(() => {
                                                   onDrop={(e) => handleDrop(e, index)}
                                                   onDragEnd={handleDragEnd}
                                                   style={{
+                                                    position: 'relative',
                                                     opacity: draggedService === index ? 0.5 : 1,
                                                     backgroundColor: dragOverIndex === index ? '#E8F4FF' : 'transparent',
                                                     transition: 'all 0.2s ease',
                                                     cursor: draggedService === index ? 'grabbing' : 'grab'
                                                   }}
                                                 >
-                                                <div className={`${styles.header} d-flex justify-content-between position-relative px-4`}>
+                                                <div className={`${styles.header} d-flex justify-content-between px-4`}>
                                                 <div className='d-flex'>
                                                 <p className='mx me-2'>{store.service_title} ({formatDuration(store.duration_minutes)})</p> 
                                                 <FontAwesomeIcon icon={faPen} style={{color: '#78716C', cursor: 'pointer'}} onClick={() => openUpdateModal(store.id)}/>
@@ -1431,7 +1682,11 @@ useEffect(() => {
                                                 <FontAwesomeIcon icon={faExternalLinkAlt} className={styles.icon} style={{color: '#78716C', cursor: 'pointer'}} onClick={() => openUpdateModal(store.id)}/>
                                                 <FontAwesomeIcon icon={faTrashCan} className={`${styles['icon']} ${styles['red']} me-3`} style={{color: '#DC2626', cursor: 'pointer'}} onClick={() => deleteServiceHandler(store.id, store.service_title)}/>
                                                 <label className={styles.switch}>
-                                                    <input type="checkbox" />
+                                                    <input
+                                                      type="checkbox"
+                                                      checked={isServiceVisible(store.is_visible)}
+                                                      onChange={(e) => handleServiceVisibilityToggle(store.id, e.target.checked)}
+                                                    />
                                                     <span className={`${styles.slider} round`}></span>
                                                 </label>
                                                 </div>
@@ -1450,38 +1705,12 @@ useEffect(() => {
                                                 </div>
                                             </div>
 
-                                            <p className={`${styles.description} px-4`}>{store.description}
-                                                <FontAwesomeIcon icon={faPen} style={{color: '#78716C'}} className='ms-2'/>
-                                            </p>
+                                            <p className={`${styles.description} px-4`}>{store.description}</p>
 
-                                            <div className={`${styles.footer} mt-3 px-3`}>
-                                                <div className={styles['left-icons']}>
-                                                <FontAwesomeIcon icon={faCog} className={styles.icon} style={{color: '#78716C'}}/>
-                                                <FontAwesomeIcon icon={faClock} className={styles.icon} style={{color: '#78716C'}}/>
-                                                <FontAwesomeIcon icon={faImage} className={styles.icon} style={{color: '#78716C'}}/>
-                                                </div>
-                                                <div className={styles.stats}>
-                                                <span style={{color: '#78716C'}}>0 Clicks</span>
-                                                <span style={{color: '#78716C'}}>0.0% CTR</span>
-                                                </div>
-                                            </div>
                                             </div>
                                         ))
                                         ) : (
                                             <p className="text-center text-muted">No services available</p>
-                                        )}
-                                        
-                                        {/* Save Order Button - Show only if services are being dragged */}
-                                        {rec && Array.isArray(servicesList) && servicesList.length > 0 && draggedService !== null && (
-                                            <div className="mt-3 mb-3">
-                                                <button 
-                                                    className={`${styles['si-btn']} px-4`}
-                                                    onClick={saveServiceOrder}
-                                                    style={{ width: '100%' }}
-                                                >
-                                                    Save Service Order
-                                                </button>
-                                            </div>
                                         )}
                                     </>
                                 )}
@@ -1574,27 +1803,43 @@ useEffect(() => {
                                                <h6>
                                                    {collect.collection_name} 
                                                    <FontAwesomeIcon icon={faPen} style={{color: '#78716C', cursor: 'pointer'}} className='ms-2' onClick={() => openEditCollection(collect)}/>
-                                                   <FontAwesomeIcon icon={faPlus} style={{color: '#0273F9', cursor: 'pointer'}} className='ms-2' title="Bulk add services" onClick={() => setBulk(collect.id)}/>
                                                </h6>
                                                <p style={{color: '#1C1917'}} className='nx mt-4 mb-0'>{collect.totalItems}  {collect.totalItems === 1 ? 'Service' : 'Services'} added</p>
                                                <small style={{color: '#1C1917'}} className='nx d-block'>{collect.is_pinned === true ? 1 : 0} Services pinned</small>
                                             </div>
                                             <div>
                                                 <div className='d-flex gap-3'>
-                                                <p style={{color: '#78716C'}}><FontAwesomeIcon icon={faTableColumns} style={{color: '#78716C'}}/> Layout</p>
-                                                <FontAwesomeIcon icon={faThumbtack} style={{color: Object.values(pinnedServices).some(v => v) ? '#0273F9' : '#78716C'}} className='mt-1' title="Collection has pinned services"/>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleCollectionCheckbox(collect.id)}
+                                                    style={{
+                                                        border: 'none',
+                                                        background: 'transparent',
+                                                        color: '#78716C',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        gap: '6px',
+                                                        padding: 0
+                                                    }}
+                                                >
+                                                    <FontAwesomeIcon
+                                                        icon={visibleCollections[collect.id] ? faEye : faEyeSlash}
+                                                        style={{ color: '#78716C' }}
+                                                    />
+                                                    <span style={{ fontSize: '12px' }}>View Services</span>
+                                                </button>
                                                 <FontAwesomeIcon icon={faTrashCan} className={`${styles.icon} ${styles.red} mt-1`} style={{color: '#DC2626'}} onClick={() => removeCollection(collect.id, collect.collection_name)}/>
                                                 <label className={`${styles.switch} mt-1`}>
-                                                    <input 
-                                                        type="checkbox" 
-                                                        checked={visibleCollections[collect.id] || false}
-                                                        onChange={(e) => handleCollectionCheckbox(e, collect.id)}
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={isCollectionVisible(collect.is_visible)}
+                                                        onChange={() => handleCollectionVisibilityToggle(collect)}
                                                     />
                                                     <span className={`${styles.slider} round`}></span>
                                                 </label>
                                             </div>
-                                            <div className="text-end mt-2">
-                                              <button className={`${styles['si-btn']} px-4 mx rounded-2`} style={{fontSize: '12px'}} onClick={() => showCollect(collect.id)}>Add Services</button>
+                                            <div className="text-end mt-4">
+                                              <button className={`${styles['si-btn']} px-4 mx rounded-2`} style={{fontSize: '12px'}} onClick={() => showCollect(collect)}>Add Services</button>
                                             </div>
                                             </div>
                                             
@@ -1623,7 +1868,6 @@ useEffect(() => {
                                                                 {pinnedServices[item.id] && (
                                                                   <FontAwesomeIcon icon={faThumbtack} style={{color: '#0273F9', cursor: 'pointer'}} className='mt-1' title="Service is pinned"/>
                                                                 )}
-                                                                <FontAwesomeIcon icon={faExternalLinkAlt} className={styles.icon} style={{color: '#78716C'}}/>
                                                                 <FontAwesomeIcon icon={faTrashCan} className={`${styles.icon} ${styles.red} me-3`} style={{color: '#DC2626'}} onClick={() => delColService(collect.id, item.id, item.service_title)}/>
                                                                 <label className={styles.switch}>
                                                                     <input 
@@ -1639,21 +1883,7 @@ useEffect(() => {
                                                             </div>
                                                         </div>
 
-                                                        <p className={`d${styles.description} px-4`}>{item.description} ({formatDuration(item.duration_minutes)})
-                                                            <FontAwesomeIcon icon={faPen} style={{color: '#78716C'}} className='ms-2'/>
-                                                        </p>
-
-                                                        <div className={`${styles.footer} mt-3 px-3`}>
-                                                            <div className={styles['left-icons']}>
-                                                            <FontAwesomeIcon icon={faCog} className={styles.icon} style={{color: '#78716C'}}/>
-                                                            <FontAwesomeIcon icon={faClock} className={styles.icon} style={{color: '#78716C'}}/>
-                                                            <FontAwesomeIcon icon={faImage} className={styles.icon} style={{color: '#78716C'}}/>
-                                                            </div>
-                                                            <div className={styles.stats}>
-                                                            <span style={{color: '#78716C'}}>0 Clicks</span>
-                                                            <span style={{color: '#78716C'}}>0.0% CTR</span>
-                                                            </div>
-                                                        </div>
+                                                        <p className={`d${styles.description} px-4`}>{item.description} ({formatDuration(item.duration_minutes)})</p>
                                                     </div>
                                                 )
                                             ) : (
@@ -1914,9 +2144,9 @@ useEffect(() => {
                                     className={`${styles['custom-checkbox']}`}
                                     data-form="loadCollection"
                                     type="checkbox" 
-                                    id="hideSocial"
-                                    name='is_visible'
-                                    checked={collectionData.is_visible}
+                                    id="createIsPinned"
+                                    name='is_pinned'
+                                    checked={collectionData.is_pinned}
                                     onChange={handleChange}
                                     style={{ transform: 'scale(1.5)' }}
                                 />
@@ -1931,9 +2161,9 @@ useEffect(() => {
                                     className={`${styles['custom-checkbox']}`}
                                     data-form="loadCollection"
                                     type="checkbox" 
-                                    id="pinnedToggle"
-                                    name='is_pinned'
-                                    checked={collectionData.is_pinned}
+                                    id="createIsVisible"
+                                    name='is_visible'
+                                    checked={collectionData.is_visible}
                                     onChange={handleChange}
                                     style={{ transform: 'scale(1.5)' }}
                                 />
@@ -2008,10 +2238,14 @@ useEffect(() => {
                             <div className={`px-3`}>
                               <label className={`${styles['custom-checkbox-wrapper']}`}>
                               <input 
+                                className={`${styles['custom-checkbox']}`}
+                                data-form="editCollection"
                                 type="checkbox" 
-                                checked={editCollectionData.is_visible}
+                                id="editIsPinned"
+                                name='is_pinned'
+                                checked={editCollectionData.is_pinned}
                                 onChange={handleChange}
-                                onClick={(e) => e.stopPropagation()}
+                                style={{ transform: 'scale(1.5)' }}
                               />
                                 <span className={styles.checkmark}></span>
                                 <span className="label-text nx">Pin this collection</span>
@@ -2024,9 +2258,9 @@ useEffect(() => {
                                     className={`${styles['custom-checkbox']}`}
                                     data-form="editCollection"
                                     type="checkbox" 
-                                    id="editIsPinned"
-                                    name='is_pinned'
-                                    checked={editCollectionData.is_pinned}
+                                    id="editIsVisible"
+                                    name='is_visible'
+                                    checked={editCollectionData.is_visible}
                                     onChange={handleChange}
                                     style={{ transform: 'scale(1.5)' }}
                                 />
@@ -2258,111 +2492,81 @@ useEffect(() => {
           <div className={styles['modal-overlay']} onClick={hideModal}>
                 <div className={styles['modal-content2']} style={{background: '#fff'}} onClick={(e) => e.stopPropagation()}>
                     <div className="d-flex justify-content-between p-3">
-                        <h6>Add New Service To Collection</h6>
+                        <h6>Add Services To {selectedCollectionName || 'Collection'}</h6>
                         <FontAwesomeIcon icon={faTimes} onClick={hideModal}/>
                     </div>
                     <div className={`${styles['modal-body']} p-3`} style={{background: '#F9F9F9'}}>
-                        <form onSubmit={serviceAddedToCollection}>
-                            <div className="mb-3">
-                                <label for="formGroupExampleInput" className='mb-2'>Service Name</label>
-                                <select name="service_id" className={styles['input-item']} data-form="addservice" value={serCollection.service_id} onChange={handleChange}>
-                                    <option value="">-select service-</option>
-                                    {serviceForCollection.map((item) =>
-                                      <option key={item.id} value={item.id}>{item.service_title}</option> 
-                                    )}
-                                </select>
-                            </div>
+                        <form onSubmit={bulkItemService}>
+                            <p style={{color: '#78716C'}} className="mb-3">
+                                Select one or more services to add. Services already in this collection are checked.
+                            </p>
 
-                            <div className={`px-3 py-3 mb-2`}>
-                                <label className={`${styles['custom-checkbox-wrapper']}`}>
-                                <input 
-                                    className={`${styles['custom-checkbox']}`}
-                                    data-form="addservice"
-                                    type="checkbox" 
-                                    id="pinnedToggle"
-                                    name='is_pinned'
-                                    checked={serCollection.is_pinned}
-                                    onChange={handleChange}
-                                    style={{ transform: 'scale(1.5)' }}
-                                />
-                                <span className={styles.checkmark}></span>
-                                <span className="label-text nx">Pin this service</span>
-                                </label>
-                            </div>
+                            <div
+                                style={{
+                                    display: 'grid',
+                                    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                                    gap: '16px'
+                                }}
+                            >
+                                {serviceForCollection.map((item) => {
+                                    const isChecked = Boolean(ditem[item.id]);
+                                    const isAlreadyAdded = existingCollectionServiceIds.includes(String(item.id));
 
-                            <div className="row align-items-center mb-3">
-                                <div className="col-auto">
-                                    <label htmlFor="sortOrderSelect" style={{color: '#78716C', fontSize: '13px', marginBottom: 0}}>Sort Order</label>
-                                </div>
-                                <div className="col-auto">
-                                    <select 
-                                        id="sortOrderSelect"
-                                        className={styles['input-item']} 
-                                        data-form="addservice" 
-                                        name='sort_order' 
-                                        value={serCollection.sort_order} 
-                                        onChange={handleChange}
-                                        style={{ fontSize: '12px' }}
-                                    >
-                                        <option value="">-select-</option>
-                                        <option value="1">1</option>
-                                        <option value="2">2</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <div className="text-end mt-4">
-                                <button className={`${styles['sk-btn']} me-2`}>Cancel</button>
-                                <button className={`${styles['si-btn']} btn-lg px-5 py-3`}>
-                                    {
-                                        loading ?(
-                                            <>
-                                            <div className="spinner-border spinner-border-sm text-light" role="status">
-                                                <span className="sr-only"></span>
+                                    return (
+                                        <div
+                                            key={item.id}
+                                            className={`${styles['service-option-container']} p-3`}
+                                            onClick={() => handleCheckService(String(item.id))}
+                                            style={{
+                                                borderColor: isChecked ? '#0273F9' : '#EEEEEE',
+                                                backgroundColor: isChecked ? '#F5FAFF' : '#FFFFFF',
+                                                boxShadow: isChecked ? '0 0 0 1px #0273F9, 0 14px 28px rgba(2, 115, 249, 0.12)' : '0 8px 18px rgba(15, 23, 42, 0.04)',
+                                                opacity: isAlreadyAdded ? 0.85 : 1
+                                            }}
+                                        >
+                                            <div className="d-flex align-items-start gap-3">
+                                                <input
+                                                    type="checkbox"
+                                                    className={styles['service-picker-checkbox']}
+                                                    checked={isChecked}
+                                                    disabled={isAlreadyAdded}
+                                                    onClick={(event) => event.stopPropagation()}
+                                                    onChange={() => handleCheckService(String(item.id))}
+                                                />
+                                                <img
+                                                    src={getServiceImage(item)}
+                                                    alt={item.service_title}
+                                                    onError={handleServiceImageError}
+                                                    style={{
+                                                        width: '52px',
+                                                        height: '52px',
+                                                        borderRadius: '12px',
+                                                        objectFit: 'cover',
+                                                        border: '1px solid #EEEEEE'
+                                                    }}
+                                                />
+                                                <div style={{ minWidth: 0 }}>
+                                                    <p className="mb-1" style={{ color: isChecked ? '#0273F9' : '#1C1917', fontWeight: 600 }}>
+                                                        {item.service_title}
+                                                    </p>
+                                                    <small className="d-block mb-1" style={{ color: '#0273F9', fontWeight: 600 }}>
+                                                        {formatServicePrice(item)}
+                                                    </small>
+                                                    {isAlreadyAdded ? (
+                                                        <small style={{ color: '#0273F9' }}>Already added</small>
+                                                    ) : (
+                                                        <small style={{ color: '#78716C' }}>Select to add</small>
+                                                    )}
+                                                </div>
                                             </div>
-                                            <span>Creating... </span>
-                                            </>
-                                            
-                                        ): (
-                                            'Add Service'
-                                        )
-                                    }
-                                </button>
+                                        </div>
+                                    );
+                                })}
                             </div>
-                        </form>
-                    </div>
-                </div>
-            </div>
-        </>
-       )}
 
-       {bulkService && (
-        <>
-            <div className={styles['modal-overlay']} onClick={hideModal}>
-            <div className={styles['modal-content2']} style={{background: '#fff'}} onClick={(e) => e.stopPropagation()}>
-                <div className="d-flex justify-content-between p-3">
-                    <h6>Add Bulk Service To Collections</h6>
-                    <FontAwesomeIcon icon={faTimes} onClick={hideModal}/>
-                </div>
-                <div className={`${styles['modal-body']} p-3`} style={{background: '#FFF'}}>
-                    <form onSubmit={bulkItemService}>
-                        <h6>Service List</h6>
-                        <p style={{color: '#78716C'}}>Available services ({serlist})</p>
-
-                        {serviceForCollection.map((item) => 
-                            <div className={`${styles['service-option-container']} p-3 mb-3`} key={item.id}>
-                                <label className={styles['custom-checkbox-wrapper']}>
-                                <input
-                                    type="checkbox"
-                                    className={styles['custom-checkbox']}
-                                    checked={ditem[item.id] || false}
-                                    onChange={(e) => handleCheckService(e, item.id)}
-                                />
-                                <span className={styles.checkmark}></span>
-                                <span className="label-text mx">{item.service_title}</span>
-                                </label>
-                            </div>
-                        )}
+                            {!serviceForCollection.length && (
+                                <p className="text-center text-muted py-4 mb-0">No services available</p>
+                            )}
 
                         <div className="text-end mt-4">
                             <button className={`${styles['sk-btn']} me-2`} type="button" onClick={hideModal}>Cancel</button>
@@ -2373,7 +2577,7 @@ useEffect(() => {
                                         <div className="spinner-border spinner-border-sm text-light" role="status">
                                             <span className="sr-only"></span>
                                         </div>
-                                        <span>Creating... </span>
+                                        <span>Adding... </span>
                                         </>
                                         
                                     ): (
@@ -2382,12 +2586,12 @@ useEffect(() => {
                                 }
                             </button>
                         </div>
-                    </form>
-                </div>
-            </div>
-            </div>
-        </>
-       )}
+	                    </form>
+	                </div>
+	            </div>
+	        </div>
+	        </>
+	       )}
 
        {upSer && (
         <>

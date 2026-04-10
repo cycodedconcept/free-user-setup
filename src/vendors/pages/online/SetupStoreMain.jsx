@@ -2,7 +2,7 @@ import React, {useState, useEffect} from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { getCountries } from '../../../slice/countriesSlice';
 import { useDispatch, useSelector } from 'react-redux';
-import { createOnlineStore, resetStatus, updateStoreLinks, getAllServices, getCollectionForProduct, productImageForCollection, getMyOnlineStore } from '../../../slice/onlineStoreSlice';
+import { createOnlineStore, resetStatus, updateStoreLinks, getAllServices, getAllCollection, getServiceCollection, getCollectionForProduct, productImageForCollection, getMyOnlineStore } from '../../../slice/onlineStoreSlice';
 import { faInfoCircle, faLink, faStore, faCube, faDatabase, faExternalLinkAlt, faEllipsisV } from '@fortawesome/free-solid-svg-icons';
 import { Flash, F, X, In, In2, Owi, Smc } from '../../../assets';
 import Service from './Service';
@@ -48,6 +48,7 @@ const SetupStoreMain = () => {
     const [activeTab, setActiveTab] = useState('Services');  
     const [change, setChange] = useState('Services');
     const [productItem, setProductItem] = useState([]);
+    const [serviceCollectionsPreview, setServiceCollectionsPreview] = useState({})
     const [collectionProducts, setCollectionProducts] = useState({})
 
     const [online, setOnline] = useState({
@@ -96,10 +97,23 @@ const SetupStoreMain = () => {
     useEffect(() => {
     if (token) {
         dispatch(getAllServices({ token, id: getId || '7'}))
+        dispatch(getAllCollection({ token, id: getId || '7'}));
         dispatch(getCollectionForProduct({ token, id: getId || '7'}));
         dispatch(getMyOnlineStore({ token, id: getId || '7'}))
     }
     }, [token, dispatch])
+
+    const fetchCollectionServices = async (collectionId) => {
+    try {
+        const response = await dispatch(getServiceCollection({ token, id: collectionId })).unwrap();
+        setServiceCollectionsPreview(prev => ({
+            ...prev,
+            [collectionId]: response.data?.services || []
+        }));
+    } catch (error) {
+        console.error('Error fetching collection services:', error);
+    }
+    }
 
     const fetchCollectionProducts = async (collectionId) => {
     try {
@@ -112,6 +126,16 @@ const SetupStoreMain = () => {
         console.error('Error fetching collection products:', error);
     }
     }
+
+    useEffect(() => {
+    if (collections?.data?.collections && collections.data.collections.length > 0) {
+        collections.data.collections.forEach(collection => {
+            if (!serviceCollectionsPreview[collection.id]) {
+                fetchCollectionServices(collection.id);
+            }
+        });
+    }
+    }, [collections]);
 
     useEffect(() => {
     if (collectionProduct?.data?.collections && collectionProduct.data.collections.length > 0) {
@@ -192,28 +216,84 @@ const SetupStoreMain = () => {
     return activeTab === 'Appearance';
     };
 
+    const renderServiceCollectionsPreview = (showHeading = false) => {
+    if (!collections?.data?.collections?.length) {
+        return <p className="text-center text-muted">No Service collections available</p>;
+    }
+
+    return (
+        <>
+        {showHeading && <h6 className='bx mt-4 mb-3'>My Service Collections</h6>}
+        {collections.data.collections.map((collection) => (
+            <div key={collection.id} className="mb-4 text-start">
+                <p className="mb-3 text-center" style={{ color: '#1C1917', fontSize: '13px', fontWeight: 600 }}>
+                    {collection.collection_name}
+                </p>
+                <div style={{background: '#78716C'}} className='p-3 rounded-3'>
+                    {(serviceCollectionsPreview[collection.id] || []).length > 0 ? (
+                        serviceCollectionsPreview[collection.id].map((service) => {
+                            const serviceData = service.StoreService || service;
+
+                            return (
+                                <div key={service.id} className="d-flex justify-content-between px-3 py-2 rounded-pill mb-2" style={{background: '#6B625C', color: '#fff'}}>
+                                    <div className='mt-1'>
+                                        <img src={getServiceImage(serviceData)} alt="" className='rounded-circle' style={{width: '24px', height: '24px', objectFit: 'cover'}} onError={handleServiceImageError} />
+                                    </div>
+                                    <div style={{width: '70%'}}>
+                                        <small className="d-block" style={{fontSize: '12px'}}>{serviceData.service_title} ({formatDuration(serviceData.duration_minutes)}) - ₦{Number(serviceData.price).toLocaleString()} <span className='bx'>Book Now</span></small>
+                                    </div>
+                                    <div className='mt-1'>
+                                        <FontAwesomeIcon icon={faEllipsisV} />
+                                    </div>
+                                </div>
+                            );
+                        })
+                    ) : (
+                        <p className="text-muted mb-0" style={{ fontSize: '12px' }}>No services in this collection</p>
+                    )}
+                </div>
+            </div>
+        ))}
+        </>
+    );
+    };
+
     const renderContent = () => {
     switch(change) {
         case 'Services':
         return <div className="p-3">
-            {allStore.data?.services && allStore.data.services.length > 0 ? (
+            {collections?.data?.collections && collections.data.collections.length > 0 ? (
             <div>
-                {allStore.data.services.map((service) => (
-                <div key={service.id} className="d-flex justify-content-between px-3 py-2 rounded-pill mb-2" style={{background: '#78716C', color: '#fff'}}>
-                    <div className="mt-1">
-                    <img src={getServiceImage(service)} alt="" className='rounded-circle' style={{width: '24px', height: '24px', objectFit: 'cover'}} onError={handleServiceImageError} />
-                    </div>
-                    <div style={{width: '70%'}}>
-                    <small className="d-block" style={{fontSize: '12px'}}>{service.service_title} ({formatDuration(service.duration_minutes)}) - ₦{Number(service.price).toLocaleString()}</small>
-                    </div>
-                    <div className="mt-1">
-                    <FontAwesomeIcon icon={faEllipsisV} />
+                {collections.data.collections.map((collection) => (
+                <div key={collection.id} className="mb-4">
+                    <p className="mb-3 text-center">{collection.collection_name}</p>
+                    <div style={{background: '#78716C'}} className='p-3 rounded-3'>
+                    {serviceCollectionsPreview[collection.id] && serviceCollectionsPreview[collection.id].length > 0 ? (
+                        serviceCollectionsPreview[collection.id].map((service) => {
+                        const serviceData = service.StoreService || service;
+                        return (
+                            <div key={service.id} className="d-flex justify-content-between px-3 py-2 rounded-pill mb-2" style={{background: '#6B625C', color: '#fff'}}>
+                                <div className="mt-1">
+                                <img src={getServiceImage(serviceData)} alt="" className='rounded-circle' style={{width: '24px', height: '24px', objectFit: 'cover'}} onError={handleServiceImageError} />
+                                </div>
+                                <div style={{width: '70%'}}>
+                                <small className="d-block" style={{fontSize: '12px'}}>{serviceData.service_title} ({formatDuration(serviceData.duration_minutes)}) - ₦{Number(serviceData.price).toLocaleString()}</small>
+                                </div>
+                                <div className="mt-1">
+                                <FontAwesomeIcon icon={faEllipsisV} />
+                                </div>
+                            </div>
+                        );
+                        })
+                    ) : (
+                        <p className="text-muted mb-0">No services in this collection</p>
+                    )}
                     </div>
                 </div>
                 ))}
             </div>
             ) : (
-            <p className="text-center text-muted">No Services available</p>
+            <p className="text-center text-muted">No Service collections available</p>
             )}
         </div>;
         case 'Shop':
@@ -995,20 +1075,7 @@ const SetupStoreMain = () => {
 
                                     <h5 className="my text-dark mt-3">Your Store</h5>
                                     <small style={{color: '#78716C'}} className='mb-4 d-block'>{storeDescription}</small>
-                                    
-                                    {allStore.data?.services?.map((store) => 
-                                      <div key={store.id} className="d-flex justify-content-between px-3 py-2 rounded-pill mt-2" style={{background: '#78716C', color: '#fff'}}>
-                                        <div className='mt-1'>
-                                        <img src={getServiceImage(store)} alt="" className='rounded-circle' style={{width: '24px', height: '24px', objectFit: 'cover'}} onError={handleServiceImageError} />
-                                        </div>
-                                        <div style={{width: '70%'}}>
-                                        <small className="d-block" style={{fontSize: '12px'}}>{store.service_title} ({formatDuration(store.duration_minutes)}) - ₦{Number(store.price).toLocaleString()} <span className='bx'>Book Now</span></small>
-                                        </div>
-                                        <div className='mt-1'>
-                                        <FontAwesomeIcon icon={faEllipsisV} />
-                                        </div>
-                                      </div>
-                                    )}
+                                    {renderServiceCollectionsPreview(false)}
                                     
                                 </div>
                                 </>
@@ -1021,21 +1088,7 @@ const SetupStoreMain = () => {
 
                                     <h5 className="my text-dark mt-3">Your Store</h5>
                                     <small style={{color: '#78716C'}} className='mb-4 d-block'>{storeDescription}</small>
-
-                                    <h6 className='bx mt-4 mb-3'>My Service Collections</h6>
-                                    {allStore.data?.services?.map((store) => 
-                                      <div key={store.id} className="d-flex justify-content-between px-3 py-2 rounded-pill mt-2" style={{background: '#78716C', color: '#fff'}}>
-                                        <div className='mt-1'>
-                                        <img src={Smc} alt="" />
-                                        </div>
-                                        <div style={{width: '70%'}}>
-                                        <small className="d-block" style={{fontSize: '12px'}}>{store.service_title} ({formatDuration(store.duration_minutes)}) - ₦{Number(store.price).toLocaleString()} <span className='bx'>Book Now</span></small>
-                                        </div>
-                                        <div className='mt-1'>
-                                        <FontAwesomeIcon icon={faEllipsisV} />
-                                        </div>
-                                      </div>
-                                    )}
+                                    {renderServiceCollectionsPreview(true)}
                                 
                                 </div>
                                 </>

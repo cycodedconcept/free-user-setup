@@ -2,6 +2,44 @@ import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { API_URL } from '../config/constant';
 import axios from 'axios';
 
+const sortItemsByOrder = (items = []) =>
+    [...items].sort((a, b) => (Number(a?.sort_order) || 0) - (Number(b?.sort_order) || 0));
+
+const restrictedProductFields = [
+    'barcode',
+    'cost',
+    'low_stock_threshold',
+    'expiry_date',
+    'batch_number',
+    'unit_of_measure'
+];
+
+const sanitizeProductPayload = (payload) => {
+    if (payload instanceof FormData) {
+        const sanitizedPayload = new FormData();
+
+        for (const [key, value] of payload.entries()) {
+            if (!restrictedProductFields.includes(key)) {
+                sanitizedPayload.append(key, value);
+            }
+        }
+
+        return sanitizedPayload;
+    }
+
+    if (payload && typeof payload === 'object') {
+        const sanitizedPayload = { ...payload };
+
+        restrictedProductFields.forEach((field) => {
+            delete sanitizedPayload[field];
+        });
+
+        return sanitizedPayload;
+    }
+
+    return payload;
+};
+
 const persistItemId = (id) => {
     if (id === undefined || id === null || id === '') {
         localStorage.removeItem('itemId');
@@ -52,6 +90,7 @@ const initialState = {
     myStore: {},
     previewDetails: {},
     available: {},
+    singleProductDetails: {},
     collectionProducts: {
         data: [],
         pagination: {
@@ -142,14 +181,17 @@ export const getMyOnlineStore = createAsyncThunk(
 
 export const storeUpdateColors = createAsyncThunk(
     'store/storeUpdateColors',
-    async ({token, background_color, button_style, button_color, button_font_color, id}, {rejectWithValue}) => {
+    async ({token, background_color, button_style, button_color, button_font_color, selected_theme, id}, {rejectWithValue}) => {
         try {
-            const response = await axios.put(`${API_URL}/stores/online/${id}/appearance`, {
-                background_color,
-                button_style,
-                button_color,
-                button_font_color
-            }, {
+            const payload = {};
+
+            if (background_color !== undefined) payload.background_color = background_color;
+            if (button_style !== undefined) payload.button_style = button_style;
+            if (button_color !== undefined) payload.button_color = button_color;
+            if (button_font_color !== undefined) payload.button_font_color = button_font_color;
+            if (selected_theme !== undefined) payload.selected_theme = selected_theme;
+
+            const response = await axios.put(`${API_URL}/stores/online/${id}/appearance`, payload, {
                 headers: {
                     Authorization: `Bearer ${token}`
                 }
@@ -175,6 +217,7 @@ export const updateStoreImages = createAsyncThunk(
                 }
             })
 
+            console.log("Image upload response:", response.data);
             return response.data;
         } catch (error) {
             if (error.response && error.response.data) {
@@ -252,18 +295,75 @@ export const updateService = createAsyncThunk (
     }
 );
 
+export const updateServiceSortOrder = createAsyncThunk(
+    'store/updateServiceSortOrder',
+    async ({ token, serviceId, sort_order }, { rejectWithValue }) => {
+        try {
+            const response = await axios.put(
+                `${API_URL}/stores/services/${serviceId}`,
+                { sort_order },
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`
+                    }
+                }
+            );
+
+            return response.data;
+        } catch (error) {
+            if (error.response && error.response.data) {
+                return rejectWithValue(error.response.data);
+            }
+            return rejectWithValue(error.message || "Something went wrong");
+        }
+    }
+);
+
+export const updateServiceVisibility = createAsyncThunk(
+    'store/updateServiceVisibility',
+    async ({ token, serviceId, is_visible }, { rejectWithValue }) => {
+        try {
+            const response = await axios.put(
+                `${API_URL}/stores/services/${serviceId}`,
+                { is_visible },
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`
+                    }
+                }
+            );
+
+            return response.data;
+        } catch (error) {
+            if (error.response && error.response.data) {
+                return rejectWithValue(error.response.data);
+            }
+            return rejectWithValue(error.message || "Something went wrong");
+        }
+    }
+);
+
 export const getAllServices = createAsyncThunk(
     'store/getStores',
     async ({ token, id }, { rejectWithValue }) => {
         try {
-            const response = await axios.get(`${API_URL}/stores/online/${id}/services`, {
+            const response = await axios.get(`${API_URL}/stores/online/${id}/services/available`, {
                 headers: {
                     Authorization: `Bearer ${token}`
                 },
             })
 
-            localStorage.setItem('services', JSON.stringify(response.data.data.services))
-            return response.data; 
+            const sortedServices = sortItemsByOrder(response?.data?.data?.services || []);
+            const payload = {
+                ...response.data,
+                data: {
+                    ...response.data.data,
+                    services: sortedServices
+                }
+            };
+
+            localStorage.setItem('services', JSON.stringify(sortedServices))
+            return payload; 
         } catch (error) {
             if (error.response && error.response.data) {
                 return rejectWithValue(error.response.data);
@@ -349,8 +449,16 @@ export const getAllCollection = createAsyncThunk(
                 Authorization: `Bearer ${token}`
             }
         });
-        localStorage.setItem('allcollections', JSON.stringify(response.data.data.collections))
-        return response.data;
+        const sortedCollections = sortItemsByOrder(response?.data?.data?.collections || []);
+        const payload = {
+            ...response.data,
+            data: {
+                ...response.data.data,
+                collections: sortedCollections
+            }
+        };
+        localStorage.setItem('allcollections', JSON.stringify(sortedCollections))
+        return payload;
             
         } catch (error) {
             if (error.response && error.response.data) {
@@ -559,6 +667,78 @@ export const updateCollection = createAsyncThunk(
     }
 );
 
+export const updateCollectionVisibility = createAsyncThunk(
+    'store/updateCollectionVisibility',
+    async ({ token, id, is_visible }, { rejectWithValue }) => {
+        try {
+            const response = await axios.put(
+                `${API_URL}/stores/collections/${id}`,
+                { is_visible },
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`
+                    }
+                }
+            );
+
+            return response.data;
+        } catch (error) {
+            if (error.response && error.response.data) {
+                return rejectWithValue(error.response.data);
+            }
+            return rejectWithValue(error.message || "Something went wrong");
+        }
+    }
+);
+
+export const updateCollectionSortOrder = createAsyncThunk(
+    'store/updateCollectionSortOrder',
+    async ({ token, id, sort_order }, { rejectWithValue }) => {
+        try {
+            const response = await axios.put(
+                `${API_URL}/stores/collections/${id}`,
+                { sort_order },
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`
+                    }
+                }
+            );
+
+            return response.data;
+        } catch (error) {
+            if (error.response && error.response.data) {
+                return rejectWithValue(error.response.data);
+            }
+            return rejectWithValue(error.message || "Something went wrong");
+        }
+    }
+);
+
+export const updateProductCollectionSortOrder = createAsyncThunk(
+    'store/updateProductCollectionSortOrder',
+    async ({ token, id, collection_ids }, { rejectWithValue }) => {
+        try {
+            const response = await axios.patch(
+                `${API_URL}/stores/online/${id}/collections/sort-order`,
+                { collection_ids },
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`
+                    }
+                }
+            );
+
+            return response.data;
+        } catch (error) {
+            if (error.response && error.response.data) {
+                return rejectWithValue(error.response.data);
+            }
+            return rejectWithValue(error.message || "Something went wrong");
+        }
+    }
+);
+
 export const deleteCollection = createAsyncThunk(
     'store/deleteCollection',
     async ({token, id}, {rejectWithValue}) => {
@@ -583,7 +763,8 @@ export const createProduct = createAsyncThunk(
     'store/createProduct',
     async ({token, formData, id}, {rejectWithValue}) => {
         try {
-            const response = await axios.post(`${API_URL}/stores/online/${id}/products`, formData, {
+            const sanitizedPayload = sanitizeProductPayload(formData);
+            const response = await axios.post(`${API_URL}/stores/online/${id}/products`, sanitizedPayload, {
                 headers: {
                     Authorization: `Bearer ${token}`
                 }
@@ -603,7 +784,8 @@ export const updateProduct = createAsyncThunk(
     'store/updateProduct',
     async ({token, formData, id, productId}, { rejectWithValue }) => {
         try {
-            const response = await axios.put(`${API_URL}/stores/online/${id}/products/${productId}`, formData, {
+            const sanitizedPayload = sanitizeProductPayload(formData);
+            const response = await axios.put(`${API_URL}/stores/online/${id}/products/${productId}`, sanitizedPayload, {
                 headers: {
                     Authorization: `Bearer ${token}`
                 }
@@ -630,6 +812,26 @@ export const getAllProductForCollection = createAsyncThunk(
             });
 
             localStorage.setItem("products", JSON.stringify(response.data.data.products))
+            return response.data;
+        } catch (error) {
+            if (error.response && error.response.data) {
+                return rejectWithValue(error.response.data);
+            }
+            return rejectWithValue(error.message || "Something went wrong");
+        }
+    }
+);
+
+export const getProductDetails = createAsyncThunk(
+    'store/getProductDetails',
+    async ({token, id, productId}, {rejectWithValue}) => {
+        try {
+            const response = await axios.get(`${API_URL}/stores/online/${id}/products/${productId}/details`, {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            });
+
             return response.data;
         } catch (error) {
             if (error.response && error.response.data) {
@@ -859,6 +1061,20 @@ const storeSlice = createSlice({
             state.loading = false;
             state.success = false;
             state.error = null;
+        },
+        setServicesOrder: (state, action) => {
+            const sortedServices = sortItemsByOrder(action.payload || []);
+            const existingData = state.allStore?.data || {};
+
+            state.allStore = {
+                ...state.allStore,
+                data: {
+                    ...existingData,
+                    services: sortedServices
+                }
+            };
+
+            localStorage.setItem('services', JSON.stringify(sortedServices));
         },
     },
     extraReducers: (builder) => {
@@ -1128,6 +1344,20 @@ const storeSlice = createSlice({
             state.success = false;
             state.error = action.payload;
         })
+        .addCase(getProductDetails.pending, (state) => {
+            state.loading = true;
+            state.success = false;
+            state.error = null;
+        })
+        .addCase(getProductDetails.fulfilled, (state, action) => {
+            state.loading = false;
+            state.singleProductDetails = action.payload?.data?.product || {};
+        })
+        .addCase(getProductDetails.rejected, (state, action) => {
+            state.loading = false;
+            state.success = false;
+            state.error = action.payload;
+        })
         .addCase(getProductOfSingleCollection.pending, (state) => {
             state.loading = true;
             state.success = false;
@@ -1313,6 +1543,9 @@ const storeSlice = createSlice({
         .addCase(storeUpdateColors.fulfilled, (state, action) => {
             state.loading = false;
             state.success = action.payload;
+            if (action.payload?.data?.onlineStore) {
+                state.myStore = { onlineStore: action.payload.data.onlineStore };
+            }
         })
         .addCase(storeUpdateColors.rejected, (state, action) => {
             state.loading = false;
@@ -1327,6 +1560,9 @@ const storeSlice = createSlice({
         .addCase(updateStoreImages.fulfilled, (state, action) => {
             state.loading = false;
             state.success = action.payload;
+            if (action.payload?.data?.onlineStore) {
+                state.myStore = { onlineStore: action.payload.data.onlineStore };
+            }
         })
         .addCase(updateStoreImages.rejected, (state, action) => {
             state.loading = false;
@@ -1381,5 +1617,5 @@ const storeSlice = createSlice({
     }
 })
 
-export const { resetStatus } = storeSlice.actions;
+export const { resetStatus, setServicesOrder } = storeSlice.actions;
 export default storeSlice.reducer;

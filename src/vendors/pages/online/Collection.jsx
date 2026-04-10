@@ -1,8 +1,8 @@
 import React, {useState, useEffect} from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { createCollection, resetStatus, getCollectionForProduct, productAddedToCollection, productImageForCollection, getAllProductForCollection, addBulkImageProductToCollection, removeProductFromCollection, updateSortOrderPinned, updateCollection, getProductOfSingleCollection, deleteProductCollection } from '../../../slice/onlineStoreSlice';
+import { createCollection, resetStatus, getCollectionForProduct, productAddedToCollection, productImageForCollection, getAllProductForCollection, addBulkImageProductToCollection, removeProductFromCollection, updateSortOrderPinned, updateCollection, updateCollectionVisibility, updateProductCollectionSortOrder, getProductOfSingleCollection, deleteProductCollection } from '../../../slice/onlineStoreSlice';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faTimes, faPen, faPlus, faTableColumns, faThumbtack, faTrashCan, faEllipsisV, faSort } from '@fortawesome/free-solid-svg-icons';
+import { faTimes, faPen, faThumbtack, faTrashCan, faSort, faEye, faEyeSlash, faEllipsisV } from '@fortawesome/free-solid-svg-icons';
 import styles from "../../../styles.module.css";
 import Swal from 'sweetalert2';
 
@@ -18,7 +18,7 @@ const Collection = ({setItemData, autoExpandProducts = false}) => {
   const [hasCollection, setHasCollection] = useState(false);
   const [mode, setMode] = useState({isOpen: false, collectionId: null});
   const [productItem, setProductItem] = useState([]);
-  const [visibleCollections, setVisibleCollections] = useState({});
+  const [expandedCollections, setExpandedCollections] = useState({});
   const [collectionServices, setCollectionServices] = useState({});
   const [tcol, setTcol] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
@@ -26,6 +26,8 @@ const Collection = ({setItemData, autoExpandProducts = false}) => {
   const [selectedProducts, setSelectedProducts] = useState([]);
   const [bulkCurrentPage, setBulkCurrentPage] = useState(1);
   const [bulkCollectionId, setBulkCollectionId] = useState(null);
+  const [draggedCollection, setDraggedCollection] = useState(null);
+  const [dragOverCollectionIndex, setDragOverCollectionIndex] = useState(null);
   const [hoveredProductId, setHoveredProductId] = useState(null);
   const [sortModalOpen, setSortModalOpen] = useState(false);
   const [sortModalData, setSortModalData] = useState({collectionId: null, productId: null, collectionProductId: null});
@@ -75,6 +77,8 @@ const Collection = ({setItemData, autoExpandProducts = false}) => {
     is_pinned: false,
     is_visible: false
   })
+
+  const isCollectionVisible = (value) => value === 1 || value === true;
 
 
   useEffect(() => {
@@ -144,7 +148,7 @@ const Collection = ({setItemData, autoExpandProducts = false}) => {
       return;
     }
 
-    setVisibleCollections(prev => {
+    setExpandedCollections(prev => {
       const next = { ...prev };
       colData.forEach(collection => {
         if (collection?.id && next[collection.id] === undefined) {
@@ -305,10 +309,9 @@ const Collection = ({setItemData, autoExpandProducts = false}) => {
     }
   }, [success, error, dispatch, mode.collectionId])
 
-  const handleCollectionCheckbox = async (e, id) => {
-    const isChecked = e.target.checked;
-    console.log('Collection ID:', id);
-    setVisibleCollections(prev => ({
+  const toggleCollectionProducts = async (id) => {
+    const isChecked = !expandedCollections[id];
+    setExpandedCollections(prev => ({
       ...prev,
       [id]: isChecked
     }));
@@ -331,6 +334,158 @@ const Collection = ({setItemData, autoExpandProducts = false}) => {
       }
     }
     
+  }
+
+  const handleCollectionDragStart = (e, index) => {
+    setDraggedCollection(index);
+    e.dataTransfer.effectAllowed = 'move';
+  }
+
+  const handleCollectionDragOver = (e, index) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDragOverCollectionIndex(index);
+  }
+
+  const handleCollectionDragLeave = () => {
+    setDragOverCollectionIndex(null);
+  }
+
+  const handleCollectionDragEnd = () => {
+    setDraggedCollection(null);
+    setDragOverCollectionIndex(null);
+  }
+
+  const handleCollectionDrop = async (e, dropIndex) => {
+    e.preventDefault();
+    setDragOverCollectionIndex(null);
+
+    if (draggedCollection === null || draggedCollection === dropIndex) {
+      setDraggedCollection(null);
+      return;
+    }
+
+    const previousCollections = [...colData];
+    const newList = [...colData];
+    const draggedItem = newList[draggedCollection];
+
+    newList.splice(draggedCollection, 1);
+    newList.splice(dropIndex, 0, draggedItem);
+
+    const reorderedCollections = newList.map((collection, index) => ({
+      ...collection,
+      sort_order: index + 1
+    }));
+
+    setColData(reorderedCollections);
+    setDraggedCollection(null);
+    localStorage.setItem('allcollectionsProduct', JSON.stringify(reorderedCollections));
+
+    try {
+      await dispatch(
+        updateProductCollectionSortOrder({
+          token,
+          id: getId || '7',
+          collection_ids: reorderedCollections.map((collection) => collection.id)
+        })
+      ).unwrap();
+
+      Swal.fire({
+        icon: 'success',
+        title: 'Collection moved',
+        text: `${draggedItem.collection_name} moved to position ${dropIndex + 1}.`,
+        confirmButtonColor: '#0273F9'
+      });
+    } catch (sortError) {
+      setColData(previousCollections);
+      localStorage.setItem('allcollectionsProduct', JSON.stringify(previousCollections));
+
+      let errorMessage = 'Failed to update collection order';
+
+      if (sortError && typeof sortError === 'object') {
+        if (Array.isArray(sortError)) {
+          errorMessage = sortError.map((item) => item.message).join(', ');
+        } else if (sortError.message) {
+          errorMessage = sortError.message;
+        } else if (sortError.error) {
+          errorMessage = sortError.error;
+        }
+      } else if (typeof sortError === 'string') {
+        errorMessage = sortError;
+      }
+
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: errorMessage,
+        confirmButtonColor: '#0273F9'
+      });
+    }
+  }
+
+  const handleCollectionVisibilityToggle = async (collection) => {
+    if (!collection?.id) {
+      return;
+    }
+
+    const nextVisibility = isCollectionVisible(collection.is_visible) ? 0 : 1;
+    const previousCollections = [...colData];
+    const updatedCollections = colData.map((item) =>
+      item.id === collection.id ? { ...item, is_visible: nextVisibility } : item
+    );
+
+    setColData(updatedCollections);
+    localStorage.setItem('allcollectionsProduct', JSON.stringify(updatedCollections));
+
+    Swal.fire({
+      title: 'Updating visibility...',
+      text: 'Please wait while we update this collection.',
+      allowOutsideClick: false,
+      showConfirmButton: false,
+      didOpen: () => {
+        Swal.showLoading();
+      }
+    });
+
+    try {
+      const response = await dispatch(
+        updateCollectionVisibility({
+          token,
+          id: collection.id,
+          is_visible: nextVisibility
+        })
+      ).unwrap();
+
+      await Swal.fire({
+        icon: 'success',
+        title: nextVisibility === 1 ? 'Collection Visible' : 'Collection Invisible',
+        text: `${collection.collection_name || 'Collection'} is now ${
+          nextVisibility === 1 ? 'visible' : 'invisible'
+        }.`,
+        confirmButtonColor: '#0273F9'
+      });
+    } catch (toggleError) {
+      setColData(previousCollections);
+      localStorage.setItem('allcollectionsProduct', JSON.stringify(previousCollections));
+
+      let errorMessage = 'Failed to update collection visibility';
+      if (toggleError && typeof toggleError === 'object') {
+        if (toggleError.message) {
+          errorMessage = toggleError.message;
+        } else if (toggleError.error) {
+          errorMessage = toggleError.error;
+        }
+      } else if (typeof toggleError === 'string') {
+        errorMessage = toggleError;
+      }
+
+      Swal.fire({
+        icon: 'error',
+        title: 'Update Failed',
+        text: errorMessage,
+        confirmButtonColor: '#0273F9'
+      });
+    }
   }
 
   const openBulkProductModal = (collectionId) => {
@@ -547,8 +702,8 @@ const Collection = ({setItemData, autoExpandProducts = false}) => {
           }
         }
         // Also refresh all visible collections
-        Object.keys(visibleCollections).forEach(async (collId) => {
-          if (visibleCollections[collId]) {
+        Object.keys(expandedCollections).forEach(async (collId) => {
+          if (expandedCollections[collId]) {
             try {
               const response = await dispatch(productImageForCollection({token, id: collId})).unwrap();
               setCollectionServices(prev => ({
@@ -562,7 +717,7 @@ const Collection = ({setItemData, autoExpandProducts = false}) => {
         });
       });
     }
-  }, [success, dispatch, bulkCollectionId, visibleCollections])
+  }, [success, dispatch, bulkCollectionId, expandedCollections])
 
   const openSortModal = (collectionId, productId, collectionProductId) => {
     setSortModalData({collectionId, productId, collectionProductId});
@@ -703,9 +858,15 @@ const Collection = ({setItemData, autoExpandProducts = false}) => {
           ) : error ? (
             <p className="text-danger text-center">Something went wrong</p>
           ) : Array.isArray(colData) && colData.length > 0 ? (
-            colData.map((collect) => (
+            colData.map((collect, index) => (
               <div 
                 key={collect.id} 
+                draggable
+                onDragStart={(e) => handleCollectionDragStart(e, index)}
+                onDragOver={(e) => handleCollectionDragOver(e, index)}
+                onDragLeave={handleCollectionDragLeave}
+                onDrop={(e) => handleCollectionDrop(e, index)}
+                onDragEnd={handleCollectionDragEnd}
                 style={{
                     background: '#F4F4F4',
                     border: '1px solid #EEEEEE',
@@ -715,38 +876,58 @@ const Collection = ({setItemData, autoExpandProducts = false}) => {
                     paddingTop: '12px',
                     paddingBottom: '12px',
                     paddingLeft: '12px',
-                    paddingRight: '12px'
+                    paddingRight: '12px',
+                    opacity: draggedCollection === index ? 0.5 : 1,
+                    backgroundColor: dragOverCollectionIndex === index ? '#E8F4FF' : '#F4F4F4',
+                    transition: 'all 0.2s ease',
+                    cursor: draggedCollection === index ? 'grabbing' : 'grab'
                 }}>
-                <div className={`d-flex justify-content-between pe-1 ${styles.vala}`}>
-                  <div>
+                <div className={`d-flex justify-content-between align-items-start flex-wrap gap-3 pe-1 ${styles.vala2}`}>
+                  <div className="d-flex align-items-center gap-2" style={{minWidth: 0}}>
+                    <div className={`d-inline-flex ${styles.sido}`} style={{position: 'static', transform: 'none'}}>
+                      <FontAwesomeIcon icon={faEllipsisV} className='me-1' style={{color: '#78716C', width: 'auto'}}/>
+                      <FontAwesomeIcon icon={faEllipsisV} style={{color: '#78716C', width: 'auto'}}/>
+                    </div>
                     <h6>
                       {collect.collection_name} 
                       <FontAwesomeIcon icon={faPen} style={{color: '#78716C', cursor: 'pointer'}} className='ms-2' onClick={() => openEditCollection(collect)}/>
-                      <FontAwesomeIcon icon={faPlus} style={{color: '#0273F9', cursor: 'pointer'}} className='ms-2' title="Bulk add products" onClick={() => openBulkProductModal(collect.id)}/>
                     </h6>
                   </div>
-                  <div>
-                    <div className='d-flex gap-3'>
-                      <p style={{color: '#78716C'}}><FontAwesomeIcon icon={faTableColumns} style={{color: '#78716C'}}/> Layout</p>
-                      <FontAwesomeIcon icon={faThumbtack} style={{color: '#78716C'}} className='mt-1' title="Collection has pinned services"/>
-                      <FontAwesomeIcon icon={faTrashCan} className={`${styles.icon} ${styles.red} mt-1`} style={{color: '#DC2626', cursor: 'pointer'}} onClick={() => handleDeleteCollection(collect.id)}/>
-                      <label className={`${styles.switch} mt-1`}>
+                  <div className="d-flex align-items-center flex-wrap gap-3">
+                    <div className='d-flex align-items-center gap-3'>
+                      <button
+                        type="button"
+                        onClick={() => toggleCollectionProducts(collect.id)}
+                        title={expandedCollections[collect.id] ? 'Hide products in this collection' : 'View products in this collection'}
+                        aria-label={expandedCollections[collect.id] ? 'Hide products in this collection' : 'View products in this collection'}
+                        style={{
+                          border: 'none',
+                          background: 'transparent',
+                          padding: 0,
+                          color: expandedCollections[collect.id] ? '#0273F9' : '#78716C',
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px'
+                        }}
+                      >
+                        <FontAwesomeIcon icon={expandedCollections[collect.id] ? faEyeSlash : faEye} />
+                        <span style={{fontSize: '12px', fontWeight: 500}}>View Product</span>
+                      </button>
+                      <FontAwesomeIcon icon={faTrashCan} className={`${styles.icon} ${styles.red}`} style={{color: '#DC2626', cursor: 'pointer'}} onClick={() => handleDeleteCollection(collect.id)}/>
+                      <label className={styles.switch}>
                           <input 
                             type="checkbox" 
-                            checked={visibleCollections[collect.id] || false}
-                            onChange={(e) => handleCollectionCheckbox(e, collect.id)}
+                            checked={isCollectionVisible(collect.is_visible)}
+                            onChange={() => handleCollectionVisibilityToggle(collect)}
                           />
                           <span className={`${styles.slider} round`}></span>
                       </label>
                     </div>
                   </div>
                 </div>
-                <div className={`position-absolute ${styles.sido}`} style={{top: '29px'}}>
-                  <FontAwesomeIcon icon={faEllipsisV} className='me-1' style={{color: '#78716C', width: 'auto'}}/>
-                  <FontAwesomeIcon icon={faEllipsisV} style={{color: '#78716C', width: 'auto'}}/>
-                </div>
 
-                {visibleCollections[collect.id] && (
+                {expandedCollections[collect.id] && (
                 <div className="row p-3 m-3 rounded-3" style={{background: '#fafafa'}}>
                   {Array.isArray(collectionServices[collect.id]) &&
                   collectionServices[collect.id].length > 0 ? (
@@ -852,9 +1033,15 @@ const Collection = ({setItemData, autoExpandProducts = false}) => {
                     <small style={{color: '#1C1917', fontSize: '12px'}} className='nx mt-4 mb-0'>Products in collection</small>
                     <small style={{color: '#1C1917', fontSize: '12px'}} className='nx d-block'>{collect.totalItems} Product added</small>
                   </div>
-                  <div className="text-end mt-2">
-                    <button className={`${styles['si-btn']} px-4 mx rounded-2`} style={{fontSize: '12px'}} onClick={() => setMode({isOpen: true, collectionId: collect.id})}>Add Product</button>
-                  </div>
+                  <button
+                    type="button"
+                    className={`${styles['si-btn']} ms-3 px-3 py-2 rounded-2 my-3`}
+                    style={{fontSize: '12px', lineHeight: 1}}
+                    onClick={() => openBulkProductModal(collect.id)}
+                    title="Bulk add products"
+                  >
+                    Add Product
+                  </button>
                 </div>
                 
             </div>
@@ -1094,7 +1281,7 @@ const Collection = ({setItemData, autoExpandProducts = false}) => {
                                   checked={selectedProducts.includes(product.id)}
                                   onChange={() => handleProductCheckbox(product.id)}
                                   onClick={(e) => e.stopPropagation()}
-                                  className={styles['glow-checkbox']}
+                                  className={styles['collection-picker-checkbox']}
                                 />
                               </div>
                               <small style={{color: '#0273F9', fontWeight: 'bold'}}>ID: {product.id}</small>
