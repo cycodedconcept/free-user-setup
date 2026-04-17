@@ -131,15 +131,49 @@ const titleize = (value) =>
     .trim()
     .replace(/\b\w/g, (char) => char.toUpperCase());
 
+const getRecordMetadata = (order) => {
+  const metadata = order?.metadata || order?.booking_metadata || {};
+
+  if (metadata && typeof metadata === "object") {
+    return metadata;
+  }
+
+  if (typeof metadata === "string") {
+    try {
+      const parsedMetadata = JSON.parse(metadata);
+      return parsedMetadata && typeof parsedMetadata === "object" ? parsedMetadata : {};
+    } catch {
+      return {};
+    }
+  }
+
+  return {};
+};
+
+const isServiceBookingRecord = (order) => {
+  const rawType = `${order?.order_type || order?.type || order?.booking_type || ""}`.toLowerCase();
+  const metadata = getRecordMetadata(order);
+  return (
+    rawType.includes("service") ||
+    rawType.includes("booking") ||
+    Boolean(order?.scheduled_at || metadata?.scheduled_at)
+  );
+};
+
 const getOrderNumber = (order) =>
   order?.order_number ||
+  order?.booking_number ||
+  order?.booking_reference ||
+  order?.reference_code ||
   order?.reference ||
   order?.reference_no ||
   order?.invoice_number ||
-  (order?.id ? `ORD-${order.id}` : "-");
+  (order?.id ? `${isServiceBookingRecord(order) ? "BK" : "ORD"}-${order.id}` : "-");
 
 const getCustomerName = (order) =>
   order?.customer_name ||
+  getRecordMetadata(order)?.customer_name ||
+  order?.customer?.fullName ||
   order?.customer?.name ||
   order?.customer?.full_name ||
   order?.user?.name ||
@@ -148,6 +182,7 @@ const getCustomerName = (order) =>
 
 const getCustomerEmail = (order) =>
   order?.customer_email ||
+  getRecordMetadata(order)?.customer_email ||
   order?.customer?.email ||
   order?.user?.email ||
   "-";
@@ -168,6 +203,8 @@ const getItemsCount = (order) => {
         order?.total_items ??
         order?.item_count ??
         order?.products_count ??
+        order?.services_count ??
+        (isServiceBookingRecord(order) ? 1 : undefined) ??
         0
     ) || 0
   );
@@ -178,12 +215,27 @@ const getOrderTotal = (order) =>
   order?.grand_total ??
   order?.total ??
   order?.amount ??
+  order?.service_amount ??
+  order?.booking_amount ??
+  getRecordMetadata(order)?.amount ??
   order?.paid_amount ??
   0;
+
+const getOrderDate = (order) =>
+  order?.scheduled_at ||
+  getRecordMetadata(order)?.scheduled_at ||
+  order?.appointment_date ||
+  order?.booking_date ||
+  order?.created_at ||
+  order?.date ||
+  order?.order_date;
 
 const getOrderItemsList = (order) =>
   order?.OnlineStoreOrderItems ||
   order?.order_items ||
+  order?.ServiceBookings ||
+  order?.service_bookings ||
+  order?.booking_items ||
   order?.items ||
   [];
 
@@ -455,7 +507,7 @@ const createOrderPrintMarkup = (order) => {
           <div>
             <h1 class="title">Order Receipt</h1>
             <p class="muted">${escapeHtml(orderNumber)}</p>
-            <p class="muted">Created on ${escapeHtml(formatLongDate(order?.created_at))}</p>
+            <p class="muted">Created on ${escapeHtml(formatLongDate(getOrderDate(order)))}</p>
           </div>
           <div>
             <div class="badge">${escapeHtml(orderStatusLabel)}</div>
@@ -875,7 +927,7 @@ const OrderDetailsView = ({
                     Order Details
                   </h5>
                   <p className="mb-0" style={{ color: "var(--app-text-muted)", fontSize: "14px" }}>
-                    Created on {formatLongDate(order?.created_at)}
+                    Created on {formatLongDate(getOrderDate(order))}
                   </p>
                 </div>
                 <span
@@ -1935,7 +1987,7 @@ const exportOrdersToCsv = (rows, activeTab) => {
       getOrderNumber(order),
       getCustomerName(order),
       getCustomerEmail(order),
-      formatDate(order?.created_at || order?.date || order?.order_date),
+      formatDate(getOrderDate(order)),
       typeConfig.label,
       getItemsCount(order),
       getOrderTotal(order),
@@ -2009,7 +2061,7 @@ const Orders = () => {
 
   const isOrdersTab = activeTab === "orders";
   const currentEmptyState = EMPTY_STATE_CONTENT[activeTab];
-  const resolvedOrderType = isOrdersTab ? "product_order" : "service_booking";
+  const resolvedOrderType = isOrdersTab ? "product_order" : "booking_order";
   const orders = ordersData?.data || [];
   const pagination = ordersData?.pagination || {};
   const receipts = receiptsData?.data || [];
@@ -2744,7 +2796,7 @@ const Orders = () => {
                                 borderBottom: "1px solid #F3F4F6",
                               }}
                             >
-                              {formatDate(order?.created_at || order?.date || order?.order_date)}
+                              {formatDate(getOrderDate(order))}
                             </td>
                             <td style={{ borderBottom: "1px solid #F3F4F6" }}>
                               <span

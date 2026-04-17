@@ -47,6 +47,10 @@ const initialState = {
   myServices: {},
   myProducts: {},
   productDetails: {},
+  storeThemes: [],
+  storeThemesLoading: false,
+  storeThemesError: null,
+  storeThemesResponse: null,
 
   bookingLoading: false,
   bookingError: null,
@@ -69,6 +73,22 @@ export const getOnlineEcommerceStore = createAsyncThunk(
       const response = await axios.get(`${API_URL}/public-store/${store}?tenant_id=${tenant_id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
+      return response.data;
+    } catch (error) {
+      if (error.response && error.response.data) return rejectWithValue(error.response.data);
+      return rejectWithValue(error.message || "Something went wrong");
+    }
+  }
+);
+
+export const getOnlineStoreThemes = createAsyncThunk(
+  'customer/getOnlineStoreThemes',
+  async ({ token, id }, { rejectWithValue }) => {
+    try {
+      if (!id) return rejectWithValue("Store id is required");
+
+      const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
+      const response = await axios.get(`${API_URL}/stores/online/${id}`, { headers });
       return response.data;
     } catch (error) {
       if (error.response && error.response.data) return rejectWithValue(error.response.data);
@@ -197,6 +217,24 @@ export const checkoutProduct = createAsyncThunk(
 // helpers for cart ops
 const itemKey = (it) => `${it.product_id}:${it.variation_id ?? ''}:${it.variation_option_id ?? ''}`;
 const toNum = (v, d = 0) => (Number.isFinite(Number(v)) ? Number(v) : d);
+const extractThemeList = (payload) => {
+  const candidates = [
+    payload?.data?.themes,
+    payload?.data?.suggested_themes,
+    payload?.data?.store?.themes,
+    payload?.data?.store?.suggested_themes,
+    payload?.data?.onlineStore?.themes,
+    payload?.data?.onlineStore?.suggested_themes,
+    payload?.themes,
+    payload?.suggested_themes,
+    payload?.store?.themes,
+    payload?.store?.suggested_themes,
+    payload?.onlineStore?.themes,
+    payload?.onlineStore?.suggested_themes
+  ];
+
+  return candidates.find(Array.isArray) || [];
+};
 
 const customerSlice = createSlice({
   name: 'customer',
@@ -309,6 +347,21 @@ const customerSlice = createSlice({
         state.loading = false;
         state.success = false;
         state.error = action.payload;
+      })
+
+      // store themes
+      .addCase(getOnlineStoreThemes.pending, (state) => {
+        state.storeThemesLoading = true;
+        state.storeThemesError = null;
+      })
+      .addCase(getOnlineStoreThemes.fulfilled, (state, action) => {
+        state.storeThemesLoading = false;
+        state.storeThemesResponse = action.payload;
+        state.storeThemes = extractThemeList(action.payload);
+      })
+      .addCase(getOnlineStoreThemes.rejected, (state, action) => {
+        state.storeThemesLoading = false;
+        state.storeThemesError = action.payload;
       })
 
       // booking

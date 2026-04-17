@@ -23,9 +23,11 @@ import productThree from "../../assets/bp3.png";
 import productFour from "../../assets/ph2.png";
 import productFive from "../../assets/ph3.png";
 import productSix from "../../assets/ph.png";
+import { buildCustomerThemeStyle, writeStoredCustomerTheme } from "../customerTheme";
 
 const EMPTY_ARRAY = [];
 const WEEKDAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const DESCRIPTION_WORD_STEP = 50;
 
 const fallbackServiceImages = [serviceOne, serviceTwo, serviceThree];
 const fallbackProductImages = [productOne, productTwo, productThree, productFour, productFive, productSix];
@@ -33,6 +35,22 @@ const PENDING_BOOKING_KEY = "mycroshop.pendingBooking";
 const SHOW_BOOKING_KEY = "mycroshop.showBookingConfirmation";
 const PAYMENT_CONTEXT_KEY = "mycroshop.paymentContext";
 const CART_KEY = "mycroshop.cart";
+const CUSTOMER_LOGO_STORAGE_KEY = "mycroshop.customerProfileLogo";
+
+const resolveStoreBannerImage = (storeData) =>
+  storeData?.banner_image_url ||
+  storeData?.banner_url ||
+  storeData?.cover_image_url ||
+  "";
+
+const readStoredCustomerLogo = () => {
+  if (typeof window === "undefined") return "";
+  try {
+    return localStorage.getItem(CUSTOMER_LOGO_STORAGE_KEY) || "";
+  } catch {
+    return "";
+  }
+};
 
 const formatNaira = (value) => {
   if (value === null || value === undefined || value === "") return "";
@@ -231,27 +249,67 @@ const buildServiceDisplayItem = (service, index) => {
   };
 };
 
+const resolveCollectionService = (entry) =>
+  entry?.StoreService || entry?.Service || entry?.service || entry?.StoreCollectionService || entry;
+
 const buildProductDisplayItem = (product, index) => ({
   id: product?.id || `product-${index}`,
   title: product?.name || product?.product_name || product?.title || "Product",
   description: product?.category || product?.description || "New arrival",
   price: formatNaira(product?.price) || "Contact for price",
+  sku: product?.sku || "",
+  category: product?.category || "",
   image:
     product?.image_url ||
     product?.image ||
     fallbackProductImages[index % fallbackProductImages.length],
+  raw: product,
 });
 
-const buildCollectionCard = (title, items, type) => ({
-  id: `${type}-${title}`.toLowerCase().replace(/\s+/g, "-"),
-  title,
-  previewImages: items
-    .map((item) => item?.image)
-    .filter(Boolean)
-    .slice(0, 3),
-  count: `${items.length} ${items.length === 1 ? type : `${type}s`}`,
-  [type === "Service" ? "services" : "products"]: items,
-});
+const buildCollectionCard = (title, items, type) => {
+  const normalizedItems = Array.isArray(items) ? items : EMPTY_ARRAY;
+  return {
+    id: `${type}-${title}`.toLowerCase().replace(/\s+/g, "-"),
+    title,
+    previewItems: normalizedItems.slice(0, 4),
+    previewImages: normalizedItems
+      .map((item) => item?.image)
+      .filter(Boolean)
+      .slice(0, 4),
+    count: `${normalizedItems.length} ${normalizedItems.length === 1 ? type : `${type}s`}`,
+    countValue: normalizedItems.length,
+    [type === "Service" ? "services" : "products"]: normalizedItems,
+  };
+};
+
+const getProductDisplayKey = (product, index) =>
+  product?.id ??
+  product?.product_id ??
+  product?.sku ??
+  `${product?.title || product?.name || "product"}-${index}`;
+
+const buildAllProductsCollection = (collections) => {
+  const seenProducts = new Set();
+  const mergedProducts = [];
+
+  (Array.isArray(collections) ? collections : EMPTY_ARRAY).forEach((collection, collectionIndex) => {
+    (Array.isArray(collection?.products) ? collection.products : EMPTY_ARRAY).forEach(
+      (product, productIndex) => {
+        const productKey = getProductDisplayKey(
+          product,
+          `${collectionIndex}-${productIndex}`
+        );
+        if (seenProducts.has(productKey)) return;
+        seenProducts.add(productKey);
+        mergedProducts.push(product);
+      }
+    );
+  });
+
+  return mergedProducts.length
+    ? buildCollectionCard("All Products", mergedProducts, "Product")
+    : null;
+};
 
 const parseAmount = (value) => {
   if (value === null || value === undefined || value === "") return null;
@@ -481,6 +539,260 @@ const getSocialIcon = (platform) => {
   );
 };
 
+const normalizeCustomerSocialLinks = (links) => {
+  const entries = Array.isArray(links) ? links : links ? [links] : [];
+
+  return entries.flatMap((entry, index) => {
+    if (!entry || typeof entry !== "object") return [];
+
+    if ("url" in entry || "platform" in entry) {
+      if (!entry.url) return [];
+      return [
+        {
+          id: `${entry.platform || "social"}-${index}`,
+          platform: entry.platform || "social",
+          label: formatPlatformLabel(entry.platform),
+          url: entry.url,
+        },
+      ];
+    }
+
+    return Object.entries(entry)
+      .filter(([, value]) => typeof value === "string" && value.trim())
+      .map(([platform, url]) => ({
+        id: `${platform}-${index}`,
+        platform,
+        label: formatPlatformLabel(platform),
+        url,
+      }));
+  });
+};
+
+const resolveStoreFooterAddresses = (storeData) => {
+  const rawLocations = [
+    storeData?.locations,
+    storeData?.store_locations,
+    storeData?.addresses,
+    storeData?.store_addresses,
+  ].find((value) => Array.isArray(value) && value.length);
+
+  if (rawLocations) {
+    return rawLocations
+      .map((location) => {
+        if (typeof location === "string") return location;
+        if (!location || typeof location !== "object") return "";
+        return [
+          location.address,
+          location.address1,
+          location.street,
+          location.city,
+          location.state,
+          location.country,
+        ]
+          .filter(Boolean)
+          .join(", ");
+      })
+      .filter(Boolean)
+      .slice(0, 2);
+  }
+
+  const primaryAddress = [
+    storeData?.address,
+    storeData?.store_address,
+    storeData?.street_address,
+    storeData?.city,
+    storeData?.state,
+    storeData?.country,
+  ]
+    .filter(Boolean)
+    .join(", ");
+
+  return primaryAddress ? [primaryAddress] : [];
+};
+
+const resolveStoreFooterHours = (storeData) => {
+  const rawHours =
+    storeData?.store_hours ||
+    storeData?.business_hours ||
+    storeData?.opening_hours ||
+    storeData?.hours;
+
+  if (typeof rawHours === "string" && rawHours.trim()) {
+    return rawHours
+      .split(/\n|,/)
+      .map((item) => item.trim())
+      .filter(Boolean)
+      .slice(0, 3);
+  }
+
+  if (Array.isArray(rawHours)) {
+    return rawHours
+      .map((item) => {
+        if (typeof item === "string") return item;
+        if (!item || typeof item !== "object") return "";
+        const day = item.day || item.days || item.label;
+        const time = item.time || item.hours || item.value;
+        return [day, time].filter(Boolean).join(": ");
+      })
+      .filter(Boolean)
+      .slice(0, 3);
+  }
+
+  if (rawHours && typeof rawHours === "object") {
+    return Object.entries(rawHours)
+      .map(([day, value]) => {
+        if (typeof value === "string") return `${formatPlatformLabel(day)}: ${value}`;
+        if (!value || typeof value !== "object") return "";
+        const from = value.open || value.from || value.start;
+        const to = value.close || value.to || value.end;
+        return [formatPlatformLabel(day), [from, to].filter(Boolean).join(" - ")]
+          .filter(Boolean)
+          .join(": ");
+      })
+      .filter(Boolean)
+      .slice(0, 3);
+  }
+
+  return ["Mon - Sat: 9am - 8pm", "Sunday: 12pm - 6pm"];
+};
+
+const CustomerStoreFooter = ({
+  storeName,
+  storeDescription,
+  socialLinks,
+  addresses,
+  hours,
+  showProducts,
+  showServices,
+  onShopAll,
+  onServices,
+  onViewCart,
+}) => {
+  const footerDescription =
+    (typeof storeDescription === "string" && storeDescription.trim()) ||
+    "Premium products and services, delivered with care.";
+  const primaryAddress = addresses[0] || "Available online";
+  const quickLinks = [
+    showProducts ? { label: "Shop All", onClick: onShopAll } : null,
+    showProducts ? { label: "New Arrivals", onClick: onShopAll } : null,
+    showProducts ? { label: "Sale", onClick: onShopAll } : null,
+    { label: "Collections", onClick: showProducts ? onShopAll : onServices },
+    showServices ? { label: "Book Services", onClick: onServices } : null,
+    { label: "Cart", onClick: onViewCart },
+  ].filter(Boolean);
+
+  return (
+    <footer className={styles.customerHomeFooter}>
+      <div className={styles.customerHomeFooterMain}>
+        <section className={styles.customerHomeFooterBrand}>
+          <h2 className={styles.customerHomeFooterLogo}>{storeName}</h2>
+          <p className={styles.customerHomeFooterText}>{footerDescription}</p>
+
+          <div className={styles.customerHomeFooterMobileAddress}>
+            <span className={styles.customerHomeFooterPin} aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path
+                  d="M12 21s7-5.2 7-12a7 7 0 1 0-14 0c0 6.8 7 12 7 12z"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <circle cx="12" cy="9" r="2.5" strokeWidth="2" />
+              </svg>
+            </span>
+            <span>{primaryAddress}</span>
+          </div>
+
+          {socialLinks.length ? (
+            <div className={styles.customerHomeFooterSocialBlock}>
+              <span className={styles.customerHomeFooterMobileLabel}>Follow Us</span>
+              <div className={styles.customerHomeFooterSocials}>
+                {socialLinks.map((link) => (
+                  <a
+                    className={styles.customerHomeFooterSocial}
+                    key={link.id}
+                    href={link.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    aria-label={link.label}
+                  >
+                    {getSocialIcon(link.platform)}
+                  </a>
+                ))}
+              </div>
+            </div>
+          ) : null}
+        </section>
+
+        {quickLinks.length ? (
+          <section className={styles.customerHomeFooterLinks}>
+            <h3 className={styles.customerHomeFooterHeading}>Quick Links</h3>
+            <div className={styles.customerHomeFooterLinkList}>
+              {quickLinks.map((link) => (
+                <Button
+                  className={styles.customerHomeFooterLink}
+                  key={link.label}
+                  type="button"
+                  onClick={link.onClick}
+                  unstyled
+                >
+                  {link.label}
+                </Button>
+              ))}
+            </div>
+          </section>
+        ) : null}
+
+        <section className={styles.customerHomeFooterContact}>
+          <h3 className={styles.customerHomeFooterHeading}>Find Us</h3>
+          <div className={styles.customerHomeFooterAddressList}>
+            {addresses.length ? (
+              addresses.map((address) => (
+                <div className={styles.customerHomeFooterAddress} key={address}>
+                  <span className={styles.customerHomeFooterPin} aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                      <path
+                        d="M12 21s7-5.2 7-12a7 7 0 1 0-14 0c0 6.8 7 12 7 12z"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                      <circle cx="12" cy="9" r="2.5" strokeWidth="2" />
+                    </svg>
+                  </span>
+                  <span>{address}</span>
+                </div>
+              ))
+            ) : (
+              <p className={styles.customerHomeFooterText}>Available online</p>
+            )}
+          </div>
+
+          {hours.length ? (
+            <div className={styles.customerHomeFooterHours}>
+              <h3 className={styles.customerHomeFooterHeading}>Store Hours</h3>
+              {hours.map((line) => (
+                <p key={line}>{line}</p>
+              ))}
+            </div>
+          ) : null}
+        </section>
+      </div>
+
+      <div className={styles.customerHomeFooterBottom}>
+        <span>
+          &copy; {new Date().getFullYear()} {storeName} · Powered by MycroShop
+        </span>
+        <div className={styles.customerHomeFooterLegal}>
+          <span>Privacy Policy</span>
+          <span>Terms of Service</span>
+          <span>Returns</span>
+        </div>
+      </div>
+    </footer>
+  );
+};
+
 const getServiceBookingMeta = (service) => {
   if (!service) {
     return { name: "", duration: "", price: "" };
@@ -493,6 +805,469 @@ const getServiceBookingMeta = (service) => {
     duration: durationMatch ? durationMatch[1] : "",
     price: pricePart || "",
   };
+};
+
+const StorefrontShell = ({
+  storeLogo,
+  storeBannerImage,
+  storeName,
+  heroDescription,
+  searchTerm,
+  onSearchTermChange,
+  searchPlaceholder,
+  cartCount,
+  onViewCart,
+  heroActionLabel,
+  onHeroAction,
+  categoryItems,
+  activeCategoryId,
+  onSelectCategory,
+  footer,
+  children,
+}) => {
+  const hasBannerImage = Boolean(storeBannerImage);
+  const heroStyle = hasBannerImage
+    ? { "--customer-home-banner-image": `url(${JSON.stringify(storeBannerImage)})` }
+    : undefined;
+
+  return (
+  <section className={styles.customerHomeShopShell}>
+    <header className={styles.customerHomeShopHeader}>
+      <div className={styles.customerHomeShopHeaderActions}>
+        <div className={styles.customerHomeShopSearch}>
+          <span className={styles.customerHomeShopSearchIcon} aria-hidden="true">
+            🔍
+          </span>
+          <input
+            className={styles.customerHomeShopSearchInput}
+            type="text"
+            placeholder={searchPlaceholder}
+            value={searchTerm}
+            onChange={(event) => onSearchTermChange(event.target.value)}
+          />
+        </div>
+
+        <Button
+          className={styles.customerHomeShopCartButton}
+          type="button"
+          onClick={onViewCart}
+          unstyled
+        >
+          <span aria-hidden="true">🛒</span>
+          <span>Cart</span>
+          {cartCount ? (
+            <span className={styles.customerHomeShopCartCount}>{cartCount}</span>
+          ) : null}
+        </Button>
+      </div>
+    </header>
+
+    <section
+      className={`${styles.customerHomeShopHero} ${
+        hasBannerImage ? styles.customerHomeShopHeroWithBanner : ""
+      }`}
+      style={heroStyle}
+    >
+      <div className={styles.customerHomeShopHeroCopy}>
+        <span className={styles.customerHomeShopHeroEyebrow}>Store banner</span>
+        <h2 className={styles.customerHomeShopHeroTitle}>{storeName}</h2>
+        <p className={styles.customerHomeShopHeroText}>{heroDescription}</p>
+        {onHeroAction ? (
+          <Button
+            className={styles.customerHomeShopHeroButton}
+            type="button"
+            onClick={onHeroAction}
+            unstyled
+          >
+            {heroActionLabel}
+          </Button>
+        ) : null}
+      </div>
+
+      {!hasBannerImage ? (
+        <div className={styles.customerHomeShopHeroMedia}>
+          <img src={storeLogo} alt={storeName} />
+        </div>
+      ) : null}
+    </section>
+
+    <div className={styles.customerHomeShopLayout}>
+      <aside className={styles.customerHomeShopSidebar}>
+        <div className={styles.customerHomeShopSidebarCard}>
+          <p className={styles.customerHomeShopSidebarTitle}>Categories</p>
+          <div className={styles.customerHomeShopCategoryList}>
+            {categoryItems.map((item) => (
+              <Button
+                className={`${styles.customerHomeShopCategoryButton} ${
+                  activeCategoryId === item.id ? styles.customerHomeShopCategoryButtonActive : ""
+                }`}
+                key={item.id}
+                type="button"
+                onClick={() => onSelectCategory(item.id)}
+                unstyled
+              >
+                {item.label}
+              </Button>
+            ))}
+          </div>
+        </div>
+      </aside>
+
+      {children}
+    </div>
+
+    {footer ? (
+      <div className={styles.customerHomeShopFooter}>
+        {footer}
+      </div>
+    ) : null}
+  </section>
+  );
+};
+
+const ProductCollectionsLanding = ({
+  collections,
+  onSelectCollection,
+  onSelectProduct,
+  onViewAllProducts,
+  onViewCart,
+  sectionTitle,
+  storeLogo,
+  storeBannerImage,
+  storeName,
+  storeDescription,
+  cartCount,
+}) => {
+  const [searchTerm, setSearchTerm] = useState("");
+  const [activeCollectionId, setActiveCollectionId] = useState("all");
+
+  const collectionFilters = useMemo(
+    () => [
+      { id: "all", label: "All" },
+      ...collections.map((collection) => ({
+        id: collection.id || collection.title,
+        label: collection.title,
+      })),
+    ],
+    [collections]
+  );
+
+  const visibleCollections = useMemo(() => {
+    const normalizedQuery = searchTerm.trim().toLowerCase();
+
+    return collections
+      .filter((collection) =>
+        activeCollectionId === "all"
+          ? true
+          : (collection.id || collection.title) === activeCollectionId
+      )
+      .map((collection) => {
+        const matchingProducts = normalizedQuery
+          ? collection.products.filter((product) =>
+              [
+                product?.title,
+                product?.description,
+                product?.price,
+                product?.category,
+                product?.sku,
+              ]
+                .filter(Boolean)
+                .join(" ")
+                .toLowerCase()
+                .includes(normalizedQuery)
+            )
+          : collection.products;
+
+        return {
+          ...collection,
+          visibleProducts: matchingProducts,
+          previewItems: matchingProducts.slice(0, 4),
+        };
+      })
+      .filter((collection) => collection.visibleProducts.length);
+  }, [activeCollectionId, collections, searchTerm]);
+
+  const heroDescription = storeDescription?.trim() || "Discover curated products from this store.";
+  const featuredCollection = collections[0] || null;
+
+  return (
+    <StorefrontShell
+      sectionTitle={sectionTitle}
+      storeLogo={storeLogo}
+      storeBannerImage={storeBannerImage}
+      storeName={storeName}
+      heroDescription={heroDescription}
+      searchTerm={searchTerm}
+      onSearchTermChange={setSearchTerm}
+      searchPlaceholder="Search products"
+      cartCount={cartCount}
+      onViewCart={onViewCart}
+      heroActionLabel="Shop collection"
+      onHeroAction={featuredCollection ? () => onSelectCollection(featuredCollection) : null}
+      categoryItems={collectionFilters}
+      activeCategoryId={activeCollectionId}
+      onSelectCategory={setActiveCollectionId}
+      footer={
+        onViewAllProducts ? (
+          <Button
+            className={styles.customerHomeViewAllButton}
+            type="button"
+            onClick={onViewAllProducts}
+            unstyled
+          >
+            View all products
+          </Button>
+        ) : null
+      }
+    >
+      <div className={styles.customerHomeCollectionLanding}>
+        <div className={styles.customerHomeCollectionLandingHeader}>
+          <h2 className={styles.customerHomeSectionTitle}>{sectionTitle}</h2>
+          {searchTerm ? (
+            <span className={styles.customerHomeCollectionLandingMeta}>
+              Search results for "{searchTerm}"
+            </span>
+          ) : null}
+        </div>
+
+        <div className={styles.customerHomeCollectionList}>
+          {visibleCollections.length ? visibleCollections.map((collection) => {
+            const previewItems = Array.isArray(collection?.previewItems)
+              ? collection.previewItems
+              : collection?.products?.slice(0, 4) || EMPTY_ARRAY;
+
+            return (
+              <section
+                className={styles.customerHomeCollectionPreviewSection}
+                key={collection.id || collection.title}
+              >
+                <div className={styles.customerHomeCollectionPreviewHeader}>
+                  <div className={styles.customerHomeCollectionPreviewHeading}>
+                    <h3 className={styles.customerHomeCollectionPreviewTitle}>{collection.title}</h3>
+                    <span className={styles.customerHomeCollectionPreviewCount}>
+                      {collection.count}
+                    </span>
+                  </div>
+
+                  <Button
+                    className={styles.customerHomeCollectionPreviewAction}
+                    type="button"
+                    onClick={() => onSelectCollection(collection)}
+                    unstyled
+                  >
+                    See all
+                  </Button>
+                </div>
+
+                <div className={styles.customerHomeCollectionPreviewGrid}>
+                  {previewItems.map((product, index) => (
+                    <Button
+                      className={styles.customerHomeCollectionPreviewCard}
+                      key={getProductDisplayKey(product, index)}
+                      type="button"
+                      onClick={() => onSelectProduct(product)}
+                      unstyled
+                    >
+                      <div className={styles.customerHomeCollectionPreviewImageWrap}>
+                        <img
+                          className={styles.customerHomeCollectionPreviewImage}
+                          src={product.image}
+                          alt={product.title}
+                        />
+                      </div>
+
+                      <div className={styles.customerHomeCollectionPreviewBody}>
+                        <h4 className={styles.customerHomeCollectionPreviewProductTitle}>
+                          {product.title}
+                        </h4>
+                        <p className={styles.customerHomeCollectionPreviewProductDesc}>
+                          {product.description}
+                        </p>
+                        <span className={styles.customerHomeCollectionPreviewPrice}>
+                          {product.price}
+                        </span>
+                      </div>
+                    </Button>
+                  ))}
+                </div>
+              </section>
+            );
+          }) : (
+            <div className={styles.customerHomeEmptyState}>
+              <p className={styles.customerHomeEmptyTitle}>No matching products</p>
+              <p className={styles.customerHomeEmptyText}>
+                Try another collection or search term.
+              </p>
+            </div>
+          )}
+        </div>
+
+      </div>
+    </StorefrontShell>
+  );
+};
+
+const ServiceCollectionsLanding = ({
+  collections,
+  onSelectCollection,
+  onSelectService,
+  onViewCart,
+  sectionTitle,
+  storeLogo,
+  storeBannerImage,
+  storeName,
+  storeDescription,
+  cartCount,
+}) => {
+  const [searchTerm, setSearchTerm] = useState("");
+  const [activeCollectionId, setActiveCollectionId] = useState("all");
+
+  const collectionFilters = useMemo(
+    () => [
+      { id: "all", label: "All" },
+      ...collections.map((collection) => ({
+        id: collection.id || collection.title,
+        label: collection.title,
+      })),
+    ],
+    [collections]
+  );
+
+  const visibleCollections = useMemo(() => {
+    const normalizedQuery = searchTerm.trim().toLowerCase();
+
+    return collections
+      .filter((collection) =>
+        activeCollectionId === "all"
+          ? true
+          : (collection.id || collection.title) === activeCollectionId
+      )
+      .map((collection) => {
+        const matchingServices = normalizedQuery
+          ? collection.services.filter((service) =>
+              [
+                service?.name,
+                service?.title,
+                service?.description,
+                service?.category,
+                service?.priceLabel,
+              ]
+                .filter(Boolean)
+                .join(" ")
+                .toLowerCase()
+                .includes(normalizedQuery)
+            )
+          : collection.services;
+
+        return {
+          ...collection,
+          visibleServices: matchingServices,
+          previewItems: matchingServices.slice(0, 4),
+        };
+      })
+      .filter((collection) => collection.visibleServices.length);
+  }, [activeCollectionId, collections, searchTerm]);
+
+  const heroDescription =
+    storeDescription?.trim() || "Book popular services and explore every collection from one place.";
+  const featuredCollection = collections[0] || null;
+
+  return (
+    <StorefrontShell
+      sectionTitle={sectionTitle}
+      storeLogo={storeLogo}
+      storeBannerImage={storeBannerImage}
+      storeName={storeName}
+      heroDescription={heroDescription}
+      searchTerm={searchTerm}
+      onSearchTermChange={setSearchTerm}
+      searchPlaceholder="Search services"
+      cartCount={cartCount}
+      onViewCart={onViewCart}
+      heroActionLabel="View services"
+      onHeroAction={featuredCollection ? () => onSelectCollection(featuredCollection) : null}
+      categoryItems={collectionFilters}
+      activeCategoryId={activeCollectionId}
+      onSelectCategory={setActiveCollectionId}
+    >
+      <div className={styles.customerHomeCollectionLanding}>
+        <div className={styles.customerHomeCollectionLandingHeader}>
+          <h2 className={styles.customerHomeSectionTitle}>{sectionTitle}</h2>
+          {searchTerm ? (
+            <span className={styles.customerHomeCollectionLandingMeta}>
+              Search results for "{searchTerm}"
+            </span>
+          ) : null}
+        </div>
+
+        <div className={styles.customerHomeCollectionList}>
+          {visibleCollections.length ? visibleCollections.map((collection) => (
+            <section
+              className={styles.customerHomeCollectionPreviewSection}
+              key={collection.id || collection.title}
+            >
+              <div className={styles.customerHomeCollectionPreviewHeader}>
+                <div className={styles.customerHomeCollectionPreviewHeading}>
+                  <h3 className={styles.customerHomeCollectionPreviewTitle}>{collection.title}</h3>
+                  <span className={styles.customerHomeCollectionPreviewCount}>
+                    {collection.count}
+                  </span>
+                </div>
+
+                <Button
+                  className={styles.customerHomeCollectionPreviewAction}
+                  type="button"
+                  onClick={() => onSelectCollection(collection)}
+                  unstyled
+                >
+                  See all
+                </Button>
+              </div>
+
+              <div className={styles.customerHomeCollectionPreviewGrid}>
+                {collection.previewItems.map((service, index) => (
+                  <Button
+                    className={`${styles.customerHomeCollectionPreviewCard} ${styles.customerHomeCollectionPreviewCardService}`}
+                    key={`${service.id || service.title}-${index}`}
+                    type="button"
+                    onClick={() => onSelectService(service)}
+                    unstyled
+                  >
+                    <div className={styles.customerHomeCollectionPreviewImageWrap}>
+                      <img
+                        className={styles.customerHomeCollectionPreviewImage}
+                        src={service.image}
+                        alt={service.name || service.title}
+                      />
+                    </div>
+
+                    <div className={styles.customerHomeCollectionPreviewBody}>
+                      <h4 className={styles.customerHomeCollectionPreviewProductTitle}>
+                        {service.name || service.title}
+                      </h4>
+                      <p className={styles.customerHomeCollectionPreviewProductDesc}>
+                        {service.description}
+                      </p>
+                      <span className={styles.customerHomeCollectionPreviewServiceCta}>
+                        {service.cta}
+                      </span>
+                    </div>
+                  </Button>
+                ))}
+              </div>
+            </section>
+          )) : (
+            <div className={styles.customerHomeEmptyState}>
+              <p className={styles.customerHomeEmptyTitle}>No matching services</p>
+              <p className={styles.customerHomeEmptyText}>
+                Try another collection or search term.
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+    </StorefrontShell>
+  );
 };
 
 const CollectionDetailView = ({ collection, onBack, onSelectProduct, storeLogo, storeName }) => {
@@ -597,8 +1372,15 @@ const CollectionDetailView = ({ collection, onBack, onSelectProduct, storeLogo, 
               />
             </div>
             <div className={styles.customerHomeProductBody}>
-              <h3 className={styles.customerHomeProductTitle}>{product.title}</h3>
-              <p className={styles.customerHomeProductDesc}>{product.description}</p>
+              <div className={styles.customerHomeProductBodyTop}>
+                <div>
+                  <h3 className={styles.customerHomeProductTitle}>{product.title}</h3>
+                  <p className={styles.customerHomeProductDesc}>{product.description}</p>
+                </div>
+                <span className={styles.customerHomeProductAddIcon} aria-hidden="true">
+                  +
+                </span>
+              </div>
               <span className={styles.customerHomeProductPrice}>{product.price}</span>
             </div>
           </Button>
@@ -1502,24 +2284,24 @@ const CustomersHome = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const token = localStorage.getItem("token");
-  const { content, bookingPayload, bookingLoading, bookingError, productDetails } = useSelector(
+  const { content, loading, error, bookingPayload, bookingLoading, bookingError, productDetails } = useSelector(
     (state) => state.customer
   );
   const getTenantId = JSON.parse(localStorage.getItem("user") || "null");
   let getStoreName = localStorage.getItem("storeView");
   console.log(getStoreName)
 
-  // useEffect(() => {
-  //   if (token && getTenantId?.tenantId) {
-  //     dispatch(getOnlineEcommerceStore({ token, tenant_id: getTenantId.tenantId, store: getStoreName }));
-  //   }
-  // }, [dispatch, token, getTenantId?.tenantId, getStoreName]);
-
   useEffect(() => {
     if (token && getTenantId?.tenantId) {
-      dispatch(getOnlineEcommerceStore({ token, tenant_id: '21', store: 'comfort' }));
+      dispatch(getOnlineEcommerceStore({ token, tenant_id: getTenantId.tenantId, store: getStoreName }));
     }
-  }, [dispatch, token, '21', 'comfort']);
+  }, [dispatch, token, getTenantId?.tenantId, getStoreName]);
+
+  // useEffect(() => {
+  //   if (token && '21') {
+  //     dispatch(getOnlineEcommerceStore({ token, tenant_id: '21', store: 'stride' }));
+  //   }
+  // }, [dispatch, token, '21', 'stride']);
 
   useEffect(() => {
     if (token) {
@@ -1528,10 +2310,43 @@ const CustomersHome = () => {
   }, [token, dispatch])
   const storeData = content?.data?.store;
   const storeName = storeData?.store_name || "Awesome Store";
-  const storeLogo = storeData?.profile_logo_url || storeAvatar;
+  const storedCustomerLogo = useMemo(() => readStoredCustomerLogo(), []);
+  const storeLogo = storeData?.profile_logo_url || storedCustomerLogo || storeAvatar;
+  const storeBannerImage = resolveStoreBannerImage(storeData);
   const storeDescription = storeData?.store_description;
+  const customerThemeStyle = useMemo(
+    () => buildCustomerThemeStyle(storeData?.selected_theme),
+    [storeData?.selected_theme]
+  );
+  useEffect(() => {
+    writeStoredCustomerTheme(storeData?.selected_theme);
+  }, [storeData?.selected_theme]);
+  useEffect(() => {
+    if (!storeData?.profile_logo_url || typeof window === "undefined") return;
+    try {
+      localStorage.setItem(CUSTOMER_LOGO_STORAGE_KEY, storeData.profile_logo_url);
+    } catch {
+      // Ignore storage errors
+    }
+  }, [storeData?.profile_logo_url]);
+  useEffect(() => {
+    setVisibleDescriptionWords(DESCRIPTION_WORD_STEP);
+  }, [storeDescription]);
+  const showStoreLoader = !storeData && !error && (loading || (!content?.data && Boolean(token)));
   const resolvedTenantId = getTenantId?.tenantId ?? null;
   const socialLinks = storeData?.social_links ?? EMPTY_ARRAY;
+  const normalizedSocialLinks = useMemo(
+    () => normalizeCustomerSocialLinks(socialLinks),
+    [socialLinks]
+  );
+  const footerAddresses = useMemo(
+    () => resolveStoreFooterAddresses(storeData),
+    [storeData]
+  );
+  const footerHours = useMemo(
+    () => resolveStoreFooterHours(storeData),
+    [storeData]
+  );
   const toggles = content?.data?.toggles ?? {};
   const showProducts = toggles?.show_products !== false;
   const showServices = toggles?.show_services !== false;
@@ -1540,7 +2355,8 @@ const CustomersHome = () => {
   const productsNotInCollections = content?.data?.products_not_in_collections?.items ?? EMPTY_ARRAY;
   const servicesNotInCollections = content?.data?.services_not_in_collections?.items ?? EMPTY_ARRAY;
 
-  const [activeTab, setActiveTab] = useState("services");
+  const [activeTab, setActiveTab] = useState("shop");
+  const [visibleDescriptionWords, setVisibleDescriptionWords] = useState(DESCRIPTION_WORD_STEP);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [selectedProductCollection, setSelectedProductCollection] = useState(null);
   const [selectedServiceCollection, setSelectedServiceCollection] = useState(null);
@@ -1558,8 +2374,19 @@ const CustomersHome = () => {
   const [showScrollHint, setShowScrollHint] = useState(false);
   const scrollRef = React.useRef(null);
   const cartCount = useMemo(() => cartItems.length, [cartItems]);
-  const sectionTitle =
-    activeTab === "services" ? "Service Collections" : "Sales Collection";
+  const storeDescriptionWords = useMemo(
+    () =>
+      typeof storeDescription === "string"
+        ? storeDescription.trim().split(/\s+/).filter(Boolean)
+        : [],
+    [storeDescription]
+  );
+  const visibleStoreDescription = useMemo(
+    () => storeDescriptionWords.slice(0, visibleDescriptionWords).join(" "),
+    [storeDescriptionWords, visibleDescriptionWords]
+  );
+  const hasMoreStoreDescription = storeDescriptionWords.length > visibleDescriptionWords;
+  const sectionTitle = activeTab === "services" ? "Service Collections" : "Collections";
   const isCollectionDetailView = Boolean(
     (activeTab === "services" && selectedServiceCollection) ||
       (activeTab === "shop" && selectedProductCollection)
@@ -1638,7 +2465,7 @@ const CustomersHome = () => {
 
   const shareOptions = useMemo(
     () =>
-      socialLinks
+      normalizedSocialLinks
         .filter((link) => link?.url)
         .map((link, index) => ({
           id: `${link.platform || "social"}-${index}`,
@@ -1647,7 +2474,7 @@ const CustomersHome = () => {
           icon: getSocialIcon(link.platform),
           url: link.url,
         })),
-    [socialLinks]
+    [normalizedSocialLinks]
   );
 
   const serviceCollections = useMemo(() => {
@@ -1655,14 +2482,15 @@ const CustomersHome = () => {
       .filter((collection) => collection?.is_visible !== false)
       .map((collection, collectionIndex) => {
         const services = sortByOrder(collection?.StoreCollectionServices).map((entry, index) =>
-          buildServiceDisplayItem(entry?.StoreService, index + collectionIndex)
+          buildServiceDisplayItem(resolveCollectionService(entry), index + collectionIndex)
         );
         return buildCollectionCard(
           collection?.collection_name || `Service Collection ${collectionIndex + 1}`,
           services,
           "Service"
         );
-      });
+      })
+      .filter((collection) => collection.services.length);
 
     const ungroupedServices = sortByOrder(servicesNotInCollections).map((service, index) =>
       buildServiceDisplayItem(service, index + mappedCollections.length)
@@ -1687,7 +2515,8 @@ const CustomersHome = () => {
           products,
           "Product"
         );
-      });
+      })
+      .filter((collection) => collection.products.length);
 
     const ungroupedProducts = sortByOrder(productsNotInCollections).map((product, index) =>
       buildProductDisplayItem(product, index + mappedCollections.length)
@@ -1699,6 +2528,11 @@ const CustomersHome = () => {
 
     return mappedCollections;
   }, [productCollectionsPayload, productsNotInCollections]);
+
+  const allProductsCollection = useMemo(
+    () => buildAllProductsCollection(productCollections),
+    [productCollections]
+  );
 
   const updateScrollHint = React.useCallback(() => {
     const el = scrollRef.current;
@@ -1842,7 +2676,7 @@ const CustomersHome = () => {
         title: "Already in cart",
         text: "This product with the selected options is already in your cart.",
         confirmButtonText: "Ok",
-        confirmButtonColor: "#0273F9",
+        confirmButtonColor: customerThemeStyle["--customer-home-button"],
       });
       return;
     }
@@ -1859,17 +2693,46 @@ const CustomersHome = () => {
     navigate("/customer/checkout");
   };
 
+  useEffect(() => {
+    if (!resolvedTenantId || activeTab !== "shop" || !selectedProduct?.id) return;
+    dispatch(
+      getProductDetails({
+        tenant_id: resolvedTenantId,
+        token,
+        store: getStoreName,
+        productId: selectedProduct.id,
+      })
+    );
+  }, [dispatch, resolvedTenantId, activeTab, selectedProduct, token, getStoreName]);
+
+
+  useEffect(() => {
+    if (showProducts) {
+      setActiveTab((current) => (current === "shop" || !showServices ? "shop" : current));
+      return;
+    }
+    if (showServices) {
+      setActiveTab("services");
+    }
+  }, [showProducts, showServices]);
+
+  useEffect(() => {
+    if (resolvedTenantId) {
+      dispatch(updateBookingField({ field: "tenant_id", value: resolvedTenantId }));
+    }
+  }, [dispatch, resolvedTenantId]);
+
   // useEffect(() => {
   //   if (!resolvedTenantId || activeTab !== "shop" || !selectedProduct?.id) return;
   //   dispatch(
   //     getProductDetails({
-  //       tenant_id: resolvedTenantId,
+  //       tenant_id: '21',
   //       token,
-  //       store: getStoreName,
+  //       store: 'stride',
   //       productId: selectedProduct.id,
   //     })
   //   );
-  // }, [dispatch, resolvedTenantId, activeTab, selectedProduct, token, getStoreName]);
+  // }, [dispatch, '21', activeTab, selectedProduct, token, 'stride']);
 
 
   // useEffect(() => {
@@ -1884,38 +2747,9 @@ const CustomersHome = () => {
 
   // useEffect(() => {
   //   if (resolvedTenantId) {
-  //     dispatch(updateBookingField({ field: "tenant_id", value: resolvedTenantId }));
+  //     dispatch(updateBookingField({ field: "tenant_id", value: '21' }));
   //   }
-  // }, [dispatch, resolvedTenantId]);
-
-  useEffect(() => {
-    if (!resolvedTenantId || activeTab !== "shop" || !selectedProduct?.id) return;
-    dispatch(
-      getProductDetails({
-        tenant_id: '21',
-        token,
-        store: 'comfort',
-        productId: selectedProduct.id,
-      })
-    );
-  }, [dispatch, '21', activeTab, selectedProduct, token, 'comfort']);
-
-
-  useEffect(() => {
-    if (showServices) {
-      setActiveTab((current) => (current === "services" || !showProducts ? "services" : current));
-      return;
-    }
-    if (showProducts) {
-      setActiveTab("shop");
-    }
-  }, [showProducts, showServices]);
-
-  useEffect(() => {
-    if (resolvedTenantId) {
-      dispatch(updateBookingField({ field: "tenant_id", value: '21' }));
-    }
-  }, [dispatch, '21']);
+  // }, [dispatch, '21']);
 
   useEffect(() => {
     if (!bookingPayload?.callback_url) {
@@ -2096,7 +2930,7 @@ const CustomersHome = () => {
         title: "Booking confirmed",
         text: scheduleText,
         confirmButtonText: "Continue",
-        confirmButtonColor: "#0273F9"
+        confirmButtonColor: customerThemeStyle["--customer-home-button"]
       });
       resetBookingForm();
       setConfirmedBooking({
@@ -2117,7 +2951,7 @@ const CustomersHome = () => {
         title: "Booking failed",
         text: errorMessage,
         confirmButtonText: "Try Again",
-        confirmButtonColor: "#0273F9"
+        confirmButtonColor: customerThemeStyle["--customer-home-button"]
       });
     }
   };
@@ -2140,72 +2974,82 @@ const CustomersHome = () => {
   };
 
   return (
-    <div className={styles.customerHomePage}>
+    <div className={styles.customerHomePage} style={customerThemeStyle}>
+      {showStoreLoader ? (
+        <div className={styles.customerHomeLoader} role="status" aria-live="polite">
+          <img
+            className={styles.customerHomeLoaderLogo}
+            src={storeLogo}
+            alt=""
+            aria-hidden="true"
+          />
+          <div className={styles.customerHomeLoaderText}>
+            <span>Preparing store</span>
+            <small>Loading products and services</small>
+          </div>
+        </div>
+      ) : null}
       <div
         className={`${styles.customerHomeContent} ${
           isNestedView ? styles.customerHomeContentDetail : ""
-        } ${activeTab === "shop" && !isNestedView ? styles.customerHomeContentShop : ""}`}
+        } ${!isNestedView ? styles.customerHomeContentShop : ""}`}
       >
-        {!isNestedView && (
-          <section className={styles.customerHomeProfile}>
-            <img className={styles.customerHomeAvatar} src={storeLogo} alt={storeName} />
-            <h1 className={styles.customerHomeTitle}>{storeName}</h1>
-            <p className={styles.customerHomeSubtitle}>
-              {storeDescription ? (
-                storeDescription
-              ) : (
-                <>
-                  Welcome to my store! Check out my latest <br /> products and exclusive deals.
-                </>
-              )}
-            </p>
-          </section>
-        )}
+        {!isNestedView ? (
+          <div className={styles.customerHomeTopbar}>
+            <div className={`${styles.customerHomeShopBrand} ${styles.customerHomeTopBrand}`}>
+              <img className={styles.customerHomeShopBrandLogo} src={storeLogo} alt={storeName} />
+              <div className={styles.customerHomeShopBrandText}>
+                <span className={styles.customerHomeShopBrandName}>{storeName}</span>
+                <span className={styles.customerHomeShopBrandMeta}>{sectionTitle}</span>
+              </div>
+            </div>
 
-        {!isNestedView && showServices && showProducts && (
-          <div className={styles.customerHomeSegment} role="tablist" aria-label="Store sections">
-            <Button
-              className={`${styles.customerHomeSegmentButton} ${
-                activeTab === "services" ? styles.customerHomeSegmentActive : ""
-              }`}
-              type="button"
-              role="tab"
-              aria-selected={activeTab === "services"}
-              onClick={() => {
-                setActiveTab("services");
-                setSelectedProduct(null);
-                setSelectedProductCollection(null);
-                setSelectedServiceCollection(null);
-                setActiveService(null);
-                setBookingService(null);
-                resetBookingSchedule();
-              }}
-              unstyled
-            >
-              Services
-            </Button>
-            <Button
-              className={`${styles.customerHomeSegmentButton} ${
-                activeTab === "shop" ? styles.customerHomeSegmentActive : ""
-              }`}
-              type="button"
-              role="tab"
-              aria-selected={activeTab === "shop"}
-              onClick={() => {
-                setActiveTab("shop");
-                setSelectedProductCollection(null);
-                setSelectedServiceCollection(null);
-                setSelectedProduct(null);
-                setActiveService(null);
-                setBookingService(null);
-                resetBookingSchedule();
-              }}
-              unstyled
-            >
-              Shop
-            </Button>
+            {showServices && showProducts ? (
+              <div className={styles.customerHomeSegment} role="tablist" aria-label="Store sections">
+                <Button
+                  className={`${styles.customerHomeSegmentButton} ${
+                    activeTab === "shop" ? styles.customerHomeSegmentActive : ""
+                  }`}
+                  type="button"
+                  role="tab"
+                  aria-selected={activeTab === "shop"}
+                  onClick={() => {
+                    setSelectedProductCollection(null);
+                    setSelectedServiceCollection(null);
+                    setSelectedProduct(null);
+                    setActiveService(null);
+                    setBookingService(null);
+                    resetBookingSchedule();
+                    setActiveTab("shop");
+                  }}
+                  unstyled
+                >
+                  Shop
+                </Button>
+                <Button
+                  className={`${styles.customerHomeSegmentButton} ${
+                    activeTab === "services" ? styles.customerHomeSegmentActive : ""
+                  }`}
+                  type="button"
+                  role="tab"
+                  aria-selected={activeTab === "services"}
+                  onClick={() => {
+                    setSelectedProduct(null);
+                    setSelectedProductCollection(null);
+                    setSelectedServiceCollection(null);
+                    setActiveService(null);
+                    setBookingService(null);
+                    resetBookingSchedule();
+                    setActiveTab("services");
+                  }}
+                  unstyled
+                >
+                  Services
+                </Button>
+              </div>
+            ) : null}
           </div>
-        )}
+        ) : null}
 
         <div
           className={`${styles.customerHomeScrollable} ${
@@ -2242,41 +3086,19 @@ const CustomersHome = () => {
               />
             ) : (
             <>
-              <h2 className={styles.customerHomeSectionTitle}>{sectionTitle}</h2>
-
               {serviceCollections.length ? (
-                <div className={styles.customerHomeCollections}>
-                  {serviceCollections.map((collection) => (
-                    <Button
-                      className={styles.customerHomeCollectionBlock}
-                      key={collection.title}
-                      type="button"
-                      onClick={() => setSelectedServiceCollection(collection)}
-                      unstyled
-                    >
-                      <h3 className={styles.customerHomeCollectionSectionTitle}>
-                        {collection.title}
-                      </h3>
-                      <div className={styles.customerHomeCollectionCard}>
-                        <div className={styles.customerHomeCollectionImages}>
-                          {collection.previewImages.map((image, index) => (
-                            <div
-                              className={styles.customerHomeCollectionImageWrap}
-                              key={`${collection.title}-service-preview-${index}`}
-                            >
-                              <img
-                                className={styles.customerHomeCollectionImage}
-                                src={image}
-                                alt={collection.title}
-                              />
-                            </div>
-                          ))}
-                        </div>
-                        <span className={styles.customerHomeCollectionCount}>{collection.count}</span>
-                      </div>
-                    </Button>
-                  ))}
-                </div>
+                <ServiceCollectionsLanding
+                  collections={serviceCollections}
+                  sectionTitle={sectionTitle}
+                  onSelectCollection={(collection) => setSelectedServiceCollection(collection)}
+                  onSelectService={(service) => setActiveService(service)}
+                  onViewCart={handleViewCart}
+                  storeLogo={storeLogo}
+                  storeBannerImage={storeBannerImage}
+                  storeName={storeName}
+                  storeDescription={visibleStoreDescription}
+                  cartCount={cartCount}
+                />
               ) : (
                 <div className={styles.customerHomeEmptyState}>
                   <p className={styles.customerHomeEmptyTitle}>No services available</p>
@@ -2311,40 +3133,24 @@ const CustomersHome = () => {
             />
           ) : (
             <div className={styles.customerHomeCollections}>
-              <h2 className={styles.customerHomeSectionTitle}>{sectionTitle}</h2>
               {productCollections.length ? (
-                <div className={styles.customerHomeCollections}>
-                  {productCollections.map((collection) => (
-                    <Button
-                      className={styles.customerHomeCollectionBlock}
-                      key={collection.title}
-                      type="button"
-                      onClick={() => setSelectedProductCollection(collection)}
-                      unstyled
-                    >
-                      <h3 className={styles.customerHomeCollectionSectionTitle}>
-                        {collection.title}
-                      </h3>
-                      <div className={styles.customerHomeCollectionCard}>
-                        <div className={styles.customerHomeCollectionImages}>
-                          {collection.previewImages.map((image, index) => (
-                            <div
-                              className={styles.customerHomeCollectionImageWrap}
-                              key={`${collection.title}-product-preview-${index}`}
-                            >
-                              <img
-                                className={styles.customerHomeCollectionImage}
-                                src={image}
-                                alt={collection.title}
-                              />
-                            </div>
-                          ))}
-                        </div>
-                        <span className={styles.customerHomeCollectionCount}>{collection.count}</span>
-                      </div>
-                    </Button>
-                  ))}
-                </div>
+                <ProductCollectionsLanding
+                  collections={productCollections}
+                  sectionTitle={sectionTitle}
+                  onSelectCollection={(collection) => setSelectedProductCollection(collection)}
+                  onSelectProduct={(product) => setSelectedProduct(product)}
+                  onViewCart={handleViewCart}
+                  onViewAllProducts={
+                    allProductsCollection
+                      ? () => setSelectedProductCollection(allProductsCollection)
+                      : null
+                  }
+                  storeLogo={storeLogo}
+                  storeBannerImage={storeBannerImage}
+                  storeName={storeName}
+                  storeDescription={visibleStoreDescription}
+                  cartCount={cartCount}
+                />
               ) : (
                 <div className={styles.customerHomeEmptyState}>
                   <p className={styles.customerHomeEmptyTitle}>No products available</p>
@@ -2355,6 +3161,36 @@ const CustomersHome = () => {
               )}
             </div>
           )}
+          {!isDetailView ? (
+            <CustomerStoreFooter
+              storeName={storeName}
+              storeDescription={storeDescription}
+              socialLinks={normalizedSocialLinks}
+              addresses={footerAddresses}
+              hours={footerHours}
+              showProducts={showProducts}
+              showServices={showServices}
+              onShopAll={() => {
+                setActiveTab("shop");
+                setSelectedProduct(null);
+                setSelectedProductCollection(null);
+                setSelectedServiceCollection(null);
+                setActiveService(null);
+                setBookingService(null);
+                resetBookingSchedule();
+              }}
+              onServices={() => {
+                setActiveTab("services");
+                setSelectedProduct(null);
+                setSelectedProductCollection(null);
+                setSelectedServiceCollection(null);
+                setActiveService(null);
+                setBookingService(null);
+                resetBookingSchedule();
+              }}
+              onViewCart={handleViewCart}
+            />
+          ) : null}
           {!isNestedView && showScrollHint && (
             <div className={styles.customerHomeScrollHint} aria-hidden="true">
               <span className={styles.customerHomeScrollHintArrow}>↓</span>
@@ -2795,21 +3631,6 @@ const CustomersHome = () => {
           />
         )}
 
-        {!isDetailView && (
-          <footer className={styles.customerHomeFooter}>
-            <div className={styles.customerHomeJoinCta}>
-              <span className={styles.customerHomeJoinIcon} aria-hidden="true">
-                <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
-                  <path d="M4 20h16v2H4z" />
-                  <path d="M6 10h3v8H6z" />
-                  <path d="M11 6h3v12h-3z" />
-                  <path d="M16 3h3v15h-3z" />
-                </svg>
-              </span>
-              <span>Join awesomestore on Mycroshop</span>
-            </div>
-          </footer>
-        )}
       </div>
     </div>
   );

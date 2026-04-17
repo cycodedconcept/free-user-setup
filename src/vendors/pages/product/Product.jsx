@@ -23,6 +23,7 @@ import Swal from "sweetalert2";
 import { Ac } from "../../../assets";
 import Button from "../../../components/ui/Button";
 import Pagination from "../../../components/Pagination";
+import ProductFormDesigner from "../../components/ProductFormDesigner";
 import {
   createProduct,
   deleteProductFromStore,
@@ -35,6 +36,7 @@ import styles from "../../../styles.module.css";
 
 const PRODUCTS_PER_PAGE = 20;
 const DEFAULT_CATEGORIES = ["Electronics", "Clothing", "Home & Garden", "Sports"];
+const shouldRenderLegacyProductModal = false;
 
 const readStoredProducts = () => {
   if (typeof window === "undefined") return [];
@@ -1491,6 +1493,50 @@ const Product = () => {
       )}
 
       {isCreateModalOpen && (
+        <ProductFormDesigner
+          title={isEditMode ? "Edit Product" : "Add New Product"}
+          isEditMode={isEditMode}
+          isSubmitting={loading}
+          loadingLabel={isEditMode ? "Updating..." : "Creating..."}
+          submitLabel={isEditMode ? "Update Product" : "Publish Product"}
+          productForm={productForm}
+          onSubmit={handleCreateProduct}
+          onClose={closeCreateProductModal}
+          onProductNameChange={handleProductNameChange}
+          onProductFormChange={handleProductFormChange}
+          selectedCategory={selectedCategory}
+          categoryInput={categoryInput}
+          categoryOptions={availableCategories}
+          showCategoryDropdown={showCategoryDropdown}
+          onCategoryInputChange={handleCategoryInputChange}
+          onCategorySelect={handleCategorySelect}
+          onCategoryFocus={handleCategoryInputFocus}
+          onCategoryBlur={handleCategoryInputBlur}
+          imageInputRef={profileInputRef}
+          optionImageRef={optionImageRef}
+          productImageSrc={im.profile}
+          onProductImageClick={() => triggerInput(profileInputRef)}
+          onProductImageChange={(event) => handleImageChange(event, "profile")}
+          variationsEnabled
+          showVariationSection={showVariationSection}
+          onToggleVariationSection={toggleVariationSection}
+          variations={variations}
+          currentVariation={currentVariation}
+          currentOption={currentOption}
+          onVariationNameChange={handleVariationNameChange}
+          onVariationTypeChange={handleVariationTypeChange}
+          onOptionValueChange={handleOptionValueChange}
+          onOptionPriceChange={handleOptionPriceChange}
+          onOptionStockChange={handleOptionStockChange}
+          onOptionImageChange={handleOptionImageChange}
+          onAddOption={addOption}
+          onRemoveOption={removeOption}
+          onAddVariation={addVariation}
+          onRemoveVariation={removeVariation}
+        />
+      )}
+
+      {isCreateModalOpen && shouldRenderLegacyProductModal && (
         <div
           className={styles["modal-overlay"]}
           onClick={closeCreateProductModal}

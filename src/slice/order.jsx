@@ -51,6 +51,10 @@ const normalizeOrdersResponse = (payload) => {
   const source =
     responseData?.orders ||
     responseData?.online_store_orders ||
+    responseData?.service_bookings ||
+    responseData?.serviceBookings ||
+    responseData?.bookings ||
+    responseData?.service_booking_orders ||
     responseData?.items ||
     responseData?.results ||
     Array.isArray(responseData?.data) ||
@@ -59,13 +63,26 @@ const normalizeOrdersResponse = (payload) => {
       : responseData?.data && typeof responseData.data === "object"
         ? responseData.data
         : responseData;
-  const orders =
+  const orderCandidate =
     source?.orders ??
     source?.online_store_orders ??
+    source?.service_bookings ??
+    source?.serviceBookings ??
+    source?.bookings ??
+    source?.service_booking_orders ??
     source?.items ??
     source?.results ??
     source?.data ??
     [];
+  const orders =
+    Array.isArray(orderCandidate)
+      ? orderCandidate
+      : orderCandidate?.data ??
+        orderCandidate?.items ??
+        orderCandidate?.results ??
+        orderCandidate?.service_bookings ??
+        orderCandidate?.bookings ??
+        [];
   const pagination = source?.pagination ?? responseData?.pagination ?? {};
 
   return {

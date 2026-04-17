@@ -5,6 +5,11 @@ import Swal from "sweetalert2";
 import { checkoutProduct, getOnlineEcommerceStore } from "../../slice/customerFacingSlice";
 import styles from "../../styles.module.css";
 import Button from "../../components/ui/Button";
+import {
+  buildCustomerThemeStyle,
+  readStoredCustomerTheme,
+  writeStoredCustomerTheme,
+} from "../customerTheme";
 
 const CART_KEY = "mycroshop.cart";
 const SHIPPING_FEE = 8;
@@ -120,7 +125,12 @@ const Checkout = () => {
   const storedStoreSlug = localStorage.getItem("storeView");
   const { content, checkoutLoading } = useSelector((state) => state.customer);
   const storeData = content?.data?.store;
+  const [storedTheme, setStoredTheme] = useState(() => readStoredCustomerTheme());
   const storeName = storeData?.store_name || "Awesome Store";
+  const customerThemeStyle = useMemo(
+    () => buildCustomerThemeStyle(storeData?.selected_theme || storedTheme),
+    [storeData?.selected_theme, storedTheme]
+  );
   const resolvedStoreSlug =
     storedStoreSlug || storeData?.store_slug || storeData?.slug || storeData?.store_name || "";
   const onlineStoreId =
@@ -154,6 +164,12 @@ const Checkout = () => {
       dispatch(getOnlineEcommerceStore({ token, tenant_id: tenantId, store: resolvedStoreSlug }));
     }
   }, [dispatch, storeData, token, tenantId, resolvedStoreSlug]);
+
+  useEffect(() => {
+    if (!storeData?.selected_theme) return;
+    writeStoredCustomerTheme(storeData.selected_theme);
+    setStoredTheme(storeData.selected_theme);
+  }, [storeData?.selected_theme]);
   const feesTotal = cartCount ? SHIPPING_FEE + DUTIES_FEE : 0;
   const orderTotal = cartSubtotal + feesTotal;
 
@@ -216,7 +232,7 @@ const Checkout = () => {
         title: "Cart is empty",
         text: "Please add at least one item to your cart before checking out.",
         confirmButtonText: "Ok",
-        confirmButtonColor: "#0273F9",
+        confirmButtonColor: customerThemeStyle["--customer-home-button"],
       });
       return;
     }
@@ -226,7 +242,7 @@ const Checkout = () => {
         title: "Store details missing",
         text: "We couldn't resolve the store information needed to place your order.",
         confirmButtonText: "Ok",
-        confirmButtonColor: "#0273F9",
+        confirmButtonColor: customerThemeStyle["--customer-home-button"],
       });
       return;
     }
@@ -236,7 +252,7 @@ const Checkout = () => {
         title: "Incomplete details",
         text: "Please complete your billing details before placing the order.",
         confirmButtonText: "Ok",
-        confirmButtonColor: "#0273F9",
+        confirmButtonColor: customerThemeStyle["--customer-home-button"],
       });
       return;
     }
@@ -278,7 +294,7 @@ const Checkout = () => {
         title: "Order placed",
         text: "Your order has been created successfully.",
         confirmButtonText: "Continue",
-        confirmButtonColor: "#0273F9",
+        confirmButtonColor: customerThemeStyle["--customer-home-button"],
       });
       navigate("/customer/order", {
         state: {
@@ -298,12 +314,12 @@ const Checkout = () => {
       title: "Checkout failed",
       text: errorMessage,
       confirmButtonText: "Try Again",
-      confirmButtonColor: "#0273F9",
+      confirmButtonColor: customerThemeStyle["--customer-home-button"],
     });
   };
 
   return (
-    <div className={styles.customerCheckoutPage}>
+    <div className={styles.customerCheckoutPage} style={customerThemeStyle}>
       <div className={styles.customerCheckoutContent}>
         <header className={styles.customerCheckoutHeader}>
           <Button

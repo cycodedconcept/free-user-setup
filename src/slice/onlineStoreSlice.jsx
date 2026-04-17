@@ -1053,6 +1053,29 @@ export const getStorePreview = createAsyncThunk(
     }
 )
 
+export const deleteBannerImage = createAsyncThunk(
+    'store/deleteBannerImage',
+    async ({token, storeId, image_type}, {rejectWithValue}) => {
+        try {
+            const endpoint = `${API_URL}/stores/online/${storeId}/image`;
+            const response = await axios.delete(endpoint, {
+                data: { image_type },
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            })
+
+            return response.data;
+        } catch (error) {
+            if (error.response && error.response.data) {
+                return rejectWithValue(error.response.data);
+            }
+            return rejectWithValue(error.message || "Something went wrong");
+        }
+    }
+);
+
+
 const storeSlice = createSlice({
     name: 'store',
     initialState,
@@ -1613,7 +1636,20 @@ const storeSlice = createSlice({
             state.success = false;
             state.error = action.payload;
         })
-
+        .addCase(deleteBannerImage.pending, (state) => {
+            state.loading = true;
+            state.success = false;
+            state.error = null;
+        })
+        .addCase(deleteBannerImage.fulfilled, (state, action) => {
+            state.loading = false;
+            state.success = action.payload;
+        })
+        .addCase(deleteBannerImage.rejected, (state, action) => {
+            state.loading = false;
+            state.success = false;
+            state.error = action.payload;
+        })
     }
 })
 

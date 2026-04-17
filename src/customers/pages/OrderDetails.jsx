@@ -5,6 +5,7 @@ import Swal from "sweetalert2";
 import { proceedToPayment } from "../../slice/customerFacingSlice";
 import styles from "../../styles.module.css";
 import Button from "../../components/ui/Button";
+import { buildCustomerThemeStyle, readStoredCustomerTheme } from "../customerTheme";
 
 const PAYMENT_CONTEXT_KEY = "mycroshop.paymentContext";
 
@@ -117,6 +118,10 @@ const OrderDetails = () => {
 
   const orderResponse = location.state?.orderResponse ?? checkoutResponse;
   const storeName = location.state?.storeName ?? "Mycroshop";
+  const customerThemeStyle = useMemo(
+    () => buildCustomerThemeStyle(readStoredCustomerTheme()),
+    []
+  );
 
   const {
     order,
@@ -200,7 +205,7 @@ const OrderDetails = () => {
         title: "Payment unavailable",
         text: "We couldn't prepare this order for payment.",
         confirmButtonText: "Ok",
-        confirmButtonColor: "#0273F9",
+        confirmButtonColor: customerThemeStyle["--customer-home-button"],
       });
       return;
     }
@@ -246,13 +251,13 @@ const OrderDetails = () => {
       title: "Payment failed",
       text: errorMessage,
       confirmButtonText: "Try Again",
-      confirmButtonColor: "#0273F9",
+      confirmButtonColor: customerThemeStyle["--customer-home-button"],
     });
   };
 
   if (!orderResponse || !order) {
     return (
-      <div className={styles.customerOrderPage}>
+      <div className={styles.customerOrderPage} style={customerThemeStyle}>
         <div className={styles.customerOrderCard}>
           <p className={styles.customerOrderEyebrow}>Order</p>
           <h1 className={styles.customerOrderTitle}>No order details found</h1>
@@ -275,7 +280,7 @@ const OrderDetails = () => {
   }
 
   return (
-    <div className={styles.customerOrderPage}>
+    <div className={styles.customerOrderPage} style={customerThemeStyle}>
       <div className={styles.customerOrderCard}>
         <div className={styles.customerOrderHeader}>
           <div>

@@ -5,9 +5,12 @@ import { faTimes, faPen, faTrashCan, faThumbtack, faCaretDown, faPlus } from '@f
 import { useDispatch, useSelector } from 'react-redux';
 import { createProduct, getAllProductForCollection, getProductDetails, updateProduct, deleteProductFromStore, publishProductToStore, unpublishProductToStore } from '../../../slice/onlineStoreSlice';
 import { getImageSrc } from '../../../utils/getImageSrc';
+import ProductFormDesigner from '../../components/ProductFormDesigner';
 import styles from "../../../styles.module.css";
 import Swal from 'sweetalert2';
 import Pagination from '../../../components/Pagination'
+
+const shouldRenderLegacyProductModal = false;
 
 const normalizeOption = (option = {}) => ({
   value: option?.value ?? option?.option_value ?? '',
@@ -1610,7 +1613,54 @@ const Product = ({setProCol}) => {
         </>
         )}
 
-        {renderProductModal()}
+        {(mode || editMode) && (
+          <ProductFormDesigner
+            title={editMode ? 'Edit Product' : 'Add New Product'}
+            isEditMode={editMode}
+            isSubmitting={loading}
+            loadingLabel={editMode ? 'Updating...' : 'Saving...'}
+            submitLabel={editMode ? 'Update Product' : 'Publish Product'}
+            productForm={productForm}
+            onSubmit={addProductToStore}
+            onClose={hideModal}
+            onProductNameChange={handleProductNameChange}
+            onProductFormChange={handleProductFormChange}
+            selectedCategory={selectedCategory}
+            categoryInput={categoryInput}
+            categoryOptions={categories}
+            showCategoryDropdown={showCategoryDropdown}
+            onCategoryInputChange={handleCategoryInputChange}
+            onCategorySelect={handleCategorySelect}
+            onCategoryFocus={handleCategoryInputFocus}
+            onCategoryBlur={handleCategoryInputBlur}
+            imageInputRef={profileInputRef}
+            optionImageRef={optionImageRef}
+            productImageSrc={im.profile ? getImageSrc(im.profile) : ''}
+            onProductImageClick={() => triggerInput(profileInputRef)}
+            onProductImageChange={(event) => handleImageChange(event, 'profile')}
+            variationsEnabled
+            showVariationSection={showVariationSection}
+            onToggleVariationSection={toggleVariationSection}
+            variations={normalizedVariations}
+            currentVariation={currentVariation}
+            currentOption={currentOption}
+            onVariationNameChange={handleVariationNameChange}
+            onVariationTypeChange={handleVariationTypeChange}
+            onVariationRequiredChange={handleVariationRequiredChange}
+            onOptionValueChange={handleOptionValueChange}
+            onOptionPriceChange={handleOptionPriceChange}
+            onOptionStockChange={handleOptionStockChange}
+            onOptionImageChange={handleOptionImageChange}
+            onAddOption={addOption}
+            onRemoveOption={removeOption}
+            onAddVariation={addVariation}
+            onRemoveVariation={removeVariation}
+            canToggleVisibility
+            canMarkFeatured
+          />
+        )}
+
+        {shouldRenderLegacyProductModal && renderProductModal()}
 
       <style jsx>{`
         .card-section:hover .product-image {

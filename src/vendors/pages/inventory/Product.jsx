@@ -20,12 +20,14 @@ import { useDispatch, useSelector } from "react-redux";
 import Swal from "sweetalert2";
 import Button from "../../../components/ui/Button";
 import Pagination from "../../../components/Pagination";
+import ProductFormDesigner from "../../components/ProductFormDesigner";
 import { createProduct } from "../../../slice/onlineStoreSlice";
 import { getInventoryCategories, getInventoryProducts } from "../../../slice/inventory";
 import styles from "../../../styles.module.css";
 
 const INVENTORY_PAGE_LIMIT = 50;
 const DEFAULT_FALLBACK_CATEGORIES = ["Electronics", "Clothing", "Home & Garden", "Sports"];
+const shouldRenderLegacyProductModal = false;
 
 const formatCurrency = (amount) =>
   new Intl.NumberFormat("en-NG", {
@@ -232,10 +234,26 @@ const Product = () => {
     price: "",
     stock: "",
     image_url: "",
+    is_published: false,
+    is_featured: false,
   });
   const [productImage, setProductImage] = useState(null);
+  const [variations, setVariations] = useState([]);
+  const [currentVariation, setCurrentVariation] = useState({
+    variation_name: "",
+    variation_type: "",
+    options: [],
+  });
+  const [currentOption, setCurrentOption] = useState({
+    value: "",
+    price: "",
+    stock: "",
+    image_url: "",
+  });
+  const [showVariationSection, setShowVariationSection] = useState(false);
   const deferredSearchQuery = useDeferredValue(searchQuery.trim());
   const profileInputRef = useRef(null);
+  const optionImageRef = useRef(null);
 
   const {
     loading,
@@ -442,11 +460,17 @@ const Product = () => {
       price: "",
       stock: "",
       image_url: "",
+      is_published: false,
+      is_featured: false,
     });
     setProductImage(null);
     setCategoryInput("");
     setSelectedCategory("");
     setShowCategoryDropdown(false);
+    setVariations([]);
+    setCurrentVariation({ variation_name: "", variation_type: "", options: [] });
+    setCurrentOption({ value: "", price: "", stock: "", image_url: "" });
+    setShowVariationSection(false);
   };
 
   const openCreateProductModal = () => {
@@ -475,10 +499,10 @@ const Product = () => {
   };
 
   const handleProductFormChange = (event) => {
-    const { name, value } = event.target;
+    const { name, value, type, checked } = event.target;
     setProductForm((previousForm) => ({
       ...previousForm,
-      [name]: value,
+      [name]: type === "checkbox" ? checked : value,
     }));
   };
 
@@ -518,6 +542,123 @@ const Product = () => {
     reader.readAsDataURL(file);
   };
 
+  const toggleVariationSection = () => {
+    if (!showVariationSection) {
+      setProductForm((previousForm) => ({
+        ...previousForm,
+        price: "",
+        stock: "",
+      }));
+    } else {
+      setCurrentVariation({ variation_name: "", variation_type: "", options: [] });
+      setCurrentOption({ value: "", price: "", stock: "", image_url: "" });
+    }
+
+    setShowVariationSection((previousState) => !previousState);
+  };
+
+  const handleVariationNameChange = (event) => {
+    setCurrentVariation((previousVariation) => ({
+      ...previousVariation,
+      variation_name: event.target.value,
+    }));
+  };
+
+  const handleVariationTypeChange = (event) => {
+    const variationType = event.target.value;
+    setCurrentVariation((previousVariation) => ({
+      ...previousVariation,
+      variation_type: variationType,
+      variation_name:
+        previousVariation.variation_name || (variationType === "custom" ? "" : variationType),
+    }));
+  };
+
+  const handleOptionValueChange = (event) => {
+    setCurrentOption((previousOption) => ({
+      ...previousOption,
+      value: event.target.value,
+    }));
+  };
+
+  const handleOptionPriceChange = (event) => {
+    setCurrentOption((previousOption) => ({
+      ...previousOption,
+      price: event.target.value === "" ? "" : Number(event.target.value),
+    }));
+  };
+
+  const handleOptionStockChange = (event) => {
+    setCurrentOption((previousOption) => ({
+      ...previousOption,
+      stock: event.target.value === "" ? "" : Number(event.target.value),
+    }));
+  };
+
+  const handleOptionImageChange = (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setCurrentOption((previousOption) => ({
+        ...previousOption,
+        image_url: reader.result,
+      }));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const addOption = () => {
+    if (!currentOption.value || currentOption.price === "" || currentOption.stock === "") {
+      Swal.fire({
+        icon: "info",
+        title: "Variation option",
+        text: "Fill in option value, price, and stock before adding the option.",
+        confirmButtonColor: "#0273F9",
+      });
+      return;
+    }
+
+    setCurrentVariation((previousVariation) => ({
+      ...previousVariation,
+      options: [...previousVariation.options, { ...currentOption }],
+    }));
+    setCurrentOption({ value: "", price: "", stock: "", image_url: "" });
+  };
+
+  const removeOption = (index) => {
+    setCurrentVariation((previousVariation) => ({
+      ...previousVariation,
+      options: previousVariation.options.filter((_, optionIndex) => optionIndex !== index),
+    }));
+  };
+
+  const addVariation = () => {
+    if (
+      !currentVariation.variation_name ||
+      !currentVariation.variation_type ||
+      currentVariation.options.length === 0
+    ) {
+      Swal.fire({
+        icon: "info",
+        title: "Variation",
+        text: "Add a variation type, display label, and at least one option value first.",
+        confirmButtonColor: "#0273F9",
+      });
+      return;
+    }
+
+    setVariations((previousVariations) => [...previousVariations, currentVariation]);
+    setCurrentVariation({ variation_name: "", variation_type: "", options: [] });
+  };
+
+  const removeVariation = (index) => {
+    setVariations((previousVariations) =>
+      previousVariations.filter((_, variationIndex) => variationIndex !== index)
+    );
+  };
+
   const handleCreateProduct = async (event) => {
     event.preventDefault();
 
@@ -526,19 +667,22 @@ const Product = () => {
     }
 
     const trimmedCategory = selectedCategory.trim() || categoryInput.trim();
+    const hasVariations = variations.length > 0;
+    const priceValid = hasVariations || productForm.price !== "";
+    const stockValid = hasVariations || productForm.stock !== "";
 
     if (
       !productForm.name.trim() ||
       !productForm.sku.trim() ||
       !productForm.description.trim() ||
       !trimmedCategory ||
-      productForm.price === "" ||
-      productForm.stock === ""
+      !priceValid ||
+      !stockValid
     ) {
       Swal.fire({
         icon: "warning",
         title: "Missing Information",
-        text: "Fill in product name, description, category, price, and stock.",
+        text: "Fill in product name, description, category, price, and stock. If using variations, add the variation options before publishing.",
         confirmButtonColor: "#0273F9",
       });
       return;
@@ -561,6 +705,8 @@ const Product = () => {
     formData.append("price", productForm.price);
     formData.append("stock", productForm.stock);
     formData.append("category", trimmedCategory);
+    formData.append("is_published", productForm.is_published ? 1 : 0);
+    formData.append("is_featured", productForm.is_featured ? 1 : 0);
 
     if (productImage?.file) {
       formData.append("product_image", productImage.file);
@@ -568,6 +714,10 @@ const Product = () => {
 
     if (productForm.image_url.trim()) {
       formData.append("image_url", productForm.image_url.trim());
+    }
+
+    if (variations.length > 0) {
+      formData.append("variations", JSON.stringify(variations));
     }
 
     try {
@@ -1566,6 +1716,52 @@ const Product = () => {
       )}
 
       {isCreateModalOpen && (
+        <ProductFormDesigner
+          title="Add New Product"
+          isSubmitting={storeLoading}
+          loadingLabel="Creating..."
+          submitLabel="Publish Product"
+          productForm={productForm}
+          onSubmit={handleCreateProduct}
+          onClose={closeCreateProductModal}
+          onProductNameChange={handleProductNameChange}
+          onProductFormChange={handleProductFormChange}
+          selectedCategory={selectedCategory}
+          categoryInput={categoryInput}
+          categoryOptions={categoryOptions}
+          categoriesLoading={categoriesLoading}
+          showCategoryDropdown={showCategoryDropdown}
+          onCategoryInputChange={handleCategoryInputChange}
+          onCategorySelect={handleCategorySelect}
+          onCategoryFocus={() => setShowCategoryDropdown(true)}
+          onCategoryBlur={handleCategoryInputBlur}
+          imageInputRef={profileInputRef}
+          optionImageRef={optionImageRef}
+          productImageSrc={productImage?.preview || ""}
+          onProductImageClick={() => triggerInput(profileInputRef)}
+          onProductImageChange={handleImageChange}
+          variationsEnabled
+          showVariationSection={showVariationSection}
+          onToggleVariationSection={toggleVariationSection}
+          variations={variations}
+          currentVariation={currentVariation}
+          currentOption={currentOption}
+          onVariationNameChange={handleVariationNameChange}
+          onVariationTypeChange={handleVariationTypeChange}
+          onOptionValueChange={handleOptionValueChange}
+          onOptionPriceChange={handleOptionPriceChange}
+          onOptionStockChange={handleOptionStockChange}
+          onOptionImageChange={handleOptionImageChange}
+          onAddOption={addOption}
+          onRemoveOption={removeOption}
+          onAddVariation={addVariation}
+          onRemoveVariation={removeVariation}
+          canToggleVisibility
+          canMarkFeatured
+        />
+      )}
+
+      {isCreateModalOpen && shouldRenderLegacyProductModal && (
         <div
           className={styles["modal-overlay"]}
           onClick={closeCreateProductModal}

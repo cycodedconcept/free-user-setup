@@ -65,8 +65,9 @@ const Login = () => {
           text: success.message || "Redirecting to Dashboard...",
           confirmButtonColor: "#0273F9",
         }).then(() => {
+          localStorage.setItem("mycroshop.vendorActiveTab", "dashboard");
           dispatch(resetStatus());
-          navigate("/vendor/store-set-up");
+          navigate("/vendor/store");
         });
       };
 

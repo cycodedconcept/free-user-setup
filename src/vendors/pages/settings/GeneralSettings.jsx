@@ -3,10 +3,12 @@ import Button from "../../../components/ui/Button";
 import styles from "../../../styles.module.css";
 import { useDispatch, useSelector } from 'react-redux';
 import { addPaymentGateway } from "../../../slice/paymentSlice";
-import { getMyOnlineStore } from "../../../slice/onlineStoreSlice";
+import { deleteBannerImage, getMyOnlineStore, resetStatus } from "../../../slice/onlineStoreSlice";
 import { Ac } from "../../../assets";
 import Swal from 'sweetalert2';
 import useAppTheme from "../../../hooks/useAppTheme";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faTrashCan } from "@fortawesome/free-solid-svg-icons";
 
 const resolveStoreInfo = (myStore) =>
   myStore?.onlineStore ||
@@ -17,12 +19,20 @@ const resolveStoreInfo = (myStore) =>
 const GeneralSettings = () => {
   const dispatch = useDispatch();
   let token = localStorage.getItem("token");
+  const getId = localStorage.getItem("itemId");
   const { loading } = useSelector((state) => state.payment);
   const myStore = useSelector((state) => state.store?.myStore);
   const storeInfo = resolveStoreInfo(myStore);
+  const resolvedStoreId =
+    getId ||
+    storeInfo?.id ||
+    storeInfo?.store_id ||
+    storeInfo?.online_store_id ||
+    null;
   const [activeSection, setActiveSection] = useState("general");
   const { theme: appearanceTheme, isDarkTheme, setTheme: setAppearanceTheme } = useAppTheme();
   const [paymentGateway, setPaymentGateway] = useState("paystack");
+  const [deletingBanner, setDeletingBanner] = useState(false);
   const [paymentFields, setPaymentFields] = useState({
     publishKey: "pk_live_51N7Vel****",
     secretKey: "************",
@@ -90,7 +100,11 @@ const GeneralSettings = () => {
     });
     setImagePreview({
       logo: storeInfo?.profile_logo_url || "",
-      banner: storeInfo?.banner_url || storeInfo?.cover_image_url || "",
+      banner:
+        storeInfo?.banner_image_url ||
+        storeInfo?.banner_url ||
+        storeInfo?.cover_image_url ||
+        "",
     });
   }, [
     storeInfo?.address,
@@ -100,6 +114,7 @@ const GeneralSettings = () => {
     storeInfo?.phone,
     storeInfo?.phone_number,
     storeInfo?.profile_logo_url,
+    storeInfo?.banner_image_url,
     storeInfo?.banner_url,
     storeInfo?.store_address,
     storeInfo?.store_description,
@@ -140,6 +155,99 @@ const GeneralSettings = () => {
       }));
     };
     reader.readAsDataURL(file);
+  };
+
+  const getActionErrorMessage = (actionError, fallbackMessage) => {
+    if (actionError && typeof actionError === "object") {
+      if (actionError.message) {
+        return actionError.message;
+      }
+
+      if (actionError.error) {
+        return actionError.error;
+      }
+    }
+
+    if (typeof actionError === "string") {
+      return actionError;
+    }
+
+    return fallbackMessage;
+  };
+
+  const handleDeleteBannerImage = async () => {
+    if (deletingBanner || !imagePreview.banner) {
+      return;
+    }
+
+    if (!token || !resolvedStoreId) {
+      await Swal.fire({
+        icon: "error",
+        title: "Unable to Delete Banner",
+        text: "Store details are still loading. Please try again in a moment.",
+        confirmButtonColor: "#0273F9",
+      });
+      return;
+    }
+
+    const result = await Swal.fire({
+      title: "Delete Banner Image?",
+      text: "This will remove the banner from your online store appearance.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Yes, Delete",
+      cancelButtonText: "Cancel",
+      confirmButtonColor: "#DC2626",
+      cancelButtonColor: "#78716C",
+    });
+
+    if (!result.isConfirmed) {
+      return;
+    }
+
+    setDeletingBanner(true);
+
+    Swal.fire({
+      title: "Deleting Banner...",
+      text: "Please wait while we remove the image.",
+      allowOutsideClick: false,
+      didOpen: () => {
+        Swal.showLoading();
+      },
+    });
+
+    try {
+      const response = await dispatch(
+        deleteBannerImage({
+          token,
+          storeId: resolvedStoreId,
+          image_type: "banner",
+        })
+      ).unwrap();
+
+      setImagePreview((prev) => ({
+        ...prev,
+        banner: "",
+      }));
+      dispatch(getMyOnlineStore({ token, id: resolvedStoreId }));
+
+      await Swal.fire({
+        icon: "success",
+        title: "Banner Deleted",
+        text: response?.message || "Banner image deleted successfully.",
+        confirmButtonColor: "#0273F9",
+      });
+    } catch (deleteError) {
+      await Swal.fire({
+        icon: "error",
+        title: "Delete Failed",
+        text: getActionErrorMessage(deleteError, "Failed to delete banner image."),
+        confirmButtonColor: "#0273F9",
+      });
+    } finally {
+      setDeletingBanner(false);
+      dispatch(resetStatus());
+    }
   };
 
   const handleToggleShippingMethod = (methodId) => {
@@ -361,7 +469,19 @@ const GeneralSettings = () => {
                   <div className={styles.vendorSettingsUploadInner}>
                     <div className={`${styles.vendorSettingsUploadPreview} ${styles.vendorSettingsUploadPreviewBanner}`}>
                       {imagePreview.banner ? (
-                        <img src={imagePreview.banner} alt="Store banner preview" />
+                        <>
+                          <img src={imagePreview.banner} alt="Store banner preview" />
+                          <button
+                            type="button"
+                            className={styles.vendorSettingsBannerDeleteButton}
+                            aria-label="Delete banner image"
+                            title="Delete banner image"
+                            disabled={deletingBanner}
+                            onClick={handleDeleteBannerImage}
+                          >
+                            <FontAwesomeIcon icon={faTrashCan} />
+                          </button>
+                        </>
                       ) : (
                         <div className={styles.vendorSettingsUploadPlaceholderBanner} />
                       )}

@@ -13,7 +13,7 @@ import { Smc } from '../../../assets';
 
 
 
-const Service = ({setPer, setVog}) => {
+const Service = ({setPer, setVog, onServiceCollectionChange}) => {
   const dispatch = useDispatch();
   let token = localStorage.getItem("token");
   let getId = localStorage.getItem("itemId");
@@ -143,6 +143,38 @@ const Service = ({setPer, setVog}) => {
       getImageUrl(serviceDetails.image) ||
       Smc
     );
+  };
+
+  const getCollectionServiceId = (service) => {
+    const serviceId =
+      service?.StoreService?.id ??
+      service?.Service?.id ??
+      service?.service?.id ??
+      service?.service_id ??
+      service?.serviceId ??
+      service?.store_service_id ??
+      service?.storeServiceId ??
+      service?.id;
+
+    return serviceId === undefined || serviceId === null ? '' : String(serviceId);
+  };
+
+  const getServiceOptionsForCollection = () => {
+    const serviceOptions = new Map();
+    const addServiceOption = (service) => {
+      const serviceId = getCollectionServiceId(service);
+
+      if (!serviceId) {
+        return;
+      }
+
+      serviceOptions.set(serviceId, service);
+    };
+
+    (collectionServices[selectedCollectionId] || []).forEach(addServiceOption);
+    serviceForCollection.forEach(addServiceOption);
+
+    return Array.from(serviceOptions.values());
   };
 
   const formatServicePrice = (service) => {
@@ -616,6 +648,7 @@ useEffect(() => {
     setAvailabilitySlots({})
     setCurrentSelectedDay('Mon')
     setCurrentSelectedTime('')
+    setCurrentSelectedMaxSlots('1')
     setAstc(false);
     setUpSer(false)
     setDitem({})
@@ -627,6 +660,7 @@ useEffect(() => {
     const [availabilitySlots, setAvailabilitySlots] = useState({});
     const [currentSelectedDay, setCurrentSelectedDay] = useState('Mon');
     const [currentSelectedTime, setCurrentSelectedTime] = useState('');
+    const [currentSelectedMaxSlots, setCurrentSelectedMaxSlots] = useState('1');
 
     const dayMapping = {
         'Mon': 'monday',
@@ -636,6 +670,75 @@ useEffect(() => {
         'Fri': 'friday',
         'Sat': 'saturday',
         'Sun': 'sunday'
+    };
+
+    const normalizeDayAvailability = (data) => {
+        const timeSlots = Array.isArray(data?.time_slots) ? data.time_slots : [];
+        const maxSlotsMap = data?.max_slots && typeof data.max_slots === 'object' ? data.max_slots : {};
+
+        const normalizedSlots = timeSlots
+            .map((slot) => {
+                if (typeof slot === 'string') {
+                    return slot;
+                }
+
+                return slot?.time || slot?.slot || slot?.start_time || '';
+            })
+            .filter(Boolean);
+
+        const legacySlotMax = timeSlots.find((slot) => typeof slot === 'object')
+            ?.max_bookings_per_slot ||
+            timeSlots.find((slot) => typeof slot === 'object')?.max_slots ||
+            timeSlots.find((slot) => typeof slot === 'object')?.max_slot ||
+            timeSlots.find((slot) => typeof slot === 'object')?.capacity ||
+            Object.values(maxSlotsMap)[0];
+
+        const normalizedMaxBookingsPerSlot = Math.max(
+            1,
+            Number(
+                data?.max_bookings_per_slot ??
+                data?.maxBookingsPerSlot ??
+                legacySlotMax ??
+                1
+            ) || 1
+        );
+
+        return {
+            available: Boolean(data?.available),
+            time_slots: normalizedSlots,
+            max_bookings_per_slot: normalizedMaxBookingsPerSlot
+        };
+    };
+
+    const handleSelectedDayChange = (day) => {
+        setCurrentSelectedDay(day);
+
+        const dayKey = dayMapping[day];
+        const currentDay = normalizeDayAvailability(availabilitySlots[dayKey] || {});
+        setCurrentSelectedMaxSlots(String(currentDay.max_bookings_per_slot || 1));
+    };
+
+    const handleMaxBookingsPerSlotChange = (value) => {
+        setCurrentSelectedMaxSlots(value);
+
+        const dayKey = dayMapping[currentSelectedDay];
+        const maxSlotsValue = Math.max(1, Number(value) || 1);
+
+        setAvailabilitySlots(prev => {
+            const currentDay = normalizeDayAvailability(prev[dayKey] || {});
+
+            if (!currentDay.time_slots.length) {
+                return prev;
+            }
+
+            return {
+                ...prev,
+                [dayKey]: {
+                    ...currentDay,
+                    max_bookings_per_slot: maxSlotsValue
+                }
+            };
+        });
     };
 
     // Add time slot for selected day
@@ -648,9 +751,12 @@ useEffect(() => {
             return;
         }
 
+        const maxSlotsValue = Math.max(1, Number(currentSelectedMaxSlots) || 1);
+
         setAvailabilitySlots(prev => {
             const dayKey = dayMapping[currentSelectedDay];
-            const currentSlots = prev[dayKey]?.time_slots || [];
+            const currentDay = normalizeDayAvailability(prev[dayKey] || {});
+            const currentSlots = currentDay.time_slots || [];
             
             // Check if time already exists for this day
             if (currentSlots.includes(currentSelectedTime)) {
@@ -662,7 +768,8 @@ useEffect(() => {
                 ...prev,
                 [dayKey]: {
                     available: true,
-                    time_slots: [...currentSlots, currentSelectedTime].sort()
+                    time_slots: [...currentSlots, currentSelectedTime].sort(),
+                    max_bookings_per_slot: maxSlotsValue
                 }
             };
         });
@@ -674,7 +781,8 @@ useEffect(() => {
     const removeTimeSlotFromDay = (day, time) => {
         setAvailabilitySlots(prev => {
             const dayKey = dayMapping[day];
-            const currentSlots = prev[dayKey]?.time_slots || [];
+            const currentDay = normalizeDayAvailability(prev[dayKey] || {});
+            const currentSlots = currentDay.time_slots || [];
             const updatedSlots = currentSlots.filter(slot => slot !== time);
             
             if (updatedSlots.length === 0) {
@@ -688,7 +796,8 @@ useEffect(() => {
                 ...prev,
                 [dayKey]: {
                     available: true,
-                    time_slots: updatedSlots
+                    time_slots: updatedSlots,
+                    max_bookings_per_slot: currentDay.max_bookings_per_slot || 1
                 }
             };
         });
@@ -708,7 +817,7 @@ useEffect(() => {
 
         // Merge with user-selected availability
         Object.keys(availabilitySlots).forEach(day => {
-            result[day] = availabilitySlots[day];
+            result[day] = normalizeDayAvailability(availabilitySlots[day]);
         });
 
         return result;
@@ -756,11 +865,13 @@ useEffect(() => {
                 // Parse availability into availabilitySlots
                 if (service.availability && typeof service.availability === 'object') {
                     const slots = {};
-                    Object.entries(service.availability).forEach(([day, data]) => {
-                        if (data.available && data.time_slots && data.time_slots.length > 0) {
-                            slots[day] = data;
-                        }
-                    });
+	                    Object.entries(service.availability).forEach(([day, data]) => {
+                            const normalizedDay = normalizeDayAvailability(data);
+
+	                        if (normalizedDay.available && normalizedDay.time_slots.length > 0) {
+	                            slots[day] = normalizedDay;
+	                        }
+	                    });
                     setAvailabilitySlots(slots);
                 }
 
@@ -1142,19 +1253,17 @@ useEffect(() => {
         setAstc(true);
 
         try {
-            const cachedServices = collectionServices[collectionId];
-            let currentCollectionServices = Array.isArray(cachedServices) ? cachedServices : null;
+            const response = await dispatch(getServiceCollection({ token, id: collectionId })).unwrap();
+            const currentCollectionServices = response.data?.services || [];
 
-            if (!currentCollectionServices) {
-                const response = await dispatch(getServiceCollection({ token, id: collectionId })).unwrap();
-                currentCollectionServices = response.data?.services || [];
-                setCollectionServices(prev => ({
-                    ...prev,
-                    [collectionId]: currentCollectionServices
-                }));
-            }
+            setCollectionServices(prev => ({
+                ...prev,
+                [collectionId]: currentCollectionServices
+            }));
 
-            const existingIds = currentCollectionServices.map((item) => String(item.id));
+            const existingIds = [
+                ...new Set(currentCollectionServices.map(getCollectionServiceId).filter(Boolean))
+            ];
 
             setExistingCollectionServiceIds(existingIds);
             setDitem(
@@ -1163,7 +1272,7 @@ useEffect(() => {
                     return acc;
                 }, {})
             );
-        } catch (fetchError) {
+        } catch {
             setExistingCollectionServiceIds([]);
             setDitem({});
 
@@ -1198,10 +1307,6 @@ useEffect(() => {
     }
 
     const handleCheckService = (serviceId) => {
-        if (existingCollectionServiceIds.includes(String(serviceId))) {
-            return;
-        }
-
         setDitem(prev => ({
             ...prev,
             [serviceId]: !prev[serviceId]
@@ -1217,9 +1322,11 @@ useEffect(() => {
 
         const existingIdsSet = new Set(existingCollectionServiceIds.map(String));
         const selectedServiceIds = Object.keys(ditem).filter((key) => ditem[key] === true);
+        const selectedIdsSet = new Set(selectedServiceIds.map(String));
         const newServiceIds = selectedServiceIds.filter((id) => !existingIdsSet.has(String(id)));
+        const removedServiceIds = existingCollectionServiceIds.filter((id) => !selectedIdsSet.has(String(id)));
 
-        if (selectedServiceIds.length === 0) {
+        if (selectedServiceIds.length === 0 && removedServiceIds.length === 0) {
             Swal.fire({
                 icon: "info",
                 title: "No Services Selected",
@@ -1229,18 +1336,18 @@ useEffect(() => {
             return;
         }
 
-        if (newServiceIds.length === 0) {
+        if (newServiceIds.length === 0 && removedServiceIds.length === 0) {
             Swal.fire({
                 icon: "info",
-                title: "No New Services",
-                text: "All selected services are already in this collection.",
+                title: "No Changes",
+                text: "Select or unselect services before saving.",
                 confirmButtonColor: '#0273F9'
             });
             return;
         }
 
         Swal.fire({
-            title: "Adding Services...",
+            title: "Updating Services...",
             text: "Please wait while we process your request.",
             allowOutsideClick: false,
             showConfirmButton: false,
@@ -1250,24 +1357,45 @@ useEffect(() => {
         });
 
         try {
-            const response = await axios.post(
-                `${API_URL}/stores/collections/${selectedCollectionId}/services/bulk`,
-                { service_ids: newServiceIds },
-                {
-                    headers: {
-                        Authorization: `Bearer ${token}`
+            let addResponse = null;
+
+            if (newServiceIds.length > 0) {
+                addResponse = await axios.post(
+                    `${API_URL}/stores/collections/${selectedCollectionId}/services/bulk`,
+                    { service_ids: newServiceIds },
+                    {
+                        headers: {
+                            Authorization: `Bearer ${token}`
+                        }
                     }
-                }
-            );
+                );
+            }
+
+            if (removedServiceIds.length > 0) {
+                await Promise.all(
+                    removedServiceIds.map((serviceId) =>
+                        dispatch(deleteServiceInCollection({
+                            token,
+                            colid: selectedCollectionId,
+                            serviceid: serviceId
+                        })).unwrap()
+                    )
+                );
+            }
 
             const refreshedServices = await dispatch(
                 getServiceCollection({ token, id: selectedCollectionId })
             ).unwrap();
+            const refreshedCollectionServices = refreshedServices.data?.services || [];
+            const refreshedIds = [
+                ...new Set(refreshedCollectionServices.map(getCollectionServiceId).filter(Boolean))
+            ];
 
             setCollectionServices(prev => ({
                 ...prev,
-                [selectedCollectionId]: refreshedServices.data?.services || []
+                [selectedCollectionId]: refreshedCollectionServices
             }));
+            onServiceCollectionChange?.(selectedCollectionId, refreshedCollectionServices);
 
             setCollectionList(prev => prev.map((collection) => {
                 if (collection.id !== selectedCollectionId) {
@@ -1276,27 +1404,37 @@ useEffect(() => {
 
                 return {
                     ...collection,
-                    totalItems: Number(collection.totalItems || 0) + newServiceIds.length
+                    totalItems: refreshedCollectionServices.length
                 };
             }));
 
-            setExistingCollectionServiceIds(prev => [...new Set([...prev, ...newServiceIds.map(String)])]);
+            setExistingCollectionServiceIds(refreshedIds);
 
             dispatch(resetStatus());
             hideModal();
 
+            const updateSummary = [
+                newServiceIds.length ? `${newServiceIds.length} added` : '',
+                removedServiceIds.length ? `${removedServiceIds.length} removed` : ''
+            ].filter(Boolean).join(', ');
+            const successMessage = removedServiceIds.length > 0
+                ? `Collection services updated successfully${updateSummary ? ` (${updateSummary})` : ''}.`
+                : addResponse?.data?.message || `Collection services updated successfully${updateSummary ? ` (${updateSummary})` : ''}.`;
+
             Swal.fire({
                 icon: "success",
-                title: "Services Added",
-                text: response.data?.message || "Services added to collection successfully.",
+                title: "Services Updated",
+                text: successMessage,
                 confirmButtonColor: "#0273F9",
             });
         } catch (bulkError) {
-            let errorMessage = "Failed to add services to collection";
+            let errorMessage = "Failed to update services in collection";
 
             if (bulkError && typeof bulkError === "object") {
                 if (bulkError.response?.data?.message) {
                     errorMessage = bulkError.response.data.message;
+                } else if (Array.isArray(bulkError)) {
+                    errorMessage = bulkError.map(item => item.message).join(', ');
                 } else if (bulkError.message) {
                     errorMessage = bulkError.message;
                 }
@@ -1938,6 +2076,7 @@ useEffect(() => {
                                 <div className="col-md-6 mb-3">
                                     <label for="formGroupExampleInput" className="form-label">Duration</label>
                                     <select data-form="loadStore" className={styles['input-item']} name='duration_minutes' value={sdata.duration_minutes} onChange={handleChange}>
+                                        <option value="">Select duration</option>
                                         <option value={30}>30 mins</option>
                                         <option value={45}>45 mins</option>
                                         <option value={60}>60 mins</option>
@@ -1946,6 +2085,7 @@ useEffect(() => {
                                 <div className="col-md-6 mb-3">
                                     <label for="formGroupExampleInput" className="form-label">Location</label>
                                     <select data-form="loadStore" className={styles['input-item']} name='location_type' value={sdata.location_type} onChange={handleChange}>
+                                        <option value="">Select location</option>
                                         <option>In person</option>
                                         <option>online</option>
                                     </select>
@@ -1968,11 +2108,11 @@ useEffect(() => {
                                                     <label className="form-label mb-2">Day</label>
                                                     <select 
                                                         className="form-select form-select-sm"
-                                                        data-form="loadStore"
-                                                        value={currentSelectedDay}
-                                                        onChange={(e) => setCurrentSelectedDay(e.target.value)}
-                                                        style={{ minWidth: '100px', fontSize: '14px' }}
-                                                    >
+	                                                        data-form="loadStore"
+	                                                        value={currentSelectedDay}
+	                                                        onChange={(e) => handleSelectedDayChange(e.target.value)}
+	                                                        style={{ minWidth: '100px', fontSize: '14px' }}
+	                                                    >
                                                         {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => (
                                                             <option key={day} value={day}>{day}</option>
                                                         ))}
@@ -1990,6 +2130,20 @@ useEffect(() => {
                                                         onChange={(e) => setCurrentSelectedTime(e.target.value)}
                                                         style={{ fontSize: '14px', minWidth: '120px' }}
                                                     />
+                                                </div>
+
+                                                {/* Max Slots Input */}
+                                                <div className="col-auto">
+                                                    <label className="form-label mb-2">Max Bookings / Slot</label>
+                                                    <input
+                                                        type="number"
+                                                        min="1"
+                                                        className="form-control form-control-sm border text-center"
+	                                                        data-form="loadStore"
+	                                                        value={currentSelectedMaxSlots}
+	                                                        onChange={(e) => handleMaxBookingsPerSlotChange(e.target.value)}
+	                                                        style={{ fontSize: '14px', minWidth: '100px' }}
+	                                                    />
                                                 </div>
 
                                                 {/* Add Button */}
@@ -2019,9 +2173,12 @@ useEffect(() => {
                                                                 <div className="fw-semibold text-dark mb-2">{dayDisplay || dayKey}</div>
                                                                 <div className="d-flex flex-wrap gap-2">
                                                                     {dayData.time_slots.map((time) => (
-                                                                        <div key={time} className="badge bg-primary d-flex align-items-center gap-2" style={{ fontSize: '13px', padding: '6px 10px' }}>
-                                                                            {time}
-                                                                            <button
+	                                                                        <div key={time} className="badge bg-primary d-flex align-items-center gap-2" style={{ fontSize: '13px', padding: '6px 10px' }}>
+	                                                                            {time}
+                                                                                <span style={{ opacity: 0.85 }}>
+                                                                                    Max {normalizeDayAvailability(dayData).max_bookings_per_slot || 1}
+                                                                                </span>
+	                                                                            <button
                                                                                 type="button"
                                                                                 className="btn-close btn-close-white"
                                                                                 style={{ fontSize: '10px' }}
@@ -2335,6 +2492,7 @@ useEffect(() => {
                                 <div className="col-md-6 mb-3">
                                     <label for="formGroupExampleInput" className="form-label">Location</label>
                                     <select className={styles['input-item']} name='location_type' value={sdata.location_type} onChange={handleChange}>
+                                        <option value="">Select location</option>
                                         <option>In person</option>
                                         <option>online</option>
                                     </select>
@@ -2357,10 +2515,10 @@ useEffect(() => {
                                                     <label className="form-label mb-2">Day</label>
                                                     <select 
                                                         className="form-select form-select-sm"
-                                                        value={currentSelectedDay}
-                                                        onChange={(e) => setCurrentSelectedDay(e.target.value)}
-                                                        style={{ minWidth: '100px', fontSize: '14px' }}
-                                                    >
+	                                                        value={currentSelectedDay}
+	                                                        onChange={(e) => handleSelectedDayChange(e.target.value)}
+	                                                        style={{ minWidth: '100px', fontSize: '14px' }}
+	                                                    >
                                                         {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => (
                                                             <option key={day} value={day}>{day}</option>
                                                         ))}
@@ -2377,6 +2535,19 @@ useEffect(() => {
                                                         onChange={(e) => setCurrentSelectedTime(e.target.value)}
                                                         style={{ fontSize: '14px', minWidth: '120px' }}
                                                     />
+                                                </div>
+
+                                                {/* Max Slots Input */}
+                                                <div className="col-auto">
+                                                    <label className="form-label mb-2">Max Bookings / Slot</label>
+                                                    <input
+                                                        type="number"
+                                                        min="1"
+	                                                        className="form-control form-control-sm border text-center"
+	                                                        value={currentSelectedMaxSlots}
+	                                                        onChange={(e) => handleMaxBookingsPerSlotChange(e.target.value)}
+	                                                        style={{ fontSize: '14px', minWidth: '100px' }}
+	                                                    />
                                                 </div>
 
                                                 {/* Add Button */}
@@ -2406,9 +2577,12 @@ useEffect(() => {
                                                                 <div className="fw-semibold text-dark mb-2">{dayDisplay || dayKey}</div>
                                                                 <div className="d-flex flex-wrap gap-2">
                                                                     {dayData.time_slots.map((time) => (
-                                                                        <div key={time} className="badge bg-primary d-flex align-items-center gap-2" style={{ fontSize: '13px', padding: '6px 10px' }}>
-                                                                            {time}
-                                                                            <button
+	                                                                        <div key={time} className="badge bg-primary d-flex align-items-center gap-2" style={{ fontSize: '13px', padding: '6px 10px' }}>
+	                                                                            {time}
+                                                                                <span style={{ opacity: 0.85 }}>
+                                                                                    Max {normalizeDayAvailability(dayData).max_bookings_per_slot || 1}
+                                                                                </span>
+	                                                                            <button
                                                                                 type="button"
                                                                                 className="btn-close btn-close-white"
                                                                                 style={{ fontSize: '10px' }}
@@ -2498,7 +2672,7 @@ useEffect(() => {
                     <div className={`${styles['modal-body']} p-3`} style={{background: '#F9F9F9'}}>
                         <form onSubmit={bulkItemService}>
                             <p style={{color: '#78716C'}} className="mb-3">
-                                Select one or more services to add. Services already in this collection are checked.
+                                Select the services that should stay in this collection. Uncheck an existing service to remove it.
                             </p>
 
                             <div
@@ -2508,15 +2682,18 @@ useEffect(() => {
                                     gap: '16px'
                                 }}
                             >
-                                {serviceForCollection.map((item) => {
-                                    const isChecked = Boolean(ditem[item.id]);
-                                    const isAlreadyAdded = existingCollectionServiceIds.includes(String(item.id));
+                                {getServiceOptionsForCollection().map((item) => {
+                                    const serviceId = getCollectionServiceId(item);
+                                    const serviceDetails = item?.StoreService || item?.Service || item?.service || item;
+                                    const serviceTitle = serviceDetails?.service_title || serviceDetails?.title || 'Service';
+                                    const isChecked = Boolean(ditem[serviceId]);
+                                    const isAlreadyAdded = existingCollectionServiceIds.includes(serviceId);
 
                                     return (
                                         <div
-                                            key={item.id}
+                                            key={serviceId}
                                             className={`${styles['service-option-container']} p-3`}
-                                            onClick={() => handleCheckService(String(item.id))}
+                                            onClick={() => handleCheckService(serviceId)}
                                             style={{
                                                 borderColor: isChecked ? '#0273F9' : '#EEEEEE',
                                                 backgroundColor: isChecked ? '#F5FAFF' : '#FFFFFF',
@@ -2529,13 +2706,12 @@ useEffect(() => {
                                                     type="checkbox"
                                                     className={styles['service-picker-checkbox']}
                                                     checked={isChecked}
-                                                    disabled={isAlreadyAdded}
                                                     onClick={(event) => event.stopPropagation()}
-                                                    onChange={() => handleCheckService(String(item.id))}
+                                                    onChange={() => handleCheckService(serviceId)}
                                                 />
                                                 <img
                                                     src={getServiceImage(item)}
-                                                    alt={item.service_title}
+                                                    alt={serviceTitle}
                                                     onError={handleServiceImageError}
                                                     style={{
                                                         width: '52px',
@@ -2547,13 +2723,17 @@ useEffect(() => {
                                                 />
                                                 <div style={{ minWidth: 0 }}>
                                                     <p className="mb-1" style={{ color: isChecked ? '#0273F9' : '#1C1917', fontWeight: 600 }}>
-                                                        {item.service_title}
+                                                        {serviceTitle}
                                                     </p>
                                                     <small className="d-block mb-1" style={{ color: '#0273F9', fontWeight: 600 }}>
                                                         {formatServicePrice(item)}
                                                     </small>
-                                                    {isAlreadyAdded ? (
+                                                    {isAlreadyAdded && isChecked ? (
                                                         <small style={{ color: '#0273F9' }}>Already added</small>
+                                                    ) : isAlreadyAdded ? (
+                                                        <small style={{ color: '#DC2626' }}>Will be removed</small>
+                                                    ) : isChecked ? (
+                                                        <small style={{ color: '#0273F9' }}>Selected to add</small>
                                                     ) : (
                                                         <small style={{ color: '#78716C' }}>Select to add</small>
                                                     )}
@@ -2564,7 +2744,7 @@ useEffect(() => {
                                 })}
                             </div>
 
-                            {!serviceForCollection.length && (
+                            {!getServiceOptionsForCollection().length && (
                                 <p className="text-center text-muted py-4 mb-0">No services available</p>
                             )}
 
@@ -2577,11 +2757,11 @@ useEffect(() => {
                                         <div className="spinner-border spinner-border-sm text-light" role="status">
                                             <span className="sr-only"></span>
                                         </div>
-                                        <span>Adding... </span>
+                                        <span>Saving... </span>
                                         </>
                                         
                                     ): (
-                                        'Add Services'
+                                        'Save Changes'
                                     )
                                 }
                             </button>

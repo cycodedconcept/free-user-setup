@@ -2,6 +2,7 @@ import React from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faBell, faStore, faChevronDown } from '@fortawesome/free-solid-svg-icons';
 import { useNavigate } from 'react-router-dom';
+import { useSelector } from 'react-redux';
 import '../sidebar/sidebar.css';
 import styles from "../../../styles.module.css";
 import Swal from 'sweetalert2';
@@ -9,6 +10,7 @@ import Swal from 'sweetalert2';
 
 const Topbar = ({ activeTab, sidebarButtons }) => {
 const navigate = useNavigate();
+const storeName = useSelector((state) => state.store?.myStore?.onlineStore?.store_name);
 let activeLabel = "Dashboard";
 
 for (const btn of sidebarButtons) {
@@ -60,10 +62,10 @@ for (const btn of sidebarButtons) {
       >
           <div>
               <h6 className="m-0" style={{color: 'var(--app-primary)'}}>{activeLabel}</h6>
-          </div>
-          <div className="d-flex align-items-center gap-4">
-              <button className={`${styles.topBtn} p-2 mx`}><FontAwesomeIcon icon={faStore} /><span className="mx-2">Chuks Electronic Store</span> <FontAwesomeIcon icon={faChevronDown} style={{color: 'var(--app-text-muted)', fontSize: '14px'}}/></button>
-              <div style={{ position: 'relative', display: 'inline-block' }}>
+	          </div>
+	          <div className="d-flex align-items-center gap-4">
+	              <button className={`${styles.topBtn} p-2 mx`} style={{color: 'var(--app-primary)'}}><FontAwesomeIcon icon={faStore} style={{color: 'var(--app-primary)'}} /><span className="mx-2" style={{color: 'var(--app-primary)'}}>{storeName || "My Store"}</span> <FontAwesomeIcon icon={faChevronDown} style={{color: 'var(--app-primary)', fontSize: '14px'}}/></button>
+	              <div style={{ position: 'relative', display: 'inline-block' }}>
                   <FontAwesomeIcon icon={faBell} size="lg" style={{ color: 'var(--app-text)' }} />
 
                   <span style={{

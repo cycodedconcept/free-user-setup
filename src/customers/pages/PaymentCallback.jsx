@@ -2,6 +2,7 @@ import React, { useMemo, useEffect, useCallback } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import styles from "../../styles.module.css";
 import Button from "../../components/ui/Button";
+import { buildCustomerThemeStyle, readStoredCustomerTheme } from "../customerTheme";
 
 const SHOW_BOOKING_KEY = "mycroshop.showBookingConfirmation";
 const PENDING_BOOKING_KEY = "mycroshop.pendingBooking";
@@ -11,6 +12,10 @@ const PAYMENT_CONTEXT_KEY = "mycroshop.paymentContext";
 const PaymentCallback = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const customerThemeStyle = useMemo(
+    () => buildCustomerThemeStyle(readStoredCustomerTheme()),
+    []
+  );
 
   const reference = useMemo(() => {
     return searchParams.get("reference") || searchParams.get("trxref") || "";
@@ -60,7 +65,7 @@ const PaymentCallback = () => {
   }, [isBookingPayment, navigate]);
 
   return (
-    <div className={styles.paymentCallbackPage}>
+    <div className={styles.paymentCallbackPage} style={customerThemeStyle}>
       <div className={styles.paymentCallbackCard}>
         <div className={styles.paymentCallbackIcon} aria-hidden="true">
           <svg viewBox="0 0 72 72" width="72" height="72" fill="none" stroke="currentColor">

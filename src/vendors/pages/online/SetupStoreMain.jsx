@@ -1,4 +1,4 @@
-import React, {useState, useEffect} from 'react'
+import React, {useState, useEffect, useMemo} from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { getCountries } from '../../../slice/countriesSlice';
 import { useDispatch, useSelector } from 'react-redux';
@@ -14,12 +14,433 @@ import styles from "../../../styles.module.css";
 import Swal from 'sweetalert2';
 import Button from '../../../components/ui/Button';
 import { API_URL } from '../../../config/constant';
+import { buildCustomerThemeStyle } from '../../../customers/customerTheme';
+
+const formatPreviewPrice = (value) => {
+    const numericValue = Number(value);
+
+    if (!Number.isFinite(numericValue)) {
+        return 'Contact for price';
+    }
+
+    return `₦${numericValue.toLocaleString()}`;
+};
+
+const previewText = (value, fallback) => {
+    if (typeof value !== 'string') return fallback;
+    const trimmedValue = value.trim();
+    return trimmedValue || fallback;
+};
+
+const getActionErrorMessage = (actionError, fallback) => {
+    if (typeof actionError === 'string' && actionError.trim()) return actionError;
+    if (actionError?.message) return actionError.message;
+    if (actionError?.error) return actionError.error;
+    return fallback;
+};
+
+const StorefrontMobilePreview = ({
+    themeStyle,
+    storeLogo,
+    storeName,
+    storeDescription,
+    storeBannerImage,
+    previewTab,
+    onPreviewTabChange,
+    productCollections,
+    serviceCollections
+}) => {
+    const [searchTerm, setSearchTerm] = useState('');
+    const [activeProductCollection, setActiveProductCollection] = useState('all');
+    const [activeServiceCollection, setActiveServiceCollection] = useState('all');
+
+    const hasBothTabs = productCollections.length > 0 && serviceCollections.length > 0;
+    const sectionTitle = previewTab === 'Shop' ? 'Collections' : 'Service Collections';
+    const heroActionLabel = previewTab === 'Shop' ? 'Shop collection' : 'View services';
+    const activeCollections = previewTab === 'Shop' ? productCollections : serviceCollections;
+    const activeCollectionId = previewTab === 'Shop' ? activeProductCollection : activeServiceCollection;
+    const setActiveCollectionId =
+        previewTab === 'Shop' ? setActiveProductCollection : setActiveServiceCollection;
+
+    useEffect(() => {
+        setSearchTerm('');
+    }, [previewTab]);
+
+    useEffect(() => {
+        if (activeCollectionId === 'all') return;
+
+        const collectionStillExists = activeCollections.some(
+            (collection) => (collection.id || collection.title) === activeCollectionId
+        );
+
+        if (!collectionStillExists) {
+            setActiveCollectionId('all');
+        }
+    }, [activeCollectionId, activeCollections, setActiveCollectionId]);
+
+    const collectionFilters = useMemo(
+        () => [
+            { id: 'all', label: 'All' },
+            ...activeCollections.map((collection) => ({
+                id: collection.id || collection.title,
+                label: collection.title
+            }))
+        ],
+        [activeCollections]
+    );
+
+    const visibleCollections = useMemo(() => {
+        const normalizedQuery = searchTerm.trim().toLowerCase();
+
+        return activeCollections
+            .filter((collection) =>
+                activeCollectionId === 'all'
+                    ? true
+                    : (collection.id || collection.title) === activeCollectionId
+            )
+            .map((collection) => {
+                const matchingItems = (collection.items || []).filter((item) => {
+                    if (!normalizedQuery) return true;
+
+                    const searchableText = [
+                        item?.title,
+                        item?.name,
+                        item?.description,
+                        item?.price,
+                        item?.priceLabel,
+                        item?.cta
+                    ]
+                        .filter(Boolean)
+                        .join(' ')
+                        .toLowerCase();
+
+                    return searchableText.includes(normalizedQuery);
+                });
+
+                return {
+                    ...collection,
+                    previewItems: matchingItems.slice(0, 4),
+                    countLabel: `${matchingItems.length} ${
+                        matchingItems.length === 1
+                            ? previewTab === 'Shop' ? 'Product' : 'Service'
+                            : previewTab === 'Shop' ? 'Products' : 'Services'
+                    }`
+                };
+            })
+            .filter((collection) => collection.previewItems.length);
+    }, [activeCollectionId, activeCollections, previewTab, searchTerm]);
+
+    const heroDescription = previewText(
+        storeDescription,
+        previewTab === 'Shop'
+            ? 'Discover curated products from this store.'
+            : 'Book services and explore every collection from one place.'
+    );
+
+    const heroStyle = storeBannerImage
+        ? { '--customer-home-banner-image': `url(${JSON.stringify(storeBannerImage)})` }
+        : undefined;
+    const previewHasBanner = Boolean(storeBannerImage);
+
+    return (
+        <div
+            className={styles.preview}
+            style={{ background: '#FFFFFF', overflow: 'hidden', padding: '10px 8px' }}
+        >
+            <div style={{ maxWidth: '380px', margin: '0 auto' }}>
+                <div
+                    style={{
+                        background: '#111827',
+                        borderRadius: '28px',
+                        padding: '10px',
+                        boxShadow: '0 20px 40px rgba(15, 23, 42, 0.22)'
+                    }}
+                >
+                    <div
+                        style={{
+                            ...themeStyle,
+                            background: 'var(--customer-home-background)',
+                            borderRadius: '20px',
+                            overflowY: 'auto',
+                            height: '454px'
+                        }}
+                    >
+                        <div
+                            className={styles.customerHomePage}
+                            style={{
+                                ...themeStyle,
+                                minHeight: '100%',
+                                background: 'var(--customer-home-background)',
+                                justifyContent: 'stretch',
+                                display: 'block'
+                            }}
+                        >
+                            <div
+                                className={styles.customerHomeContent}
+                                style={{ maxWidth: '100%', width: '100%', padding: '12px 12px 20px' }}
+                            >
+                                <div
+                                    className={styles.customerHomeTopbar}
+                                    style={{
+                                        flexDirection: 'column',
+                                        alignItems: 'flex-start',
+                                        justifyContent: 'flex-start',
+                                        gap: '10px',
+                                        marginBottom: '12px'
+                                    }}
+                                >
+                                    <div
+                                        className={`${styles.customerHomeShopBrand} ${styles.customerHomeTopBrand}`}
+                                        style={{ margin: '0 0 14px', justifyContent: 'flex-start' }}
+                                    >
+                                        <img
+                                            className={styles.customerHomeShopBrandLogo}
+                                            src={storeLogo}
+                                            alt={storeName}
+                                        />
+                                        <div className={styles.customerHomeShopBrandText}>
+                                            <span className={styles.customerHomeShopBrandName}>{storeName}</span>
+                                            <span className={styles.customerHomeShopBrandMeta}>{sectionTitle}</span>
+                                        </div>
+                                    </div>
+
+                                    {hasBothTabs ? (
+                                        <div
+                                            className={styles.customerHomeSegment}
+                                            role="tablist"
+                                            aria-label="Store preview sections"
+                                            style={{
+                                                width: '100%',
+                                                margin: 0,
+                                                padding: '4px',
+                                                borderRadius: '12px',
+                                                background: 'var(--customer-home-primary-muted)'
+                                            }}
+                                        >
+                                            <Button
+                                                className={`${styles.customerHomeSegmentButton} ${
+                                                    previewTab === 'Shop' ? styles.customerHomeSegmentActive : ''
+                                                }`}
+                                                type="button"
+                                                onClick={() => onPreviewTabChange('Shop')}
+                                                style={{ minWidth: 0, minHeight: '38px', borderRadius: '10px' }}
+                                                unstyled
+                                            >
+                                                Shop
+                                            </Button>
+                                            <Button
+                                                className={`${styles.customerHomeSegmentButton} ${
+                                                    previewTab === 'Services' ? styles.customerHomeSegmentActive : ''
+                                                }`}
+                                                type="button"
+                                                onClick={() => onPreviewTabChange('Services')}
+                                                style={{ minWidth: 0, minHeight: '38px', borderRadius: '10px' }}
+                                                unstyled
+                                            >
+                                                Services
+                                            </Button>
+                                        </div>
+                                    ) : null}
+                                </div>
+
+                                <section className={styles.customerHomeShopShell}>
+                                    <section
+                                        className={`${styles.customerHomeShopHero} ${
+                                            storeBannerImage ? styles.customerHomeShopHeroWithBanner : ''
+                                        }`}
+                                        style={{
+                                            ...heroStyle,
+                                            gridTemplateColumns: 'minmax(0, 1fr)',
+                                            alignItems: previewHasBanner ? 'end' : 'start',
+                                            padding: '18px'
+                                        }}
+                                    >
+                                        <div className={styles.customerHomeShopHeroCopy}>
+                                            <span className={styles.customerHomeShopHeroEyebrow}>Store banner</span>
+                                            <h2 className={styles.customerHomeShopHeroTitle}>{storeName}</h2>
+                                            <p className={styles.customerHomeShopHeroText}>{heroDescription}</p>
+                                            <Button
+                                                className={styles.customerHomeShopHeroButton}
+                                                type="button"
+                                                unstyled
+                                            >
+                                                {heroActionLabel}
+                                            </Button>
+                                        </div>
+
+                                        {!storeBannerImage ? (
+                                            <div
+                                                className={styles.customerHomeShopHeroMedia}
+                                                style={{ display: 'none' }}
+                                            >
+                                                <img src={storeLogo} alt={storeName} />
+                                            </div>
+                                        ) : null}
+                                    </section>
+
+                                    <div
+                                        className={styles.customerHomeShopLayout}
+                                        style={{ gridTemplateColumns: 'minmax(0, 1fr)', gap: '18px' }}
+                                    >
+                                        <aside className={styles.customerHomeShopSidebar}>
+                                            <div
+                                                className={styles.customerHomeShopSidebarCard}
+                                                style={{
+                                                    position: 'static',
+                                                    top: 'auto',
+                                                    border: 'none',
+                                                    borderRadius: 0,
+                                                    background: 'transparent',
+                                                    padding: 0
+                                                }}
+                                            >
+                                                <p className={styles.customerHomeShopSidebarTitle}>Categories</p>
+                                                <div
+                                                    className={styles.customerHomeShopCategoryList}
+                                                    style={{
+                                                        flexDirection: 'row',
+                                                        overflowX: 'auto',
+                                                        paddingBottom: '4px'
+                                                    }}
+                                                >
+                                                    {collectionFilters.map((item) => (
+                                                        <Button
+                                                            className={`${styles.customerHomeShopCategoryButton} ${
+                                                                activeCollectionId === item.id
+                                                                    ? styles.customerHomeShopCategoryButtonActive
+                                                                    : ''
+                                                            }`}
+                                                            key={item.id}
+                                                            type="button"
+                                                            onClick={() => setActiveCollectionId(item.id)}
+                                                            style={{
+                                                                width: 'auto',
+                                                                justifyContent: 'center',
+                                                                flex: '0 0 auto'
+                                                            }}
+                                                            unstyled
+                                                        >
+                                                            {item.label}
+                                                        </Button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </aside>
+
+                                        <div className={styles.customerHomeCollectionLanding}>
+                                            <div className={styles.customerHomeCollectionLandingHeader}>
+                                                <h2 className={styles.customerHomeSectionTitle}>{sectionTitle}</h2>
+                                                {searchTerm ? (
+                                                    <span className={styles.customerHomeCollectionLandingMeta}>
+                                                        Search results for "{searchTerm}"
+                                                    </span>
+                                                ) : null}
+                                            </div>
+
+                                            <div className={styles.customerHomeCollectionList}>
+                                                {visibleCollections.length ? (
+                                                    visibleCollections.map((collection) => (
+                                                        <section
+                                                            className={styles.customerHomeCollectionPreviewSection}
+                                                            key={collection.id || collection.title}
+                                                        >
+                                                            <div className={styles.customerHomeCollectionPreviewHeader}>
+                                                                <div className={styles.customerHomeCollectionPreviewHeading}>
+                                                                    <h3 className={styles.customerHomeCollectionPreviewTitle}>
+                                                                        {collection.title}
+                                                                    </h3>
+                                                                    <span className={styles.customerHomeCollectionPreviewCount}>
+                                                                        {collection.countLabel}
+                                                                    </span>
+                                                                </div>
+
+                                                                <Button
+                                                                    className={styles.customerHomeCollectionPreviewAction}
+                                                                    type="button"
+                                                                    unstyled
+                                                                >
+                                                                    See all
+                                                                </Button>
+                                                            </div>
+
+                                                            <div
+                                                                className={styles.customerHomeCollectionPreviewGrid}
+                                                                style={{
+                                                                    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+                                                                    gap: '12px'
+                                                                }}
+                                                            >
+                                                                {collection.previewItems.map((item, index) => (
+                                                                    <Button
+                                                                        className={`${styles.customerHomeCollectionPreviewCard} ${
+                                                                            previewTab === 'Services'
+                                                                                ? styles.customerHomeCollectionPreviewCardService
+                                                                                : ''
+                                                                        }`}
+                                                                        key={item.id || `${collection.id}-${index}`}
+                                                                        type="button"
+                                                                        unstyled
+                                                                    >
+                                                                        <div className={styles.customerHomeCollectionPreviewImageWrap}>
+                                                                            <img
+                                                                                className={styles.customerHomeCollectionPreviewImage}
+                                                                                src={item.image}
+                                                                                alt={item.title || item.name}
+                                                                            />
+                                                                        </div>
+
+                                                                        <div className={styles.customerHomeCollectionPreviewBody}>
+                                                                            <h4 className={styles.customerHomeCollectionPreviewProductTitle}>
+                                                                                {item.title || item.name}
+                                                                            </h4>
+                                                                            <p className={styles.customerHomeCollectionPreviewProductDesc}>
+                                                                                {item.description}
+                                                                            </p>
+                                                                            {previewTab === 'Shop' ? (
+                                                                                <span className={styles.customerHomeCollectionPreviewPrice}>
+                                                                                    {item.price}
+                                                                                </span>
+                                                                            ) : (
+                                                                                <span className={styles.customerHomeCollectionPreviewServiceCta}>
+                                                                                    {item.cta}
+                                                                                </span>
+                                                                            )}
+                                                                        </div>
+                                                                    </Button>
+                                                                ))}
+                                                            </div>
+                                                        </section>
+                                                    ))
+                                                ) : (
+                                                    <div className={styles.customerHomeEmptyState}>
+                                                        <p className={styles.customerHomeEmptyTitle}>
+                                                            {previewTab === 'Shop'
+                                                                ? 'No matching products'
+                                                                : 'No matching services'}
+                                                        </p>
+                                                        <p className={styles.customerHomeEmptyText}>
+                                                            Try another collection or search term.
+                                                        </p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </section>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
 
 const SetupStoreMain = () => {
     const dispatch = useDispatch();
     let token = localStorage.getItem("token");
     let getId = localStorage.getItem("itemId");
-    const [add, setAdd] = useState(true);
+    const [add, setAdd] = useState(false);
     const [isAllowed, setIsAllowed] = useState(true);
     const [selectedCountry, setSelectedCountry] = useState('Nigeria');
     const [selectedStates, setSelectedStates] = useState(['Lagos']);
@@ -45,9 +466,12 @@ const SetupStoreMain = () => {
     const [per, setPer] = useState(true);
     const [proCol, setProCol] = useState(true);
     const [itemData, setItemData] = useState(true);
-    const [activeTab, setActiveTab] = useState('Services');  
+    const [activeTab, setActiveTab] = useState('SetupStore');  
+    const [setupStep, setSetupStep] = useState('store');
+    const [createdStoreId, setCreatedStoreId] = useState(null);
     const [change, setChange] = useState('Services');
     const [productItem, setProductItem] = useState([]);
+    const [serviceItem, setServiceItem] = useState([]);
     const [serviceCollectionsPreview, setServiceCollectionsPreview] = useState({})
     const [collectionProducts, setCollectionProducts] = useState({})
 
@@ -56,6 +480,12 @@ const SetupStoreMain = () => {
     store_name: '',
     store_description: ''
     })
+    const [socialLinks, setSocialLinks] = useState({
+    facebook: '',
+    twitter: '',
+    linkedin: '',
+    instagram: ''
+    });
 
     const [links, setLinks] = useState({
     show_location: 0,
@@ -69,6 +499,11 @@ const SetupStoreMain = () => {
     useEffect(() => {
     const itemValue = JSON.parse(localStorage.getItem('products')) || [];
     setProductItem(itemValue.slice(0, 4));
+    }, [])
+
+    useEffect(() => {
+    const itemValue = JSON.parse(localStorage.getItem('services')) || [];
+    setServiceItem(itemValue.slice(0, 4));
     }, [])
 
     const readHasCollections = () => {
@@ -114,6 +549,17 @@ const SetupStoreMain = () => {
         console.error('Error fetching collection services:', error);
     }
     }
+
+    const handleServiceCollectionChange = (collectionId, services = []) => {
+    if (!collectionId) {
+        return;
+    }
+
+    setServiceCollectionsPreview(prev => ({
+        ...prev,
+        [collectionId]: Array.isArray(services) ? services : []
+    }));
+    };
 
     const fetchCollectionProducts = async (collectionId) => {
     try {
@@ -185,6 +631,12 @@ const SetupStoreMain = () => {
     const handleActiveTabChange = (tabName) => {
     setActiveTab(tabName);
 
+    if (tabName === 'SetupStore') {
+        setAdd(false);
+        setSetupStep('store');
+        return;
+    }
+
     if (tabName === 'Product') {
         setProCol(false);
         setItemData(true);
@@ -199,10 +651,21 @@ const SetupStoreMain = () => {
     }
     };
 
+    useEffect(() => {
+    if (activeTab === 'Services') {
+        setChange('Services');
+    }
+
+    if (activeTab === 'Product' || activeTab === 'Collection') {
+        setChange('Shop');
+    }
+    }, [activeTab]);
+
     const topTabs = [
+    { id: 'setup-store', label: 'Store Information', target: 'SetupStore' },
     { id: 'services', label: 'My Services', target: 'Services' },
     { id: 'shop', label: 'My Shop', target: 'Collection' },
-    { id: 'customize', label: 'Customize Store', target: 'Appearance' }
+    { id: 'customize', label: 'Store Appearance', target: 'Appearance' }
     ];
 
     const shopTabs = [
@@ -211,6 +674,7 @@ const SetupStoreMain = () => {
     ];
 
     const isTopTabActive = (tabId) => {
+    if (tabId === 'setup-store') return activeTab === 'SetupStore';
     if (tabId === 'services') return activeTab === 'Services';
     if (tabId === 'shop') return activeTab === 'Product' || activeTab === 'Collection';
     return activeTab === 'Appearance';
@@ -445,34 +909,21 @@ const SetupStoreMain = () => {
     // };
 
 
-    // const [isHidden, setIsHidden] = useState(false);
-    // const [socialLinks, setSocialLinks] = useState({
-    // website: 'example.com',
-    // instagram: '',
-    // facebook: '',
-    // linkedin: '',
-    // x: '',
-    // tiktok: ''
-    // });
+    useEffect(() => {
+    const normalizedSocialLinks = {
+        facebook: socialLinks.facebook || '',
+        linkedin: socialLinks.linkedin || '',
+        x: socialLinks.twitter || '',
+        instagram: socialLinks.instagram || ''
+    };
 
-    // // Sync socialLinks with links.social_links
-    // useEffect(() => {
-    // setLinks(prev => ({
-    //     ...prev,
-    //     social_links: [{
-    //     facebook: socialLinks.facebook || '',
-    //     linkedin: socialLinks.linkedin || '',
-    //     x: socialLinks.x || socialLinks.twitter || '',
-    //     instagram: socialLinks.instagram || '',
-    //     tiktok: socialLinks.tiktok || ''
-    //     }]
-    // }));
-    // }, [socialLinks]);
+    const hasAnySocialLink = Object.values(normalizedSocialLinks).some(Boolean);
 
-    // Debug log for links state
-    //   useEffect(() => {
-    //     console.log('Links state updated:', links);
-    //   }, [links]);
+    setLinks(prev => ({
+        ...prev,
+        social_links: hasAnySocialLink ? [normalizedSocialLinks] : []
+    }));
+    }, [socialLinks]);
 
     const handleInputChange = (platform, value) => {
     setSocialLinks(prev => ({
@@ -521,6 +972,27 @@ const SetupStoreMain = () => {
     setFront(itemValue.length === 0);
     }, []);
 
+    useEffect(() => {
+    const storeInfo = myStore?.onlineStore;
+    if (!storeInfo) return;
+    const existingSocialLinks = Array.isArray(storeInfo.social_links)
+        ? storeInfo.social_links[0] || {}
+        : storeInfo.social_links || {};
+
+    setOnline((prev) => ({
+        username: prev.username || storeInfo.username || '',
+        store_name: prev.store_name || storeInfo.store_name || '',
+        store_description: prev.store_description || storeInfo.store_description || ''
+    }));
+    setSocialLinks((prev) => ({
+        facebook: prev.facebook || existingSocialLinks.facebook || '',
+        twitter: prev.twitter || existingSocialLinks.twitter || existingSocialLinks.x || '',
+        linkedin: prev.linkedin || existingSocialLinks.linkedin || '',
+        instagram: prev.instagram || existingSocialLinks.instagram || ''
+    }));
+    setCreatedStoreId((prev) => prev || storeInfo.id || null);
+    }, [myStore?.onlineStore]);
+
 
     const formatDuration = (minutes) => {
     if (minutes < 60) return `${minutes} mins`;
@@ -529,7 +1001,138 @@ const SetupStoreMain = () => {
     };
 
     const storeLogo = myStore?.onlineStore?.profile_logo_url || Owi;
-    const storeDescription = myStore?.onlineStore?.store_description || 'Store Description Here...';
+    const storeBannerImage =
+    getImageUrl(myStore?.onlineStore?.banner_image_url) ||
+    getImageUrl(myStore?.onlineStore?.banner_url) ||
+    getImageUrl(myStore?.onlineStore?.cover_image_url) ||
+    '';
+    const previewStoreName = previewText(
+    online.store_name || myStore?.onlineStore?.store_name,
+    'Your Store'
+    );
+    const storeDescription = previewText(
+    online.store_description || myStore?.onlineStore?.store_description,
+    'Store Description Here...'
+    );
+    const previewThemeStyle = useMemo(
+    () => buildCustomerThemeStyle(myStore?.onlineStore?.selected_theme),
+    [myStore?.onlineStore?.selected_theme]
+    );
+    const previewProductCollections = useMemo(() => {
+    const mappedCollections = (collectionProduct?.data?.collections || [])
+        .map((collection, collectionIndex) => {
+            const items = (collectionProducts[collection.id] || []).map((entry, itemIndex) => {
+                const product = entry?.Product || entry?.product || entry || {};
+
+                return {
+                    id: product?.id || entry?.id || `${collection.id}-${itemIndex}`,
+                    title: previewText(product?.name || product?.product_name || product?.title, 'Product'),
+                    description: previewText(product?.category || product?.description, 'New arrival'),
+                    price: formatPreviewPrice(product?.price),
+                    image: getImageUrl(product?.image_url || product?.image) || storeLogo
+                };
+            });
+
+            return {
+                id: collection?.id || `product-collection-${collectionIndex}`,
+                title: previewText(collection?.collection_name, `Collection ${collectionIndex + 1}`),
+                countValue: items.length,
+                items
+            };
+        })
+        .filter((collection) => collection.items.length > 0);
+
+    if (mappedCollections.length > 0) {
+        return mappedCollections;
+    }
+
+    if (!productItem.length) {
+        return [];
+    }
+
+    return [
+        {
+            id: 'all-products',
+            title: 'All Products',
+            countValue: productItem.length,
+            items: productItem.map((product, index) => ({
+                id: product?.id || `product-item-${index}`,
+                title: previewText(product?.name || product?.product_name || product?.title, 'Product'),
+                description: previewText(product?.category || product?.description, 'New arrival'),
+                price: formatPreviewPrice(product?.price),
+                image: getImageUrl(product?.image_url || product?.image) || storeLogo
+            }))
+        }
+    ];
+    }, [collectionProduct?.data?.collections, collectionProducts, productItem, storeLogo]);
+    const previewServiceCollections = useMemo(() => {
+    const mappedCollections = (collections?.data?.collections || [])
+        .map((collection, collectionIndex) => {
+            const items = (serviceCollectionsPreview[collection.id] || []).map((service, itemIndex) => {
+                const serviceData = service?.StoreService || service || {};
+                const serviceTitle = previewText(
+                    serviceData?.service_title || serviceData?.title,
+                    'Service'
+                );
+                const durationLabel = formatDuration(serviceData?.duration_minutes);
+
+                return {
+                    id: service?.id || serviceData?.id || `${collection.id}-${itemIndex}`,
+                    title: serviceTitle,
+                    name: serviceTitle,
+                    description: previewText(
+                        serviceData?.description,
+                        durationLabel ? `Duration ${durationLabel}` : 'Book this service from the store.'
+                    ),
+                    cta: 'Book Now',
+                    image: getServiceImage(serviceData)
+                };
+            });
+
+            return {
+                id: collection?.id || `service-collection-${collectionIndex}`,
+                title: previewText(collection?.collection_name, `Collection ${collectionIndex + 1}`),
+                countValue: items.length,
+                items
+            };
+        })
+        .filter((collection) => collection.items.length > 0);
+
+    if (mappedCollections.length > 0) {
+        return mappedCollections;
+    }
+
+    if (!serviceItem.length) {
+        return [];
+    }
+
+    return [
+        {
+            id: 'all-services',
+            title: 'All Services',
+            countValue: serviceItem.length,
+            items: serviceItem.map((service, index) => {
+                const serviceTitle = previewText(
+                    service?.service_title || service?.title,
+                    'Service'
+                );
+                const durationLabel = formatDuration(service?.duration_minutes);
+
+                return {
+                    id: service?.id || `service-item-${index}`,
+                    title: serviceTitle,
+                    name: serviceTitle,
+                    description: previewText(
+                        service?.description,
+                        durationLabel ? `Duration ${durationLabel}` : 'Book this service from the store.'
+                    ),
+                    cta: 'Book Now',
+                    image: getServiceImage(service)
+                };
+            })
+        }
+    ];
+    }, [collections?.data?.collections, serviceCollectionsPreview, serviceItem]);
 
     const buildStoreUsername = (storeName) =>
     storeName
@@ -538,8 +1141,16 @@ const SetupStoreMain = () => {
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, "-")
         .replace(/^-+|-+$/g, "");
-
-    const saveContent = (e) => {
+    const resolveOnlineStoreId = (payload) =>
+    payload?.data?.onlineStore?.id ||
+    payload?.data?.store?.id ||
+    payload?.onlineStore?.id ||
+    payload?.store?.id ||
+    payload?.id ||
+    myStore?.onlineStore?.id ||
+    localStorage.getItem('itemId') ||
+    getId;
+    const saveStoreInformation = async (e) => {
     e.preventDefault();
 
     const { store_name, store_description } = online;
@@ -554,94 +1165,92 @@ const SetupStoreMain = () => {
         return;
     }
 
-    dispatch(createOnlineStore({
-        token,
-        ...online,
-        username: online.username || buildStoreUsername(store_name)
-    }))
-    setFront(false)
-    }
+    try {
+        if (myStore?.onlineStore?.id) {
+            setSetupStep('social');
+            return;
+        }
 
-    useEffect(() => {
-    if (success) {
-        Swal.fire({
+        const storePayload = {
+            token,
+            ...online,
+            username: online.username || buildStoreUsername(store_name)
+        };
+        const storeResponse = await dispatch(createOnlineStore(storePayload)).unwrap();
+        const onlineStoreId = resolveOnlineStoreId(storeResponse);
+
+        if (onlineStoreId) {
+            setCreatedStoreId(onlineStoreId);
+            await dispatch(getMyOnlineStore({ token, id: onlineStoreId })).unwrap();
+        }
+
+        await Swal.fire({
             icon: "success",
-            title: "created successfull",
-            text: success.message,
-            confirmButtonColor: "#0273F9",
-        }).then(() => {
-            dispatch(resetStatus());
-            setOnline({
-                username: '',
-                store_name: '',
-                store_description: ''
-            });
-        });
-    }
-
-    if (error) {
-        Swal.fire({
-            icon: "error",
-            title: "failed to setup",
-            text: error.message,
-            confirmButtonColor: "#0273F9",
-        }).then(() => {
-            dispatch(resetStatus());
-        });
-    }
-    }, [success, error, dispatch])
-
-
-    const addLinks = (e) => {
-    e.preventDefault();
-
-    const { social_links } = links;
-
-    if (!social_links) {
-        Swal.fire({
-            icon: "info",
-            title: "Missing Fields",
-            text: "Please fill in all fields",
+            title: "Store created",
+            text: storeResponse?.message || "Your store information has been saved.",
             confirmButtonColor: '#0273F9'
         });
+
+        setFront(false);
+        setSetupStep('social');
+    } catch (actionError) {
+        await Swal.fire({
+            icon: "error",
+            title: "Failed to create store",
+            text: getActionErrorMessage(actionError, 'Unable to save your store information right now.'),
+            confirmButtonColor: '#0273F9'
+        });
+        dispatch(resetStatus());
+    }
+    };
+
+    const saveSocialLinks = async (e) => {
+    e.preventDefault();
+
+    const onlineStoreId = createdStoreId || resolveOnlineStoreId(myStore?.onlineStore);
+
+    if (!onlineStoreId) {
+        await Swal.fire({
+            icon: "info",
+            title: "Create your store first",
+            text: "Save your store information before adding social links.",
+            confirmButtonColor: '#0273F9'
+        });
+        setSetupStep('store');
         return;
     }
 
-    dispatch(updateStoreLinks({token, id: getId || '7', ...links}))
-    }
+    try {
+        const response = await dispatch(updateStoreLinks({
+            token,
+            id: onlineStoreId,
+            show_location: links.show_location,
+            country: links.country,
+            state: links.state,
+            is_location_based: links.is_location_based,
+            allow_delievry_datetime: links.allow_delivery_datetime,
+            social_links: links.social_links
+        })).unwrap();
 
-    useEffect(() => {
-    if (success) {
-        Swal.fire({
+        await dispatch(getMyOnlineStore({ token, id: onlineStoreId })).unwrap();
+        await Swal.fire({
             icon: "success",
-            title: "added successfull",
-            text: success.message,
-            confirmButtonColor: "#0273F9",
-        }).then(() => {
-            dispatch(resetStatus());
-            setFront(false)
-            setLinks({
-                show_location: 0,
-                country: '',
-                state: '',
-                is_location_based: 1,
-                allow_delivery_datetime: 1,
-                social_links: []
-            });
+            title: "Social links saved",
+            text: response?.message || "Your storefront social links have been updated.",
+            confirmButtonColor: '#0273F9'
         });
-    }
-
-    if (error) {
-        Swal.fire({
+        setFront(false);
+    } catch (actionError) {
+        await Swal.fire({
             icon: "error",
-            title: "failed to add links",
-            text: error.message,
-            confirmButtonColor: "#0273F9",
-        }).then(() => {
-            dispatch(resetStatus());
+            title: "Failed to save social links",
+            text: getActionErrorMessage(actionError, 'Unable to save your social links right now.'),
+            confirmButtonColor: '#0273F9'
         });
+        dispatch(resetStatus());
     }
-   }, [success, error, dispatch])
+    };
+
   return (
     <>
       {ms ? (
@@ -673,7 +1282,7 @@ const SetupStoreMain = () => {
         <div className="row">
             <div className="col-sm-12 col-md-12 col-lg-7">
                 {/* <h5 className="text-center mt-3 mb-5">StoreFront Setup</h5> */}
-                {front ? (
+                {activeTab === 'SetupStore' ? (
                     <>
                       {add ? (
                             <>
@@ -690,298 +1299,155 @@ const SetupStoreMain = () => {
                             </>
                             ) : (
                             <>
-                                <form onSubmit={saveContent}>
+                                <form onSubmit={setupStep === 'store' ? saveStoreInformation : saveSocialLinks}>
                                     <div className={`${styles['store-info']} p-3`} style={{background: "#fff", border: '2px solid #EEEEEE', borderRadius: '12px'}}>
-                                        <h6 style={{color: '#1C1917'}} className='mx'>Store Information</h6>
-                                        <p style={{color: '#78716C', fontSize: '13px'}}>Let’s start with the basic information about your store</p>
+                                        {setupStep === 'store' ? (
+                                            <>
+                                                <h6 style={{color: '#1C1917'}} className='mx'>Store Information</h6>
+                                                <p style={{color: '#78716C', fontSize: '13px'}}>Let’s start with the basic information about your store</p>
 
-                                        
-                                        <label for="formGroupExampleInput" className="form-label">Store Name</label>
-                                        <input 
-                                            type="text"
-                                            data-form="setUpStore"
-                                            className={`${styles["input-item"]} ${styles["dr-item"]}`} 
-                                            placeholder="E.g Mystorename"
-                                            name='store_name'
-                                            value={online.store_name}
-                                            onChange={handleChange}
-                                        />
-
-                                        <label for="formGroupExampleInput" className='mb-2'>Store Description</label>
-
-                                        <textarea 
-                                        className={`${styles["input-item"]} ${styles["dr-item"]}`} 
-                                        placeholder="Enter store description" 
-                                        style={{height: '100px'}}
-                                        data-form="setUpStore"
-                                        name='store_description'
-                                        value={online.store_description}
-                                        onChange={handleChange}
-                                        ></textarea>
-
-                                        <small className="d-block" style={{color: '#909396'}}>This will appear on your store page. Keep it short and engaging</small>
-                                    </div>
-                                </form>
-                                <form onSubmit={addLinks}>
-                                    <div className="container-fluid p-4 mt-4" style={{background: "#fff", border: '2px solid #EEEEEE', borderRadius: '12px'}}>
-                                        <div className="row">
-                                            <div className="col-12">
-                                            {/* Header Section */}
-                                            <div className="d-flex justify-content-between align-items-center mb-4">
-                                                <div>
-                                                <h5 className="text-dark mb-1" style={{fontSize: '17px'}}>My Social</h5>
-                                                <p className="mb-0" style={{color: '#78716C', fontSize: '13px'}}>Add social media link to your store</p>
-                                                </div>
-                                                
-                                                {/* Toggle Switch */}
-                                                <div className='form-check form-switch'>
+                                                <label htmlFor="setup-store-name" className="form-label">Store Name</label>
                                                 <input 
-                                                    className="form-check-input" 
-                                                    type="checkbox" 
-                                                    id="hideSocial"
-                                                    name='show_location'
-                                                    data-form="setUpLink"
-                                                    checked={links.show_location === 1}
+                                                    id="setup-store-name"
+                                                    type="text"
+                                                    data-form="setUpStore"
+                                                    className={`${styles["input-item"]} ${styles["dr-item"]}`} 
+                                                    placeholder="E.g. Mystorename"
+                                                    name='store_name'
+                                                    value={online.store_name}
                                                     onChange={handleChange}
-                                                    style={{ transform: 'scale(1.5)' }}
                                                 />
-                                                <label className="form-check-label ms-2" htmlFor="hideSocial" style={{color: '#78716C', fontSize: '13px'}}>
-                                                    {links.show_location === 1 ? 'Hide' : 'Show'}
-                                                </label>
-                                                </div>
-                                            </div>
 
-                                            {links.show_location === 1 && (
-                                                <>
-                                                {/* Social Media Icons Row */}
-                                                <div className="row mb-4">
-                                                    <div className="col-12">
-                                                    <div className="d-flex gap-3 mb-4">
-                                                        {socialPlatforms.map((platform, index) => (
-                                                        <div 
-                                                            key={platform.name}
-                                                            className="bg-white rounded-circle d-flex align-items-center justify-content-center shadow-sm"
-                                                            style={{ 
-                                                            width: '60px', 
-                                                            height: '60px',
-                                                            cursor: 'pointer',
-                                                            border: '1px solid #e9ecef',
-                                                            background: '#EEEEEE'
-                                                            }}
-                                                        >
-                                                            <span style={{ fontSize: '16px' }} className=' text-center'>
-                                                                {/* {platform.icon} */}
-                                                                <img src={platform.icon} alt="" className='w-50'/>
-                                                            </span>
-                                                        </div>
-                                                        ))}
-                                                    </div>
-                                                    </div>
-                                                </div>
+                                                <div className="my-4">
+                                                    <label className="form-label" style={{color: '#1C1917'}}>
+                                                        Username <span style={{color: '#78716C'}}>(for your store link)</span>
+                                                    </label>
 
-                                                {/* Website Link */}
-                                                <div className="row mb-3">
-                                                    <div className="col-12">
-                                                    <div className={`p-2 border ${styles['input-item']}`}>
-                                                        <div className="d-flex align-items-center">
-                                                        <div 
-                                                            className="d-flex align-items-center justify-content-center me-3"
-                                                            style={{ width: '40px', height: '10px' }}
-                                                        >
-                                                            <span style={{ fontSize: '16px' }}>🌐</span>
-                                                        </div>
+                                                    <div className={`d-flex overflow-hidden ${styles['store-input-wrapper']}`} style={{border: '1px solid #EEEEEE'}}>
+                                                        <span className="px-3 d-flex align-items-center mx" style={{background: '#EAF4FF'}}>
+                                                            mycroshop.com/
+                                                        </span>
                                                         <input
                                                             type="text"
-                                                            className={`form-control ${styles['input-item']} ${styles['dr-item']} border-0`}
-                                                            value={socialLinks.website}
-                                                            onChange={(e) => handleInputChange('website', e.target.value)}
-                                                            placeholder="example.com"
-                                                            style={{ fontSize: '16px', color: '#6c757d' }}
+                                                            data-form="setUpStore"
+                                                            className={`border-0 ${styles['input-item']} ${styles['dr-item']}`}
+                                                            placeholder="yourstore"
+                                                            name='username'
+                                                            value={online.username}
+                                                            onChange={handleChange}
                                                         />
-                                                        </div>
                                                     </div>
-                                                    </div>
+
+                                                    <small className="mt-2 d-block" style={{color: '#78716C', fontSize: '13px'}}>
+                                                        PNG, JPEG or GIF. Max 5MB.
+                                                    </small>
                                                 </div>
 
-                                                {/* Instagram Link */}
-                                                <div className="row mb-3">
-                                                    <div className="col-12">
-                                                    <div className={`p-2 border ${styles['input-item']}`}>
-                                                        <div className="d-flex align-items-center">
-                                                        <div 
-                                                            className="d-flex align-items-center justify-content-center me-3"
-                                                            style={{ width: '40px', height: '10px' }}
-                                                        >
-                                                            <span style={{ fontSize: '16px' }}><img src={In2} alt='' style={{width: '60%'}} className='mx-2'/></span>
-                                                        </div>
-                                                        <input
-                                                            type="text"
-                                                            className={`form-control ${styles['input-item']} ${styles['dr-item']} border-0`}
-                                                            value={socialLinks.instagram}
-                                                            onChange={(e) => handleInputChange('instagram', e.target.value)}
-                                                            placeholder="Instagram URL or username"
-                                                            style={{ fontSize: '16px' }}
-                                                        />
-                                                        {socialLinks.instagram && (
-                                                            <button 
-                                                            className="btn btn-primary btn-sm rounded-circle ms-2"
-                                                            onClick={() => removeSocialLink('instagram')}
-                                                            style={{ width: '30px', height: '30px' }}
+                                                <label htmlFor="setup-store-description" className='mb-2'>Store Description</label>
+
+                                                <textarea 
+                                                id="setup-store-description"
+                                                className={`${styles["input-item"]} ${styles["dr-item"]}`} 
+                                                placeholder="Enter store description" 
+                                                style={{height: '100px'}}
+                                                data-form="setUpStore"
+                                                name='store_description'
+                                                value={online.store_description}
+                                                onChange={handleChange}
+                                                ></textarea>
+
+                                                <small className="d-block" style={{color: '#909396'}}>This will appear on your store page. Keep it short and engaging</small>
+                                                <div style={{background: '#EEF8FF'}} className='p-3 mt-4 rounded'>
+                                                    <h6 style={{color: '#0273F9'}} className='mx mb-0'>
+                                                        <FontAwesomeIcon icon={faInfoCircle} style={{color: '#0273F9'}} className='me-2'/>
+                                                        <span className='nx'>Your store link will be </span>
+                                                        <span className='my'>
+                                                            mycroshop.com/{online.username || 'yourstore'}
+                                                        </span>
+                                                    </h6>
+                                                </div>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <div className="d-flex justify-content-between align-items-start gap-3">
+                                                    <div>
+                                                        <h6 style={{color: '#1C1917'}} className='mx mb-1'>Social Links</h6>
+                                                        <p style={{color: '#78716C', fontSize: '13px'}} className='mb-0'>
+                                                            Add the social profiles you want customers to find from your storefront.
+                                                        </p>
+                                                    </div>
+                                                    <button
+                                                        type="button"
+                                                        className="bg-transparent border-0 p-0"
+                                                        onClick={() => setSetupStep('store')}
+                                                        style={{color: primaryColor, fontSize: '13px', fontWeight: 600}}
+                                                    >
+                                                        Back
+                                                    </button>
+                                                </div>
+
+                                                <div className="row g-3 mt-1">
+                                                    {socialPlatforms.map((platform) => (
+                                                        <div className="col-12" key={platform.name}>
+                                                            <label className="form-label" style={{color: '#1C1917'}}>
+                                                                {platform.name.charAt(0).toUpperCase() + platform.name.slice(1)}
+                                                            </label>
+                                                            <div
+                                                                className={`d-flex align-items-center overflow-hidden ${styles['store-input-wrapper']}`}
+                                                                style={{border: '1px solid #EEEEEE', background: '#fff', borderRadius: '12px'}}
                                                             >
-                                                            ×
-                                                            </button>
-                                                        )}
+                                                                <span
+                                                                    className="px-3 d-flex align-items-center justify-content-center"
+                                                                    style={{background: '#FAFAFA', minWidth: '52px', height: '52px'}}
+                                                                >
+                                                                    <img
+                                                                        src={platform.icon}
+                                                                        alt={platform.name}
+                                                                        style={{width: '18px', height: '18px', objectFit: 'contain'}}
+                                                                    />
+                                                                </span>
+                                                                <input
+                                                                    type="text"
+                                                                    className={`border-0 ${styles['input-item']} ${styles['dr-item']}`}
+                                                                    placeholder={platform.placeholder}
+                                                                    value={socialLinks[platform.name] || ''}
+                                                                    onChange={(event) => handleInputChange(platform.name, event.target.value)}
+                                                                />
+                                                                {socialLinks[platform.name] ? (
+                                                                    <button
+                                                                        type="button"
+                                                                        className="bg-transparent border-0 px-3"
+                                                                        onClick={() => removeSocialLink(platform.name)}
+                                                                        style={{color: '#78716C'}}
+                                                                    >
+                                                                        Clear
+                                                                    </button>
+                                                                ) : null}
+                                                            </div>
                                                         </div>
-                                                    </div>
-                                                    </div>
+                                                    ))}
                                                 </div>
-
-                                                {/* Facebook Link */}
-                                                <div className="row mb-3">
-                                                    <div className="col-12">
-                                                    <div className={`p-2 border ${styles['input-item']}`}>
-                                                        <div className="d-flex align-items-center">
-                                                        <div 
-                                                            className="d-flex align-items-center justify-content-center me-3"
-                                                            style={{ width: '40px', height: '10px' }}
-                                                        >
-                                                            <span style={{ fontSize: '16px' }}><img src={F} alt='' style={{width: '50%'}} className='mx-2'/></span>
-                                                        </div>
-                                                        <input
-                                                            type="text"
-                                                            className={`form-control ${styles['input-item']} ${styles['dr-item']} border-0`}
-                                                            value={socialLinks.facebook}
-                                                            onChange={(e) => handleInputChange('facebook', e.target.value)}
-                                                            placeholder="Facebook URL or username"
-                                                            style={{ fontSize: '16px' }}
-                                                        />
-                                                        {socialLinks.facebook && (
-                                                            <button 
-                                                            className="btn btn-primary btn-sm rounded-circle ms-2"
-                                                            onClick={() => removeSocialLink('facebook')}
-                                                            style={{ width: '30px', height: '30px' }}
-                                                            >
-                                                            ×
-                                                            </button>
-                                                        )}
-                                                        </div>
+                                            </>
+                                        )}
+                                    </div>
+                                    <div className="text-end mt-3">
+                                        <button type="submit" className={`${styles['btn-lg']} ${styles['si-btn']} px-4 py-3`}>
+                                            {
+                                                loading ?(
+                                                    <>
+                                                    <div className="spinner-border spinner-border-sm text-light" role="status">
+                                                        <span className="sr-only"></span>
                                                     </div>
-                                                    </div>
-                                                </div>
-
-                                                {/* LinkedIn Link */}
-                                                <div className="row mb-3">
-                                                    <div className="col-12">
-                                                    <div className={`p-2 border ${styles['input-item']}`}>
-                                                        <div className="d-flex align-items-center">
-                                                        <div 
-                                                            className="d-flex align-items-center justify-content-center me-3"
-                                                            style={{ width: '40px', height: '10px' }}
-                                                        >
-                                                            <span style={{ fontSize: '16px' }}><img src={In} alt='' style={{width: '50%'}} className='mx-2'/></span>
-                                                        </div>
-                                                        <input
-                                                            type="text"
-                                                            className={`form-control ${styles['input-item']} ${styles['dr-item']} border-0`}
-                                                            value={socialLinks.linkedin}
-                                                            onChange={(e) => handleInputChange('linkedin', e.target.value)}
-                                                            placeholder="LinkedIn URL or username"
-                                                            style={{ fontSize: '16px' }}
-                                                        />
-                                                        {socialLinks.linkedin && (
-                                                            <button 
-                                                            className="btn btn-primary btn-sm rounded-circle ms-2"
-                                                            onClick={() => removeSocialLink('linkedin')}
-                                                            style={{ width: '30px', height: '30px' }}
-                                                            >
-                                                            ×
-                                                            </button>
-                                                        )}
-                                                        </div>
-                                                    </div>
-                                                    </div>
-                                                </div>
-
-                                                {/* X/Twitter Link */}
-                                                <div className="row mb-3">
-                                                    <div className="col-12">
-                                                    <div className={`p-2 border ${styles['input-item']}`}>
-                                                        <div className="d-flex align-items-center">
-                                                        <div 
-                                                            className="d-flex align-items-center justify-content-center me-3"
-                                                            style={{ width: '40px', height: '10px' }}
-                                                        >
-                                                            <span style={{ fontSize: '16px' }}><img src={X} alt='' style={{width: '50%'}} className='mx-2'/></span>
-                                                        </div>
-                                                        <input
-                                                            type="text"
-                                                            className={`form-control ${styles['input-item']} ${styles['dr-item']} border-0`}
-                                                            value={socialLinks.x}
-                                                            onChange={(e) => handleInputChange('x', e.target.value)}
-                                                            placeholder="X (Twitter) URL or username"
-                                                            style={{ fontSize: '16px' }}
-                                                        />
-                                                        {socialLinks.x && (
-                                                            <button 
-                                                            className="btn btn-primary btn-sm rounded-circle ms-2"
-                                                            onClick={() => removeSocialLink('x')}
-                                                            style={{ width: '30px', height: '30px' }}
-                                                            >
-                                                            ×
-                                                            </button>
-                                                        )}
-                                                        </div>
-                                                    </div>
-                                                    </div>
-                                                </div>
-
-                                                {/* TikTok Link */}
-                                                <div className="row mb-4">
-                                                    <div className="col-12">
-                                                    <div className={`p-2 border ${styles['input-item']}`}>
-                                                        <div className="d-flex align-items-center">
-                                                        <div 
-                                                            className="d-flex align-items-center justify-content-center me-3"
-                                                            style={{ width: '40px', height: '10px' }}
-                                                        >
-                                                            <span style={{ fontSize: '16px' }}>🎵</span>
-                                                        </div>
-                                                        <input
-                                                            type="text"
-                                                            className={`form-control ${styles['input-item']} ${styles['dr-item']} border-0`}
-                                                            value={socialLinks.tiktok}
-                                                            onChange={(e) => handleInputChange('tiktok', e.target.value)}
-                                                            placeholder="TikTok URL or username"
-                                                            style={{ fontSize: '16px' }}
-                                                        />
-                                                        {socialLinks.tiktok && (
-                                                            <button 
-                                                            className="btn btn-primary btn-sm rounded-circle ms-2"
-                                                            onClick={() => removeSocialLink('tiktok')}
-                                                            style={{ width: '30px', height: '30px' }}
-                                                            >
-                                                            ×
-                                                            </button>
-                                                        )}
-                                                        </div>
-                                                    </div>
-                                                    </div>
-                                                </div>
-
-                                                {/* Add More Text */}
-                                                <div className="row">
-                                                    <div className="col-12">
-                                                    <p className="mb-0" style={{ fontSize: '14px', color: '#78716C' }}>
-                                                        You can always add more later
-                                                    </p>
-                                                    </div>
-                                                </div>
-                                                </>
-                                            )}
-                                            </div>
-                                        </div>
+                                                    <span>{setupStep === 'store' ? 'Creating... ' : 'Saving... '}</span>
+                                                    </>
+                                                ): (
+                                                    setupStep === 'store' ? 'Save and Continue' : 'Save Social Links'
+                                                )
+                                            }
+                                        </button>
                                     </div>
                                 </form>
+                                
                             </>
                        )}
                     </>
@@ -1037,7 +1503,13 @@ const SetupStoreMain = () => {
                                 ))}
                             </div>
                         )}
-                        {activeTab === 'Services' && <Service setPer={setPer} setVog={setVog}/>}
+                        {activeTab === 'Services' && (
+                            <Service
+                                setPer={setPer}
+                                setVog={setVog}
+                                onServiceCollectionChange={handleServiceCollectionChange}
+                            />
+                        )}
                         {activeTab === 'Appearance' && <Appearance />}
                         {activeTab === 'Product' && <Product setProCol={setProCol}/>}
                         {activeTab === 'Collection' && <Collection setItemData={setItemData} autoExpandProducts />}
@@ -1051,95 +1523,18 @@ const SetupStoreMain = () => {
 
             <div className="col-sm-12 col-md-12 col-lg-5 mt-5" style={{position: 'sticky', top: 0}}>
                 <h5 className="text-center mt-3 mb-4">Preview</h5>
-                
-                <>
-                    <div className={`${styles.preview} d-flex flex-column text-center`}>
-                        {proCol ? (
-                            <>
-                              {vog ? (
-                                <>
-                                {per ? (
-                                    <>
-                                    <div style={{margin: '40% auto'}}>
-                                        <div className='mb-3'>
-                                            <img src={storeLogo} alt="Store logo" className='rounded-pill w-25' />
-                                        </div>
-                                        <h5 className="my text-dark">Your Store</h5>
-                                        <p>{storeDescription}</p>
-                                    </div>
-                                    </>
-                                ) : (
-                                <>
-                                <div className="text-center mt-5 mx-3">
-                                    <img src={storeLogo} alt="Store logo" className='rounded-pill w-25' />
 
-                                    <h5 className="my text-dark mt-3">Your Store</h5>
-                                    <small style={{color: '#78716C'}} className='mb-4 d-block'>{storeDescription}</small>
-                                    {renderServiceCollectionsPreview(false)}
-                                    
-                                </div>
-                                </>
-                            )}
-                                </>
-                            ) : (
-                                <>
-                                <div className="text-center mt-5 mx-3">
-                                    <img src={storeLogo} alt="Store logo" className='rounded-pill w-25' />
-
-                                    <h5 className="my text-dark mt-3">Your Store</h5>
-                                    <small style={{color: '#78716C'}} className='mb-4 d-block'>{storeDescription}</small>
-                                    {renderServiceCollectionsPreview(true)}
-                                
-                                </div>
-                                </>
-                            )}
-                            </>
-                        ) : (
-                        <>
-                          <div style={{margin: '5% auto'}}>
-                            <div className='mb-2'>
-                                <img src={storeLogo} alt="Store logo" className='rounded-pill w-25' />
-                            </div>
-                            <h5 className="my text-dark">Your Store</h5>
-                            <p>{storeDescription}</p>
-                          </div>
-                          <div className="container" style={{ maxWidth: '400px' }}>
-                            {/* Tab buttons */}
-                            <div className="text-center" role="tablist">
-                                {itemService.map((tab, index) => (
-                                <button
-                                    key={tab.id}
-                                    type="button"
-                                    role="tab"
-                                    onClick={() => setChange(tab.id)}
-                                    className={`btn ${change === tab.id ? styles['btn-alt'] : styles['btn-pl']}`}
-                                    style={{
-                                    borderRadius: index === 0 ? '0.375rem 0 0 0.375rem' : 
-                                                index === itemService.length - 1 ? '0 0.375rem 0.375rem 0' : '0',
-                                    borderRight: index < itemService.length - 1 ? '1px solid #6c757d' : 'none',
-                                    // backgroundColor: '#DEDEDF',
-                                    color: change === tab.id ? '#fff' : '#dad5d5',
-                                    fontSize: '13px',
-                                    cursor: 'pointer',
-                                    pointerEvents: 'auto'
-                                    }}
-                                >
-                                    {tab.label}
-                                </button>
-                                ))}
-                            </div>
-                            
-                                {/* Tab content */}
-                                <div >
-                                    {renderContent()}
-                                </div>
-                            </div>
-
-                            
-                        </>
-                        )} 
-                    </div>
-                </>
+                <StorefrontMobilePreview
+                    themeStyle={previewThemeStyle}
+                    storeLogo={storeLogo}
+                    storeName={previewStoreName}
+                    storeDescription={storeDescription}
+                    storeBannerImage={storeBannerImage}
+                    previewTab={change}
+                    onPreviewTabChange={setChange}
+                    productCollections={previewProductCollections}
+                    serviceCollections={previewServiceCollections}
+                />
             </div>
         </div>
         </>

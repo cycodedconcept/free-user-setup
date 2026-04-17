@@ -1,4 +1,4 @@
-import React, {useState, useEffect} from 'react';
+import React, {useState, useEffect, useRef} from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { createCollection, resetStatus, getCollectionForProduct, productAddedToCollection, productImageForCollection, getAllProductForCollection, addBulkImageProductToCollection, removeProductFromCollection, updateSortOrderPinned, updateCollection, updateCollectionVisibility, updateProductCollectionSortOrder, getProductOfSingleCollection, deleteProductCollection } from '../../../slice/onlineStoreSlice';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -10,6 +10,7 @@ const Collection = ({setItemData, autoExpandProducts = false}) => {
   const dispatch = useDispatch();
   let token = localStorage.getItem("token");
   let getId = localStorage.getItem("itemId");
+  const bulkProductSyncInProgress = useRef(false);
 
   const { loading, error, success, colDetails, collectionProducts, singleCollectionProducts } = useSelector((state) => state.store);
   const [cmode, setCmode] = useState(false);
@@ -24,6 +25,7 @@ const Collection = ({setItemData, autoExpandProducts = false}) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [bulkModalOpen, setBulkModalOpen] = useState(false);
   const [selectedProducts, setSelectedProducts] = useState([]);
+  const [existingCollectionProductIds, setExistingCollectionProductIds] = useState([]);
   const [bulkCurrentPage, setBulkCurrentPage] = useState(1);
   const [bulkCollectionId, setBulkCollectionId] = useState(null);
   const [draggedCollection, setDraggedCollection] = useState(null);
@@ -55,6 +57,7 @@ const Collection = ({setItemData, autoExpandProducts = false}) => {
     setMode({isOpen: false, collectionId: null})
     setBulkModalOpen(false)
     setSelectedProducts([])
+    setExistingCollectionProductIds([])
     setBulkCurrentPage(1)
     setSortModalOpen(false)
     setSortModalData({collectionId: null, productId: null, collectionProductId: null})
@@ -79,6 +82,22 @@ const Collection = ({setItemData, autoExpandProducts = false}) => {
   })
 
   const isCollectionVisible = (value) => value === 1 || value === true;
+
+  const getCollectionProductId = (item) => {
+    const productId =
+      item?.Product?.id ??
+      item?.product?.id ??
+      item?.StoreProduct?.id ??
+      item?.product_id ??
+      item?.productId ??
+      item?.store_product_id ??
+      item?.storeProductId ??
+      item?.id;
+
+    return productId === undefined || productId === null ? '' : String(productId);
+  };
+
+  const getProductOptionDetails = (item) => item?.Product || item?.product || item?.StoreProduct || item || {};
 
 
   useEffect(() => {
@@ -201,6 +220,10 @@ const Collection = ({setItemData, autoExpandProducts = false}) => {
   }
 
   useEffect(() => {
+    if (bulkProductSyncInProgress.current) {
+      return;
+    }
+
     if (success) {
         Swal.fire({
             icon: "success",
@@ -266,6 +289,10 @@ const Collection = ({setItemData, autoExpandProducts = false}) => {
   }
 
   useEffect(() => {
+    if (bulkProductSyncInProgress.current) {
+      return;
+    }
+
     if (success) {
       Swal.fire({
         icon: 'success',
@@ -488,11 +515,42 @@ const Collection = ({setItemData, autoExpandProducts = false}) => {
     }
   }
 
-  const openBulkProductModal = (collectionId) => {
+  const openBulkProductModal = async (collectionId) => {
     setBulkCollectionId(collectionId);
     setBulkModalOpen(true);
     setBulkCurrentPage(1);
     setSelectedProducts([]);
+    setExistingCollectionProductIds([]);
+
+    try {
+      const response = await dispatch(productImageForCollection({token, id: collectionId})).unwrap();
+      const currentCollectionProducts = response.data?.collection?.StoreCollectionProducts || [];
+      const existingProductIds = [
+        ...new Set(currentCollectionProducts.map(getCollectionProductId).filter(Boolean))
+      ];
+
+      setCollectionServices(prev => ({
+        ...prev,
+        [collectionId]: currentCollectionProducts
+      }));
+      setExistingCollectionProductIds(existingProductIds);
+      setSelectedProducts(existingProductIds);
+    } catch (fetchError) {
+      let errorMessage = 'Failed to load collection products.';
+
+      if (fetchError && typeof fetchError === 'object') {
+        errorMessage = fetchError.message || fetchError.error || errorMessage;
+      } else if (typeof fetchError === 'string') {
+        errorMessage = fetchError;
+      }
+
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: errorMessage,
+        confirmButtonColor: '#0273F9'
+      });
+    }
   }
 
   const openEditCollection = (collection) => {
@@ -541,6 +599,10 @@ const Collection = ({setItemData, autoExpandProducts = false}) => {
   }
 
   useEffect(() => {
+    if (bulkProductSyncInProgress.current) {
+      return;
+    }
+
     if (success && editMode) {
       Swal.fire({
         icon: "success",
@@ -572,17 +634,24 @@ const Collection = ({setItemData, autoExpandProducts = false}) => {
   }, [success, error, dispatch, editMode, editingCollectionId, editCollectionData])
 
   const handleProductCheckbox = (productId) => {
+    const productIdValue = String(productId);
+
     setSelectedProducts(prev => {
-      if (prev.includes(productId)) {
-        return prev.filter(id => id !== productId);
+      if (prev.includes(productIdValue)) {
+        return prev.filter(id => id !== productIdValue);
       } else {
-        return [...prev, productId];
+        return [...prev, productIdValue];
       }
     });
   }
 
   const handleBulkProductSubmit = async () => {
-    if (selectedProducts.length === 0) {
+    const existingIdsSet = new Set(existingCollectionProductIds.map(String));
+    const selectedIdsSet = new Set(selectedProducts.map(String));
+    const newProductIds = selectedProducts.filter((id) => !existingIdsSet.has(String(id)));
+    const removedProductIds = existingCollectionProductIds.filter((id) => !selectedIdsSet.has(String(id)));
+
+    if (selectedProducts.length === 0 && removedProductIds.length === 0) {
       Swal.fire({
         icon: 'info',
         title: 'No Products Selected',
@@ -592,8 +661,18 @@ const Collection = ({setItemData, autoExpandProducts = false}) => {
       return;
     }
 
+    if (newProductIds.length === 0 && removedProductIds.length === 0) {
+      Swal.fire({
+        icon: 'info',
+        title: 'No Changes',
+        text: 'Select or unselect products before saving.',
+        confirmButtonColor: '#0273F9'
+      });
+      return;
+    }
+
     Swal.fire({
-      title: "Adding bulk products...",
+      title: "Updating products...",
       text: "Please wait while we process your request.",
       allowOutsideClick: false,
       showConfirmButton: false,
@@ -602,10 +681,90 @@ const Collection = ({setItemData, autoExpandProducts = false}) => {
       },
     });
 
-    dispatch(addBulkImageProductToCollection({token, id: bulkCollectionId, product_ids: selectedProducts}))
+    try {
+      bulkProductSyncInProgress.current = true;
+
+      if (newProductIds.length > 0) {
+        await dispatch(addBulkImageProductToCollection({token, id: bulkCollectionId, product_ids: newProductIds})).unwrap();
+      }
+
+      if (removedProductIds.length > 0) {
+        await Promise.all(
+          removedProductIds.map((productId) =>
+            dispatch(removeProductFromCollection({token, collectionId: bulkCollectionId, productId})).unwrap()
+          )
+        );
+      }
+
+      const refreshedProducts = await dispatch(productImageForCollection({token, id: bulkCollectionId})).unwrap();
+      const refreshedCollectionProducts = refreshedProducts.data?.collection?.StoreCollectionProducts || [];
+      const refreshedProductIds = [
+        ...new Set(refreshedCollectionProducts.map(getCollectionProductId).filter(Boolean))
+      ];
+
+      setCollectionServices(prev => ({
+        ...prev,
+        [bulkCollectionId]: refreshedCollectionProducts
+      }));
+      setExistingCollectionProductIds(refreshedProductIds);
+      setSelectedProducts(refreshedProductIds);
+      setColData(prev => prev.map((collection) => {
+        if (collection.id !== bulkCollectionId) {
+          return collection;
+        }
+
+        return {
+          ...collection,
+          totalItems: refreshedCollectionProducts.length
+        };
+      }));
+
+      dispatch(resetStatus());
+      dispatch(getCollectionForProduct({ token, id: getId || '7'}));
+      hideModal();
+
+      const updateSummary = [
+        newProductIds.length ? `${newProductIds.length} added` : '',
+        removedProductIds.length ? `${removedProductIds.length} removed` : ''
+      ].filter(Boolean).join(', ');
+
+      Swal.fire({
+        icon: "success",
+        title: "Products Updated",
+        text: `Collection products updated successfully${updateSummary ? ` (${updateSummary})` : ''}.`,
+        confirmButtonColor: "#0273F9",
+      });
+    } catch (bulkError) {
+      let errorMessage = "Failed to update products in collection";
+
+      if (bulkError && typeof bulkError === "object") {
+        if (Array.isArray(bulkError)) {
+          errorMessage = bulkError.map(item => item.message).join(', ');
+        } else if (bulkError.message) {
+          errorMessage = bulkError.message;
+        } else if (bulkError.error) {
+          errorMessage = bulkError.error;
+        }
+      } else if (typeof bulkError === 'string') {
+        errorMessage = bulkError;
+      }
+
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: errorMessage,
+        confirmButtonColor: "#0273F9",
+      });
+    } finally {
+      bulkProductSyncInProgress.current = false;
+    }
   }
 
   useEffect(() => {
+    if (bulkProductSyncInProgress.current) {
+      return;
+    }
+
     if (success) {
       Swal.fire({
         icon: "success",
@@ -681,6 +840,10 @@ const Collection = ({setItemData, autoExpandProducts = false}) => {
   }
 
   useEffect(() => {
+    if (bulkProductSyncInProgress.current) {
+      return;
+    }
+
     if (success) {
       Swal.fire({
         icon: 'success',
@@ -754,6 +917,10 @@ const Collection = ({setItemData, autoExpandProducts = false}) => {
   }
 
   useEffect(() => {
+    if (bulkProductSyncInProgress.current) {
+      return;
+    }
+
     if (success) {
       Swal.fire({
         icon: 'success',
@@ -782,6 +949,10 @@ const Collection = ({setItemData, autoExpandProducts = false}) => {
   const [deletedCollectionId, setDeletedCollectionId] = useState(null);
 
   useEffect(() => {
+    if (bulkProductSyncInProgress.current) {
+      return;
+    }
+
     if (success && success.message && (success.message.toLowerCase().includes('delete') || success.message.toLowerCase().includes('removed'))) {
       // Store the deleted ID from the response or from our state
       Swal.fire({
@@ -811,10 +982,28 @@ const Collection = ({setItemData, autoExpandProducts = false}) => {
   }
 
   const allProducts = collectionProducts?.data || [];
+  const getProductOptionsForCollection = () => {
+    const productOptions = new Map();
+    const addProductOption = (product) => {
+      const productId = getCollectionProductId(product);
+
+      if (!productId) {
+        return;
+      }
+
+      productOptions.set(productId, product);
+    };
+
+    (collectionServices[bulkCollectionId] || []).forEach(addProductOption);
+    allProducts.forEach(addProductOption);
+
+    return Array.from(productOptions.values());
+  };
+  const productOptionsForCollection = getProductOptionsForCollection();
   const productsPerPage = 20;
-  const totalBulkPages = collectionProducts?.pagination?.total_pages || 1;
+  const totalBulkPages = Math.max(1, Math.ceil(productOptionsForCollection.length / productsPerPage));
   const startIdx = (bulkCurrentPage - 1) * productsPerPage;
-  const paginatedProducts = allProducts.slice(startIdx, startIdx + productsPerPage);
+  const paginatedProducts = productOptionsForCollection.slice(startIdx, startIdx + productsPerPage);
 
   return (
     <>
@@ -1240,57 +1429,78 @@ const Collection = ({setItemData, autoExpandProducts = false}) => {
       {bulkModalOpen && (
         <>
           <div className={styles['modal-overlay']} onClick={hideModal}>
-            <div className={styles['modal-content2']} style={{background: '#fff', maxHeight: '90vh', overflowY: 'auto'}} onClick={(e) => e.stopPropagation()}>
-              <div className="d-flex justify-content-between p-3">
-                <h6>Select Multiple Products to Add</h6>
-                <FontAwesomeIcon icon={faTimes} onClick={hideModal} style={{cursor: 'pointer'}}/>
-              </div>
-              <div className={`${styles['modal-body']} p-3`}>
-                <div className="row g-3">
-                  {paginatedProducts && paginatedProducts.length > 0 ? (
-                    paginatedProducts.map((product) => (
-                      <div className="col-md-3 col-sm-6" key={product.id}>
-                        <div style={{
-                          position: 'relative',
-                          border: selectedProducts.includes(product.id) ? '2px solid #0273F9' : '1px solid #ddd',
-                          borderRadius: '8px',
-                          cursor: 'pointer',
-                          backgroundColor: selectedProducts.includes(product.id) ? '#f0f7ff' : '#fff',
-                          transition: 'all 0.2s ease'
-                        }}
-                        onClick={() => handleProductCheckbox(product.id)}
-                        >
-                          <div style={{ borderRadius: '8px 8px 0 0', overflow: 'hidden' }}>
-                            <img src={product.image_url} alt={product.name} style={{
-                              width: '100%',
-                              height: '150px',
-                              objectFit: 'cover',
+	            <div className={styles['modal-content2']} style={{background: '#fff', maxHeight: '90vh', overflowY: 'auto'}} onClick={(e) => e.stopPropagation()}>
+	              <div className="d-flex justify-content-between p-3">
+	                <h6>Select Products for Collection</h6>
+	                <FontAwesomeIcon icon={faTimes} onClick={hideModal} style={{cursor: 'pointer'}}/>
+	              </div>
+	              <div className={`${styles['modal-body']} p-3`}>
+	                <p style={{color: '#78716C'}} className="mb-3">
+	                  Select the products that should stay in this collection. Uncheck an existing product to remove it.
+	                </p>
+	                <div className="row g-3">
+	                  {paginatedProducts && paginatedProducts.length > 0 ? (
+	                    paginatedProducts.map((product) => {
+                        const productId = getCollectionProductId(product);
+                        const productDetails = getProductOptionDetails(product);
+                        const isChecked = selectedProducts.includes(productId);
+                        const isAlreadyAdded = existingCollectionProductIds.includes(productId);
+                        const productName = productDetails?.name || productDetails?.product_name || 'Product';
+                        const productImage = productDetails?.image_url || productDetails?.image || productDetails?.product_image_url || '';
+
+                        return (
+	                      <div className="col-md-3 col-sm-6" key={productId}>
+	                        <div style={{
+	                          position: 'relative',
+	                          border: isChecked ? '2px solid #0273F9' : '1px solid #ddd',
+	                          borderRadius: '8px',
+	                          cursor: 'pointer',
+	                          backgroundColor: isChecked ? '#f0f7ff' : '#fff',
+	                          transition: 'all 0.2s ease'
+	                        }}
+	                        onClick={() => handleProductCheckbox(productId)}
+	                        >
+	                          <div style={{ borderRadius: '8px 8px 0 0', overflow: 'hidden' }}>
+	                            <img src={productImage} alt={productName} style={{
+	                              width: '100%',
+	                              height: '150px',
+	                              objectFit: 'cover',
                               display: 'block'
-                            }}/>
-                          </div>
-                          <div style={{padding: '10px'}}>
-                            <small style={{display: 'block', marginBottom: '5px', fontSize: '12px'}} className='text-truncate'>{product.name}</small>
-                            <div style={{
-                              display: 'flex',
-                              alignItems: 'center',
+	                            }}/>
+	                          </div>
+	                          <div style={{padding: '10px'}}>
+	                            <small style={{display: 'block', marginBottom: '5px', fontSize: '12px'}} className='text-truncate'>{productName}</small>
+                              {isAlreadyAdded && isChecked ? (
+                                <small style={{ color: '#0273F9' }}>Already added</small>
+                              ) : isAlreadyAdded ? (
+                                <small style={{ color: '#DC2626' }}>Will be removed</small>
+                              ) : isChecked ? (
+                                <small style={{ color: '#0273F9' }}>Selected to add</small>
+                              ) : (
+                                <small style={{ color: '#78716C' }}>Select to add</small>
+                              )}
+	                            <div style={{
+	                              display: 'flex',
+	                              alignItems: 'center',
                               justifyContent: 'space-between'
                             }}>
                               <div>
-                                <input 
-                                  type="checkbox" 
-                                  checked={selectedProducts.includes(product.id)}
-                                  onChange={() => handleProductCheckbox(product.id)}
-                                  onClick={(e) => e.stopPropagation()}
-                                  className={styles['collection-picker-checkbox']}
-                                />
-                              </div>
-                              <small style={{color: '#0273F9', fontWeight: 'bold'}}>ID: {product.id}</small>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ))
-                  ) : (
+	                                <input 
+	                                  type="checkbox" 
+	                                  checked={isChecked}
+	                                  onChange={() => handleProductCheckbox(productId)}
+	                                  onClick={(e) => e.stopPropagation()}
+	                                  className={styles['collection-picker-checkbox']}
+	                                />
+	                              </div>
+	                              <small style={{color: '#0273F9', fontWeight: 'bold'}}>ID: {productId}</small>
+	                            </div>
+	                          </div>
+	                        </div>
+	                      </div>
+                        );
+                      })
+	                  ) : (
                     <div className="col-12">
                       <p className="text-center text-muted">No products available</p>
                     </div>
@@ -1347,8 +1557,8 @@ const Collection = ({setItemData, autoExpandProducts = false}) => {
                   </div>
                 )}
 
-                <div className="d-flex justify-content-between align-items-center mt-4 p-3 border-top">
-                  <small style={{color: '#78716C'}}>{selectedProducts.length} product(s) selected</small>
+	                <div className="d-flex justify-content-between align-items-center mt-4 p-3 border-top">
+	                  <small style={{color: '#78716C'}}>{selectedProducts.length} product(s) selected</small>
                   <div className="gap-2" style={{display: 'flex'}}>
                     <button 
                       className={`${styles['sk-btn']}`}
@@ -1362,8 +1572,8 @@ const Collection = ({setItemData, autoExpandProducts = false}) => {
                       onClick={handleBulkProductSubmit}
                       type="button"
                     >
-                      Add Selected ({selectedProducts.length})
-                    </button>
+	                      Save Changes
+	                    </button>
                   </div>
                 </div>
               </div>

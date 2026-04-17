@@ -1,7 +1,6 @@
-import React from "react";
+import React, { useEffect, useMemo } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faArrowTrendUp,
   faBoxOpen,
   faChevronRight,
   faLightbulb,
@@ -11,6 +10,9 @@ import {
   faStore,
   faBagShopping,
 } from "@fortawesome/free-solid-svg-icons";
+import { useDispatch, useSelector } from "react-redux";
+import { getAllProductForCollection } from "../../../slice/onlineStoreSlice";
+import { getImageSrc } from "../../../utils/getImageSrc";
 import styles from "../../../styles.module.css";
 import { Hm, Ben } from "../../../assets";
 import Button from "../../../components/ui/Button";
@@ -63,6 +65,56 @@ const quickActions = [
 
 const periodOptions = ["Last 7 Days", "Last 30 Days", "Last 90 Days", "This Year"];
 
+const readStoredProducts = () => {
+  if (typeof window === "undefined") return [];
+
+  try {
+    const storedProducts = localStorage.getItem("products");
+    const parsedProducts = storedProducts ? JSON.parse(storedProducts) : [];
+    return Array.isArray(parsedProducts) ? parsedProducts : [];
+  } catch {
+    return [];
+  }
+};
+
+const formatProductTotal = (value) => {
+  const amount = Number(value);
+
+  if (!Number.isFinite(amount)) {
+    return "₦0.00";
+  }
+
+  return new Intl.NumberFormat("en-NG", {
+    style: "currency",
+    currency: "NGN",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(amount);
+};
+
+const resolveProductName = (product) =>
+  product?.name || product?.product_name || product?.title || "Product";
+
+const resolveProductImage = (product) =>
+  getImageSrc(
+    product?.image_url ||
+      product?.product_image ||
+      product?.image ||
+      product?.thumbnail_url ||
+      ""
+  );
+
+const resolveProductTotalValue = (product) =>
+  Number(
+    product?.total_sales ||
+      product?.sales_total ||
+      product?.revenue ||
+      product?.total_revenue ||
+      product?.total ||
+      product?.price ||
+      0
+  ) || 0;
+
 const statAccentClasses = {
   green: styles.vendorDashboardCardGreen,
   yellow: styles.vendorDashboardCardYellow,
@@ -76,6 +128,10 @@ const actionAccentClasses = {
 };
 
 const Home = ({ setActiveTab }) => {
+  const dispatch = useDispatch();
+  const token = localStorage.getItem("token");
+  const storeId = localStorage.getItem("itemId");
+  const { collectionProducts } = useSelector((state) => state.store);
   const today = new Date().toLocaleDateString("en-US", {
     weekday: "long",
     month: "long",
@@ -92,6 +148,37 @@ const Home = ({ setActiveTab }) => {
   const bannerStyle = {
     "--vendor-dashboard-banner-image": `url(${Hm})`,
   };
+
+  useEffect(() => {
+    if (!token || !storeId) return;
+
+    dispatch(
+      getAllProductForCollection({
+        token,
+        id: storeId,
+        page: 1,
+        limit: 50,
+      })
+    );
+  }, [dispatch, storeId, token]);
+
+  const realProducts = useMemo(() => {
+    const fetchedProducts = Array.isArray(collectionProducts?.data)
+      ? collectionProducts.data
+      : [];
+    const products = fetchedProducts.length ? fetchedProducts : readStoredProducts();
+
+    return products
+      .map((product, index) => ({
+        id: product?.id || product?.product_id || `${resolveProductName(product)}-${index}`,
+        name: resolveProductName(product),
+        image: resolveProductImage(product),
+        totalValue: resolveProductTotalValue(product),
+        total: formatProductTotal(resolveProductTotalValue(product)),
+      }))
+      .sort((a, b) => b.totalValue - a.totalValue)
+      .slice(0, 5);
+  }, [collectionProducts?.data]);
 
   return (
     <div className={styles.vendorDashboard}>
@@ -186,17 +273,44 @@ const Home = ({ setActiveTab }) => {
         <article className={`${styles.vendorDashboardCard} ${styles.vendorDashboardPanel}`}>
           <div className={styles.vendorDashboardPanelHeader}>
             <div>
-              <h3>Recent Activities</h3>
-              <p>Latest system activities across all modules</p>
+              <h3>Top Performing Products</h3>
             </div>
           </div>
 
-          <div className={styles.vendorDashboardEmptyState}>
-            <div className={styles.vendorDashboardEmptyIcon}>
-              <FontAwesomeIcon icon={faArrowTrendUp} />
-            </div>
-            <h4>Activities</h4>
-            <p>No information available</p>
+          <div className={styles.vendorDashboardProductTableWrap}>
+            <table className={styles.vendorDashboardProductTable}>
+              <thead>
+                <tr>
+                  <th>Product</th>
+                  <th>Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {realProducts.length ? (
+                  realProducts.map((item) => (
+                    <tr key={item.id}>
+                      <td>
+                        <div className={styles.vendorDashboardProductCell}>
+                          {item.image ? (
+                            <img src={item.image} alt={item.name} />
+                          ) : (
+                            <span>{item.name.slice(0, 1).toUpperCase()}</span>
+                          )}
+                          <strong>{item.name}</strong>
+                        </div>
+                      </td>
+                      <td>{item.total}</td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="2" className={styles.vendorDashboardProductEmpty}>
+                      No products available yet
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           </div>
         </article>
 

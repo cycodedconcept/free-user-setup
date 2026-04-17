@@ -15,7 +15,7 @@ import Pagination from '../../../components/Pagination';
 import CreateInvoice from '../crm/CreateInvoice';
 import InvoiceDetails from './InvoiceDetails';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faEllipsisV, faEye, faPen, faTrash, faMoneyBillWave, faReceipt } from '@fortawesome/free-solid-svg-icons';
+import { faEllipsisV, faEye, faPen, faTrash, faMoneyBillWave, faReceipt, faSearch } from '@fortawesome/free-solid-svg-icons';
 import { Tiv, Pb2, Tp, Tm, Upi, Logo } from '../../../assets';
 
 const resolveStoreInfo = (myStore) =>
@@ -100,6 +100,8 @@ const AllInvoices = () => {
   const [generatingReceiptId, setGeneratingReceiptId] = useState(null);
   const [receiptsModalInvoice, setReceiptsModalInvoice] = useState(null);
   const [fetchingReceiptsInvoiceId, setFetchingReceiptsInvoiceId] = useState(null);
+  const [searchInput, setSearchInput] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
   const dropdownRef = useRef(null);
   const storeInfo = resolveStoreInfo(myStore);
   const storeLogoUrl = resolveStoreLogoUrl(storeInfo);
@@ -181,6 +183,16 @@ const AllInvoices = () => {
     setCurrentPage(page);
   };
 
+  const handleSearchSubmit = (event) => {
+    event.preventDefault();
+    setSearchTerm(searchInput.trim());
+  };
+
+  const handleClearSearch = () => {
+    setSearchInput('');
+    setSearchTerm('');
+  };
+
   const toggleDropdown = (invoiceId) => {
     setOpenDropdown(openDropdown === invoiceId ? null : invoiceId);
   };
@@ -229,6 +241,30 @@ const AllInvoices = () => {
 
     return invoice?.customer_name || invoice?.customer_email || '-';
   };
+
+  const filteredInvoices = invoices.filter((invoice) => {
+    const normalizedSearch = searchTerm.trim().toLowerCase();
+
+    if (!normalizedSearch) {
+      return true;
+    }
+
+    return [
+      invoice?.invoice_number,
+      invoice?.id,
+      getCustomerName(invoice),
+      invoice?.customer_email,
+      invoice?.customer_phone,
+      invoice?.status,
+      invoice?.total,
+      invoice?.issue_date,
+      invoice?.due_date,
+    ]
+      .filter((value) => value !== undefined && value !== null)
+      .join(' ')
+      .toLowerCase()
+      .includes(normalizedSearch);
+  });
 
   const handlePreview = (invoice) => {
     if (invoice.preview_url) {
@@ -675,6 +711,74 @@ const AllInvoices = () => {
 
             {/* Invoice Table */}
             <div className="bg-white rounded-3 p-3 mt-4" style={{border: '1px solid #eee'}}>
+            <form
+              className="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3"
+              onSubmit={handleSearchSubmit}
+            >
+              <div
+                className="d-flex align-items-center"
+                style={{
+                  flex: '1 1 280px',
+                  maxWidth: '420px',
+                  minHeight: '44px',
+                  border: '1px solid #E5E7EB',
+                  borderRadius: '8px',
+                  background: '#fff',
+                  overflow: 'hidden'
+                }}
+              >
+                <span className="px-3" style={{color: '#9CA3AF'}}>
+                  <FontAwesomeIcon icon={faSearch} />
+                </span>
+                <input
+                  type="text"
+                  value={searchInput}
+                  onChange={(event) => setSearchInput(event.target.value)}
+                  placeholder="Search invoice ID, customer, status..."
+                  style={{
+                    flex: 1,
+                    minWidth: 0,
+                    border: 'none',
+                    outline: 'none',
+                    fontSize: '13px',
+                    color: '#1F2937'
+                  }}
+                />
+              </div>
+
+              <div className="d-flex align-items-center gap-2">
+                {searchTerm ? (
+                  <button
+                    type="button"
+                    className="bg-transparent"
+                    onClick={handleClearSearch}
+                    style={{
+                      minHeight: '40px',
+                      border: '1px solid #E5E7EB',
+                      borderRadius: '8px',
+                      color: '#78716C',
+                      fontSize: '13px',
+                      padding: '0 14px'
+                    }}
+                  >
+                    Clear
+                  </button>
+                ) : null}
+                <button
+                  type="submit"
+                  className={`rounded-3 ${stylesItem.jBtn}`}
+                  style={{minHeight: '40px', padding: '0 18px'}}
+                >
+                  Search
+                </button>
+              </div>
+
+              {searchTerm ? (
+                <small className="w-100" style={{color: '#78716C'}}>
+                  Showing {filteredInvoices.length} result{filteredInvoices.length === 1 ? '' : 's'} for "{searchTerm}"
+                </small>
+              ) : null}
+            </form>
             <table className="table table-borderless">
                 <thead>
                 <tr style={{borderBottom: '1px solid #eee'}}>
@@ -696,8 +800,8 @@ const AllInvoices = () => {
                         </div>
                     </td>
                     </tr>
-                ) : invoices.length > 0 ? (
-                    invoices.map((invoice) => (
+                ) : filteredInvoices.length > 0 ? (
+                    filteredInvoices.map((invoice) => (
                     <tr key={invoice.id} style={{borderBottom: '1px solid #eee'}}>
                         <td style={{fontSize: '13px'}}>{invoice.invoice_number || invoice.id}</td>
                         <td style={{fontSize: '13px'}}>{getCustomerName(invoice)}</td>
@@ -888,13 +992,13 @@ const AllInvoices = () => {
                         </td>
                     </tr>
                     ))
-                ) : (
-                    <tr>
-                    <td colSpan="7" className="text-center py-4" style={{color: '#78716C'}}>
-                        No invoices found
-                    </td>
-                    </tr>
-                )}
+	                ) : (
+	                    <tr>
+	                    <td colSpan="7" className="text-center py-4" style={{color: '#78716C'}}>
+	                        {searchTerm ? 'No invoices matched your search' : 'No invoices found'}
+	                    </td>
+	                    </tr>
+	                )}
                 </tbody>
             </table>
 

@@ -1,10 +1,11 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { updateStoreImages, resetStatus, getMyOnlineStore, storeUpdateColors } from '../../../slice/onlineStoreSlice';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { deleteBannerImage, updateStoreImages, resetStatus, getMyOnlineStore, storeUpdateColors } from '../../../slice/onlineStoreSlice';
+import { getOnlineStoreThemes } from '../../../slice/customerFacingSlice';
 import { useDispatch, useSelector } from 'react-redux';
 import { Ac } from '../../../assets';
 import Swal from 'sweetalert2';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faCheck } from '@fortawesome/free-solid-svg-icons';
+import { faCheck, faTrashCan } from '@fortawesome/free-solid-svg-icons';
 
 const appearanceSteps = [
   {
@@ -28,6 +29,7 @@ const Appearance = () => {
   const token = localStorage.getItem('token');
   const getId = localStorage.getItem('itemId');
   const { loading, myStore } = useSelector((state) => state.store);
+  const { storeThemes, storeThemesLoading, storeThemesError } = useSelector((state) => state.customer);
 
   const [activeStep, setActiveStep] = useState(0);
   const [uploadingKey, setUploadingKey] = useState(null);
@@ -39,6 +41,7 @@ const Appearance = () => {
   const [selectedThemeId, setSelectedThemeId] = useState(null);
   const [applyingThemeId, setApplyingThemeId] = useState(null);
   const [themeProgress, setThemeProgress] = useState(0);
+  const [deletingBanner, setDeletingBanner] = useState(false);
   const [im, setIm] = useState({
     profile: null,
     cover: null
@@ -60,23 +63,45 @@ const Appearance = () => {
     myStore?.data?.onlineStore ||
     myStore?.store ||
     {};
+  const resolvedStoreId =
+    getId ||
+    storeInfo?.id ||
+    storeInfo?.store_id ||
+    storeInfo?.online_store_id ||
+    null;
+  const storeIdForWrite = resolvedStoreId || getId || null;
+  const hasResolvedStoreId = Boolean(resolvedStoreId || getId);
 
   const triggerInput = (ref) => ref?.current?.click();
 
   useEffect(() => {
     if (token) {
-      dispatch(getMyOnlineStore({ token, id: getId || '7' }));
+      dispatch(getMyOnlineStore({ token, id: getId }));
     }
   }, [dispatch, token, getId]);
 
   useEffect(() => {
+    if (token && resolvedStoreId) {
+      dispatch(getOnlineStoreThemes({ token, id: resolvedStoreId }));
+    }
+  }, [dispatch, token, resolvedStoreId]);
+
+  useEffect(() => {
+    const profileImage = storeInfo?.profile_logo_url;
+    const coverImage =
+      storeInfo?.banner_image_url ||
+      storeInfo?.banner_url ||
+      storeInfo?.cover_image_url;
+
     setIm((prev) => ({
-      profile: storeInfo?.profile_logo_url || prev.profile,
-      cover:
-        storeInfo?.banner_image_url ||
-        storeInfo?.banner_url ||
-        storeInfo?.cover_image_url ||
-        prev.cover
+      profile: profileImage || prev.profile,
+      cover: coverImage || prev.cover
+    }));
+
+    setUploadedSteps((prev) => ({
+      ...prev,
+      logo: Boolean(profileImage) || prev.logo,
+      banner: Boolean(coverImage) || prev.banner
     }));
   }, [
     storeInfo?.profile_logo_url,
@@ -92,7 +117,41 @@ const Appearance = () => {
     }
   }, [storeInfo?.selected_theme]);
 
+  const availableThemes = useMemo(() => {
+    const themeMap = new Map();
+
+    [...suggestedThemes, ...storeThemes].forEach((theme) => {
+      if (!theme || typeof theme !== 'object') {
+        return;
+      }
+
+      const themeKey = theme.id || theme.name;
+      if (!themeKey || themeMap.has(themeKey)) {
+        return;
+      }
+
+      themeMap.set(themeKey, theme);
+    });
+
+    return Array.from(themeMap.values());
+  }, [suggestedThemes, storeThemes]);
+
+  const themeErrorMessage =
+    storeThemesError?.message ||
+    storeThemesError?.error ||
+    (typeof storeThemesError === 'string' ? storeThemesError : 'Unable to load store themes.');
+
   const uploadImageForStore = async (file, step) => {
+    if (!token || !hasResolvedStoreId || !storeIdForWrite) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Unable to Upload Image',
+        text: 'Store details are still loading. Please try again in a moment.',
+        confirmButtonColor: '#0273F9'
+      });
+      return;
+    }
+
     const formData = new FormData();
     formData.append(step.id, file);
 
@@ -103,7 +162,7 @@ const Appearance = () => {
         updateStoreImages({
           token,
           formData,
-          id: getId || '7'
+          id: storeIdForWrite
         })
       ).unwrap();
 
@@ -132,6 +191,8 @@ const Appearance = () => {
           updatedStore?.cover_image_url ||
           prev.cover
       }));
+
+      dispatch(getMyOnlineStore({ token, id: storeIdForWrite }));
 
       await Swal.fire({
         icon: 'success',
@@ -170,6 +231,17 @@ const Appearance = () => {
       return;
     }
 
+    if (!token || !hasResolvedStoreId || !storeIdForWrite) {
+      e.target.value = '';
+      Swal.fire({
+        icon: 'error',
+        title: 'Unable to Upload Image',
+        text: 'Store details are still loading. Please try again in a moment.',
+        confirmButtonColor: '#0273F9'
+      });
+      return;
+    }
+
     const localPreviewUrl = URL.createObjectURL(file);
     setIm((prev) => ({
       ...prev,
@@ -178,6 +250,108 @@ const Appearance = () => {
 
     await uploadImageForStore(file, step);
     e.target.value = '';
+  };
+
+  const handleStepSelect = (index) => {
+    setActiveStep(index);
+  };
+
+  const getActionErrorMessage = (actionError, fallbackMessage) => {
+    if (actionError && typeof actionError === 'object') {
+      if (actionError.message) {
+        return actionError.message;
+      }
+
+      if (actionError.error) {
+        return actionError.error;
+      }
+    }
+
+    if (typeof actionError === 'string') {
+      return actionError;
+    }
+
+    return fallbackMessage;
+  };
+
+  const handleDeleteBannerImage = async () => {
+    if (deletingBanner || !im.cover) {
+      return;
+    }
+
+    if (!token || !hasResolvedStoreId) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Unable to Delete Banner',
+        text: 'Store details are still loading. Please try again in a moment.',
+        confirmButtonColor: '#0273F9'
+      });
+      return;
+    }
+
+    const result = await Swal.fire({
+      title: 'Delete Banner Image?',
+      text: 'This will remove the banner from your online store appearance.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, Delete',
+      cancelButtonText: 'Cancel',
+      confirmButtonColor: '#DC2626',
+      cancelButtonColor: '#78716C'
+    });
+
+    if (!result.isConfirmed) {
+      return;
+    }
+
+    setDeletingBanner(true);
+
+    Swal.fire({
+      title: 'Deleting Banner...',
+      text: 'Please wait while we remove the image.',
+      allowOutsideClick: false,
+      didOpen: () => {
+        Swal.showLoading();
+      }
+    });
+
+    try {
+      const response = await dispatch(
+        deleteBannerImage({
+          token,
+          storeId: storeIdForWrite,
+          image_type: 'banner'
+        })
+      ).unwrap();
+
+      setIm((prev) => ({
+        ...prev,
+        cover: null
+      }));
+      setUploadedSteps((prev) => ({
+        ...prev,
+        banner: false
+      }));
+
+      dispatch(getMyOnlineStore({ token, id: storeIdForWrite }));
+
+      await Swal.fire({
+        icon: 'success',
+        title: 'Banner Deleted',
+        text: response?.message || 'Banner image deleted successfully.',
+        confirmButtonColor: '#0273F9'
+      });
+    } catch (deleteError) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Delete Failed',
+        text: getActionErrorMessage(deleteError, 'Failed to delete banner image.'),
+        confirmButtonColor: '#0273F9'
+      });
+    } finally {
+      setDeletingBanner(false);
+      dispatch(resetStatus());
+    }
   };
 
   const renderPreview = (step) => {
@@ -199,7 +373,23 @@ const Appearance = () => {
       return (
         <div style={dropdownStyles.bannerPreview}>
           {previewSrc ? (
-            <img src={previewSrc} alt={step.title} style={dropdownStyles.previewImage} />
+            <>
+              <img src={previewSrc} alt={step.title} style={dropdownStyles.previewImage} />
+              <button
+                type="button"
+                aria-label="Delete banner image"
+                title="Delete banner image"
+                style={dropdownStyles.deleteBannerBtn}
+                disabled={deletingBanner}
+                onClick={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  handleDeleteBannerImage();
+                }}
+              >
+                <FontAwesomeIcon icon={faTrashCan} />
+              </button>
+            </>
           ) : (
             <div style={dropdownStyles.placeholderBanner} />
           )}
@@ -234,7 +424,7 @@ const Appearance = () => {
       const response = await dispatch(
         storeUpdateColors({
           token,
-          id: getId || '7',
+          id: storeIdForWrite,
           selected_theme: theme
         })
       ).unwrap();
@@ -294,8 +484,10 @@ const Appearance = () => {
           const isDone = uploadedSteps[step.id];
 
           return (
-            <div
+            <button
               key={step.id}
+              type="button"
+              onClick={() => handleStepSelect(index)}
               style={{
                 padding: '8px 14px',
                 borderRadius: '999px',
@@ -303,11 +495,12 @@ const Appearance = () => {
                 background: isActive ? '#EAF4FF' : isDone ? '#F0FDF4' : '#fff',
                 color: isActive ? '#0273F9' : '#57534E',
                 fontSize: '12px',
-                fontWeight: 600
+                fontWeight: 600,
+                cursor: 'pointer'
               }}
             >
               {index + 1}. {step.title}
-            </div>
+            </button>
           );
         })}
       </div>
@@ -343,7 +536,7 @@ const Appearance = () => {
 
         <p style={dropdownStyles.note}>{currentStep.recommendation}</p>
 
-        {uploadedSteps[currentStep.id] && !isLastStep && (
+        {(uploadedSteps[currentStep.id] || im[currentStep.previewKey]) && !isLastStep && (
           <div className="mt-4">
             <button
               type="button"
@@ -364,58 +557,71 @@ const Appearance = () => {
         )}
       </div>
 
-      {uploadedSteps.logo && suggestedThemes.length > 0 && (
-        <div className="mt-4">
+      <div className="mt-4">
           <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
             <div>
-              <h6 style={{ color: '#1C1917', marginBottom: '4px' }}>Suggested Themes</h6>
+              <h6 style={{ color: '#1C1917', marginBottom: '4px' }}>Available Themes</h6>
               <small style={{ color: '#78716C' }}>
-                Theme recommendations generated from your uploaded logo click to select any theme for your store front.
+                {suggestedThemes.length > 0
+                  ? 'Theme recommendations generated from your uploaded logo click to select any theme for your store front.'
+                  : 'Select any theme to update your store front anytime.'}
               </small>
             </div>
           </div>
 
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
-              gap: '16px'
-            }}
-          >
-            {suggestedThemes.map((theme) => (
-              (() => {
-                const isApplying = applyingThemeId === theme.id;
-                const isSelected = selectedThemeId === theme.id;
-                const showActiveBorder = isApplying || isSelected;
+          {storeThemesLoading && availableThemes.length === 0 ? (
+            <div className="d-flex align-items-center gap-2 py-3" style={{ color: '#78716C' }}>
+              <div className="spinner-border spinner-border-sm text-primary" role="status" />
+              <small>Loading themes...</small>
+            </div>
+          ) : storeThemesError && availableThemes.length === 0 ? (
+            <small className="d-block text-danger py-3">{themeErrorMessage}</small>
+          ) : availableThemes.length > 0 ? (
+          <>
+            {storeThemesError && (
+              <small className="d-block text-danger mb-3">{themeErrorMessage}</small>
+            )}
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+                gap: '16px'
+              }}
+            >
+              {availableThemes.map((theme) => (
+                (() => {
+                  const isApplying = applyingThemeId === theme.id;
+                  const isSelected = selectedThemeId === theme.id;
+                  const showActiveBorder = isApplying || isSelected;
 
-                return (
-                  <button
-                    key={theme.id}
-                    type="button"
-                    onClick={() => handleThemeSelection(theme)}
-                    disabled={Boolean(applyingThemeId)}
-                    style={{
-                      border: 'none',
-                      padding: 0,
-                      background: showActiveBorder ? getThemeProgressBackground(isApplying ? themeProgress : 100) : 'transparent',
-                      borderRadius: '22px',
-                      cursor: applyingThemeId ? 'not-allowed' : 'pointer',
-                      textAlign: 'left'
-                    }}
-                  >
-                    <div
+                  return (
+                    <button
+                      key={theme.id || theme.name}
+                      type="button"
+                      onClick={() => handleThemeSelection(theme)}
+                      disabled={Boolean(applyingThemeId)}
                       style={{
-                        margin: '2px',
-                        borderRadius: '20px',
-                        border: `1px solid ${showActiveBorder ? 'transparent' : theme.border_default || '#E7E5E4'}`,
-                        background: theme.card || '#FFFFFF',
-                        overflow: 'hidden',
-                        boxShadow: showActiveBorder
-                          ? '0 14px 28px rgba(59, 130, 246, 0.14)'
-                          : '0 10px 24px rgba(15, 23, 42, 0.08)',
-                        transition: 'all 0.2s ease'
+                        border: 'none',
+                        padding: 0,
+                        background: showActiveBorder ? getThemeProgressBackground(isApplying ? themeProgress : 100) : 'transparent',
+                        borderRadius: '22px',
+                        cursor: applyingThemeId ? 'not-allowed' : 'pointer',
+                        textAlign: 'left'
                       }}
                     >
+                      <div
+                        style={{
+                          margin: '2px',
+                          borderRadius: '20px',
+                          border: `1px solid ${showActiveBorder ? 'transparent' : theme.border_default || '#E7E5E4'}`,
+                          background: theme.card || '#FFFFFF',
+                          overflow: 'hidden',
+                          boxShadow: showActiveBorder
+                            ? '0 14px 28px rgba(59, 130, 246, 0.14)'
+                            : '0 10px 24px rgba(15, 23, 42, 0.08)',
+                          transition: 'all 0.2s ease'
+                        }}
+                      >
                 <div
                   style={{
                     background: theme.surface || theme.background_color || '#F8FAFC',
@@ -510,7 +716,7 @@ const Appearance = () => {
                     <div className="d-flex align-items-center gap-1">
                       {(theme.preview_colors || []).slice(0, 3).map((colorItem) => (
                         <span
-                          key={`${theme.id}-${colorItem}`}
+                          key={`${theme.id || theme.name}-${colorItem}`}
                           style={{
                             width: '10px',
                             height: '10px',
@@ -550,17 +756,22 @@ const Appearance = () => {
                       letterSpacing: '0.08em'
                     }}
                   >
-                    {theme.id}
+                    {theme.id || theme.name}
                   </div>
                 </div>
-                    </div>
-                  </button>
-                );
-              })()
-            ))}
-          </div>
+                      </div>
+                    </button>
+                  );
+                })()
+              ))}
+            </div>
+          </>
+          ) : (
+            <small className="d-block py-3" style={{ color: '#78716C' }}>
+              No themes available for this store yet.
+            </small>
+          )}
         </div>
-      )}
     </div>
   );
 };
@@ -598,7 +809,8 @@ const dropdownStyles = {
     borderRadius: '12px',
     overflow: 'hidden',
     backgroundColor: '#ddd',
-    marginBottom: '1rem'
+    marginBottom: '1rem',
+    position: 'relative'
   },
   previewImage: {
     width: '100%',
@@ -623,7 +835,24 @@ const dropdownStyles = {
     borderRadius: '8px',
     fontSize: '14px',
     cursor: 'pointer',
-    color: '#0273F9'
+    color: '#0273F9',
+    width: '229px',
+  },
+  deleteBannerBtn: {
+    position: 'absolute',
+    top: '8px',
+    right: '8px',
+    width: '34px',
+    height: '34px',
+    border: 'none',
+    borderRadius: '8px',
+    backgroundColor: '#DC2626',
+    color: '#FFFFFF',
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    cursor: 'pointer',
+    boxShadow: '0 8px 18px rgba(220, 38, 38, 0.28)'
   },
   nextBtn: {
     padding: '10px 24px',
