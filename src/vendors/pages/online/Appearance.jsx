@@ -6,6 +6,8 @@ import { Ac } from '../../../assets';
 import Swal from 'sweetalert2';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCheck, faTrashCan } from '@fortawesome/free-solid-svg-icons';
+import styles from "../../../styles.module.css";
+
 
 const appearanceSteps = [
   {

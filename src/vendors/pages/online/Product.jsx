@@ -1535,7 +1535,7 @@ const Product = ({setProCol}) => {
               <small className="d-block" style={{color: '#78716C'}}>0 pinned to top</small>
             </div>
             <div>
-              <button className={`${styles['si-btn']} px-5 py-3`} onClick={() => {setMode(true)}}>Add Product</button>
+              <button className={`${styles['si-btn']} px-2 px-lg-5 py-3 py-lg-3`} onClick={() => {setMode(true)}}>Add Product</button>
             </div>
           </div>
 

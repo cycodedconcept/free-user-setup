@@ -1,6 +1,6 @@
 import React, {useState, useEffect} from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faExternalLinkAlt, faTimes, faTrashCan, faPen, faEllipsisV, faThumbtack, faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
+import { faExternalLinkAlt, faTimes, faTrashCan, faPen, faEllipsisV, faThumbtack, faEye, faEyeSlash, faGripVertical } from '@fortawesome/free-solid-svg-icons';
 import { useDispatch, useSelector } from 'react-redux';
 import { createService, updateService, updateServiceSortOrder, updateServiceVisibility, updateCollectionSortOrder, getAllServices, deleteService, getAllCollection, setServicesOrder,
     createCollection, resetStatus, getServiceCollection, 
@@ -1542,7 +1542,7 @@ useEffect(() => {
     const delColService = async (colid, serid, serviceTitle) => {
         Swal.fire({
             title: 'Delete Service?',
-            text: `<p>Are you sure you want to delete <span className="danger">"${serviceTitle}"</span>? This action cannot be undone.</p>`,
+            html: `Are you sure you want to delete <span style="color: #DC2626; font-weight: bold;">"${serviceTitle}"</span>? This action cannot be undone.`,
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#DC2626',
@@ -1822,9 +1822,21 @@ useEffect(() => {
                                                   }}
                                                 >
                                                 <div className={`${styles.header} ${styles.vendorServiceCardHeader} d-flex justify-content-between px-4`}>
-                                                <div className={`${styles.vendorServiceCardTitle} d-flex`}>
-                                                <p className='mx me-2'>{store.service_title} ({formatDuration(store.duration_minutes)})</p> 
-                                                <FontAwesomeIcon icon={faPen} style={{color: '#78716C', cursor: 'pointer'}} onClick={() => openUpdateModal(store.id)}/>
+                                                <div className={`${styles.vendorServiceCardTitle} d-flex align-items-start justify-content-between w-100 gap-2`}>
+                                                  <div className="d-flex align-items-start gap-2 min-w-0">
+                                                    <p className='mx me-2'>{store.service_title} ({formatDuration(store.duration_minutes)})</p> 
+                                                    <FontAwesomeIcon icon={faPen} style={{color: '#78716C', cursor: 'pointer'}} onClick={() => openUpdateModal(store.id)}/>
+                                                  </div>
+                                                  <div className={styles.vendorServiceMobileToggle}>
+                                                    <label className={styles.switch}>
+                                                      <input
+                                                        type="checkbox"
+                                                        checked={isServiceVisible(store.is_visible)}
+                                                        onChange={(e) => handleServiceVisibilityToggle(store.id, e.target.checked)}
+                                                      />
+                                                      <span className={`${styles.slider} round`}></span>
+                                                    </label>
+                                                  </div>
                                                 </div>
                                                 <div className={styles.vendorServiceCardActions}>
                                                 <FontAwesomeIcon icon={faExternalLinkAlt} className={styles.icon} style={{color: '#78716C', cursor: 'pointer'}} onClick={() => openUpdateModal(store.id)}/>
@@ -1854,6 +1866,24 @@ useEffect(() => {
                                             </div>
 
                                             <p className={`${styles.description} px-4`}>{store.description}</p>
+                                            <div className={styles.vendorServiceMobileActions}>
+                                              <button
+                                                type="button"
+                                                className={styles.vendorServiceMobileIconButton}
+                                                onClick={() => openUpdateModal(store.id)}
+                                                aria-label={`Open ${store.service_title}`}
+                                              >
+                                                <FontAwesomeIcon icon={faExternalLinkAlt} />
+                                              </button>
+                                              <button
+                                                type="button"
+                                                className={`${styles.vendorServiceMobileIconButton} ${styles.vendorServiceMobileIconButtonDanger}`}
+                                                onClick={() => deleteServiceHandler(store.id, store.service_title)}
+                                                aria-label={`Delete ${store.service_title}`}
+                                              >
+                                                <FontAwesomeIcon icon={faTrashCan} />
+                                              </button>
+                                            </div>
 
                                             </div>
                                         ))
@@ -1954,6 +1984,80 @@ useEffect(() => {
                                             transition: 'all 0.2s ease',
                                             cursor: draggedCollection === index ? 'grabbing' : 'grab'
                                         }}>
+                                        <div className={styles.vendorServiceCollectionMobileCard}>
+                                            <div className={styles.vendorServiceCollectionMobileTopRow}>
+                                                <button
+                                                    type="button"
+                                                    className={styles.vendorServiceCollectionDragHandle}
+                                                    aria-label={`Drag ${collect.collection_name}`}
+                                                >
+                                                    <FontAwesomeIcon icon={faGripVertical} />
+                                                </button>
+                                                    <div className={styles.vendorServiceCollectionMobileCopy}>
+                                                    <div className={styles.vendorServiceCollectionMobileTitleRow}>
+                                                        <h6>
+                                                            {collect.collection_name}
+                                                        </h6>
+                                                        <label className={`${styles.switch} mt-1`}>
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={isCollectionVisible(collect.is_visible)}
+                                                                onChange={() => handleCollectionVisibilityToggle(collect)}
+                                                            />
+                                                            <span className={`${styles.slider} round`}></span>
+                                                        </label>
+                                                    </div>
+                                                    <p style={{color: '#1C1917'}} className='nx mt-2 mb-0'>
+                                                        {collect.totalItems} {collect.totalItems > 1 ? 'Services' : 'Service'} added
+                                                    </p>
+                                                    <small style={{color: '#1C1917'}} className='nx d-block'>
+                                                        {pinnedCount} {pinnedCount === 1 ? 'Service' : 'Services'} pinned
+                                                    </small>
+                                                </div>
+                                            </div>
+
+                                            <div className={styles.vendorServiceCollectionMobileFooter}>
+                                                <div className={styles.vendorServiceCollectionMobileLeftActions}>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleCollectionCheckbox(collect.id)}
+                                                        className={styles.vendorServiceCollectionMobileActionButton}
+                                                        aria-label={visibleCollections[collect.id] ? 'Hide services' : 'View services'}
+                                                    >
+                                                        <FontAwesomeIcon
+                                                            icon={visibleCollections[collect.id] ? faEye : faEyeSlash}
+                                                            style={{ color: '#78716C' }}
+                                                        />
+                                                    </button>
+                                                    {/* <button
+                                                        type="button"
+                                                        onClick={() => openEditCollection(collect)}
+                                                        className={styles.vendorServiceCollectionMobileActionButton}
+                                                        aria-label={`Edit ${collect.collection_name}`}
+                                                    >
+                                                        <FontAwesomeIcon icon={faPen} />
+                                                    </button> */}
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => removeCollection(collect.id, collect.collection_name)}
+                                                        className={`${styles.vendorServiceCollectionMobileActionButton} ${styles.vendorServiceCollectionMobileDangerButton}`}
+                                                        aria-label={`Delete ${collect.collection_name}`}
+                                                    >
+                                                        <FontAwesomeIcon icon={faTrashCan} />
+                                                    </button>
+                                                </div>
+
+                                                <button
+                                                    type="button"
+                                                    className={`${styles['si-btn']} ${styles.vendorServiceCollectionMobileAddButton} px-4 rounded-2`}
+                                                    style={{fontSize: '12px'}}
+                                                    onClick={() => showCollect(collect)}
+                                                >
+                                                    Add Services
+                                                </button>
+                                            </div>
+                                        </div>
+
                                         <div className={`${styles.vendorServiceCollectionHeader} d-flex justify-content-between ${styles.vala}`}>
                                             <div>
                                                <h6>
@@ -2014,7 +2118,50 @@ useEffect(() => {
                                                     return bPinned - aPinned;
                                                 }).map((item) =>
                                                     <div className={`${styles['service-card']} ${styles.vendorServiceCard}`} key={item.id}>
-                                                        <div className={`${styles.header} ${styles.vendorServiceCardHeader} d-flex justify-content-between position-relative px-4`}>
+                                                    <div className={styles.vendorServiceCardMobileCard}>
+                                                        <div className={styles.vendorServiceCardMobileTopRow}>
+                                                            <div className={styles.vendorServiceCardMobileCopy}>
+                                                                <div className={styles.vendorServiceCardMobileTitleRow}>
+                                                                    <p className="mx">{item.service_title}</p>
+                                                                </div>
+                                                                <small className={styles.vendorServiceCardMobileMeta}>
+                                                                    {formatDuration(item.duration_minutes)}
+                                                                </small>
+                                                            </div>
+                                                            <FontAwesomeIcon
+                                                                icon={faThumbtack}
+                                                                style={{
+                                                                    color: isCollectionServicePinned(item) ? '#0273F9' : '#78716C',
+                                                                    cursor: 'pointer'
+                                                                }}
+                                                                title={isCollectionServicePinned(item) ? 'Service is pinned' : 'Service is not pinned'}
+                                                            />
+                                                        </div>
+
+                                                        <p className={`${styles.vendorServiceCardMobileDescription} px-4`}>
+                                                            {item.description} ({formatDuration(item.duration_minutes)})
+                                                        </p>
+
+                                                        <div className={styles.vendorServiceCardMobileFooter}>
+                                                            <button
+                                                                type="button"
+                                                                className={styles.vendorServiceCardMobileActionButton}
+                                                                onClick={() => showSerMode(item.id, collect.id)}
+                                                                aria-label={`Edit ${item.service_title}`}
+                                                            >
+                                                                <FontAwesomeIcon icon={faPen} />
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                className={`${styles.vendorServiceCardMobileActionButton} ${styles.vendorServiceCardMobileDangerButton}`}
+                                                                onClick={() => delColService(collect.id, item.id, item.service_title)}
+                                                                aria-label={`Delete ${item.service_title}`}
+                                                            >
+                                                                <FontAwesomeIcon icon={faTrashCan} />
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                    <div className={`${styles.header} ${styles.vendorServiceCardHeader} d-flex justify-content-between position-relative px-4`}>
                                                             <div className={`${styles.vendorServiceCardTitle} d-flex gap-3`}>
                                                                 <p className='mx'>{item.service_title}</p> 
                                                                 <FontAwesomeIcon icon={faPen} style={{color: '#78716C'}} onClick={() => showSerMode(item.id, collect.id)}/>
@@ -2256,9 +2403,9 @@ useEffect(() => {
                                 </div>
                             </div>
 
-                            <div className="text-end mt-4">
-                                <button className={`${styles['sk-btn']} me-2`}>Cancel</button>
-                                <button className={`${styles['si-btn']} btn-lg px-5 py-3`}>
+                            <div className={`${styles.vendorServiceFormActions} text-end mt-4`}>
+                                <button className={`${styles['sk-btn']} ${styles.vendorServiceFormCancel}`}>Cancel</button>
+                                <button className={`${styles['si-btn']} btn-lg px-5 py-3 ${styles.vendorServiceFormSubmit}`}>
                                     {
                                         loading ?(
                                             <>
@@ -2353,9 +2500,9 @@ useEffect(() => {
                             </div>
 
 
-                            <div className="text-end mt-4">
-                                <button className={`${styles['sk-btn']} me-2`}>Cancel</button>
-                                <button className={`${styles['si-btn']} btn-lg px-5 py-3`}>
+                            <div className={`${styles.vendorServiceCollectionModalActions} text-end mt-4`}>
+                                <button type="button" className={`${styles['sk-btn']} ${styles.vendorServiceCollectionModalCancel}`}>Cancel</button>
+                                <button className={`${styles['si-btn']} btn-lg px-5 py-3 ${styles.vendorServiceCollectionModalSubmit}`}>
                                     {
                                         loading ?(
                                             <>
@@ -2449,9 +2596,9 @@ useEffect(() => {
                                 </label>
                             </div>
 
-                            <div className="text-end mt-4">
-                                <button className={`${styles['sk-btn']} me-2`} type="button" onClick={hideModal}>Cancel</button>
-                                <button className={`${styles['si-btn']} btn-lg px-5 py-3`}>
+                            <div className={`${styles.vendorServiceCollectionModalActions} text-end mt-4`}>
+                                <button className={`${styles['sk-btn']} ${styles.vendorServiceCollectionModalCancel}`} type="button" onClick={hideModal}>Cancel</button>
+                                <button className={`${styles['si-btn']} btn-lg px-5 py-3 ${styles.vendorServiceCollectionModalSubmit}`}>
                                     {
                                         loading ?(
                                             <>
@@ -2659,9 +2806,9 @@ useEffect(() => {
                                 </div>
                             </div>
 
-                            <div className="text-end mt-4">
-                                <button className={`${styles['sk-btn']} me-2`} type="button" onClick={hideModal}>Cancel</button>
-                                <button className={`${styles['si-btn']} btn-lg px-5 py-3`} type="submit">
+                            <div className={`${styles.vendorServiceFormActions} text-end mt-4`}>
+                                <button className={`${styles['sk-btn']} ${styles.vendorServiceFormCancel}`} type="button" onClick={hideModal}>Cancel</button>
+                                <button className={`${styles['si-btn']} btn-lg px-5 py-3 ${styles.vendorServiceFormSubmit}`} type="submit">
                                     {
                                         loading ?(
                                             <>
@@ -2771,9 +2918,9 @@ useEffect(() => {
                                 <p className="text-center text-muted py-4 mb-0">No services available</p>
                             )}
 
-                        <div className="text-end mt-4">
-                            <button className={`${styles['sk-btn']} me-2`} type="button" onClick={hideModal}>Cancel</button>
-                            <button className={`${styles['si-btn']} btn-lg px-5 py-3`} type="submit">
+                        <div className={`${styles.vendorServiceCollectionModalActions} text-end mt-4`}>
+                            <button className={`${styles['sk-btn']} ${styles.vendorServiceCollectionModalCancel}`} type="button" onClick={hideModal}>Cancel</button>
+                            <button className={`${styles['si-btn']} btn-lg px-5 py-3 ${styles.vendorServiceCollectionModalSubmit}`} type="submit">
                                 {
                                     loading ?(
                                         <>
@@ -2843,9 +2990,9 @@ useEffect(() => {
                             </div>
                         </div>
 
-                        <div className="text-end mt-4">
-                            <button className={`${styles['sk-btn']} me-2`} type="button" onClick={hideModal}>Cancel</button>
-                            <button className={`${styles['si-btn']} btn-lg px-5 py-3`} type="submit">
+                        <div className={`${styles.vendorServiceCollectionModalActions} text-end mt-4`}>
+                            <button className={`${styles['sk-btn']} ${styles.vendorServiceCollectionModalCancel} me-2`} type="button" onClick={hideModal}>Cancel</button>
+                            <button className={`${styles['si-btn']} btn-lg px-5 py-3 ${styles.vendorServiceCollectionModalSubmit}`} type="submit">
                                 {
                                     loading ?(
                                         <>

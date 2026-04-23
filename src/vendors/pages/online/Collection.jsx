@@ -31,6 +31,7 @@ const Collection = ({setItemData, autoExpandProducts = false}) => {
   const [draggedCollection, setDraggedCollection] = useState(null);
   const [dragOverCollectionIndex, setDragOverCollectionIndex] = useState(null);
   const [hoveredProductId, setHoveredProductId] = useState(null);
+  const [isCollectionMobile, setIsCollectionMobile] = useState(false);
   const [sortModalOpen, setSortModalOpen] = useState(false);
   const [sortModalData, setSortModalData] = useState({collectionId: null, productId: null, collectionProductId: null});
   const [sortData, setSortData] = useState({
@@ -151,6 +152,17 @@ const Collection = ({setItemData, autoExpandProducts = false}) => {
     const itemValue = JSON.parse(localStorage.getItem('products')) || [];
     setProductItem(itemValue);
   }, [])
+
+  useEffect(() => {
+    const updateIsCollectionMobile = () => {
+      setIsCollectionMobile(window.innerWidth < 768);
+    };
+
+    updateIsCollectionMobile();
+    window.addEventListener('resize', updateIsCollectionMobile);
+
+    return () => window.removeEventListener('resize', updateIsCollectionMobile);
+  }, []);
 
   useEffect(() => {
     const getCollectionItem = JSON.parse(localStorage.getItem("allcollectionsProduct"));
@@ -1023,7 +1035,7 @@ const Collection = ({setItemData, autoExpandProducts = false}) => {
 
           {addButton && (
             <div>
-              <button className={`${styles['si-btn']} px-5 py-3`} onClick={() => {setCmode(true)}}>Add Collection</button>
+              <button className={`${styles['si-btn']} px-lg-5 py-lg-3 py-3 px-2`} onClick={() => {setCmode(true)}}>Add Collection</button>
             </div>
           )}
           
@@ -1056,6 +1068,7 @@ const Collection = ({setItemData, autoExpandProducts = false}) => {
                 onDragLeave={handleCollectionDragLeave}
                 onDrop={(e) => handleCollectionDrop(e, index)}
                 onDragEnd={handleCollectionDragEnd}
+                className={styles.vendorCollectionCard}
                 style={{
                     background: '#F4F4F4',
                     border: '1px solid #EEEEEE',
@@ -1071,59 +1084,98 @@ const Collection = ({setItemData, autoExpandProducts = false}) => {
                     transition: 'all 0.2s ease',
                     cursor: draggedCollection === index ? 'grabbing' : 'grab'
                 }}>
-                <div className={`d-flex justify-content-between align-items-start flex-wrap gap-3 pe-1 ${styles.vala2} ${styles.vendorOnlineCardHeader}`}>
-                  <div className="d-flex align-items-center gap-2" style={{minWidth: 0}}>
+                <div className={`d-flex justify-content-between align-items-start flex-wrap gap-3 pe-1 ${styles.vala2} ${styles.vendorOnlineCardHeader} ${styles.vendorCollectionCardHeader}`}>
+                  <div className={`d-flex align-items-center gap-2 ${styles.vendorCollectionCardTitle}`} style={{minWidth: 0}}>
                     <div className={`d-inline-flex ${styles.sido}`} style={{position: 'static', transform: 'none'}}>
                       <FontAwesomeIcon icon={faEllipsisV} className='me-1' style={{color: '#78716C', width: 'auto'}}/>
                       <FontAwesomeIcon icon={faEllipsisV} style={{color: '#78716C', width: 'auto'}}/>
                     </div>
-                    <h6>
-                      {collect.collection_name} 
+                    <h6 className={styles.vendorCollectionCardName}>
+                      {collect.collection_name}
                       <FontAwesomeIcon icon={faPen} style={{color: '#78716C', cursor: 'pointer'}} className='ms-2' onClick={() => openEditCollection(collect)}/>
                     </h6>
-                  </div>
-                  <div className={`d-flex align-items-center flex-wrap gap-3 ${styles.vendorOnlineCardActions}`}>
-                    <div className='d-flex align-items-center gap-3'>
+                    <div className={styles.vendorCollectionMobileHeaderActions}>
                       <button
                         type="button"
                         onClick={() => toggleCollectionProducts(collect.id)}
                         title={expandedCollections[collect.id] ? 'Hide products in this collection' : 'View products in this collection'}
                         aria-label={expandedCollections[collect.id] ? 'Hide products in this collection' : 'View products in this collection'}
-                        style={{
-                          border: 'none',
-                          background: 'transparent',
-                          padding: 0,
-                          color: expandedCollections[collect.id] ? '#0273F9' : '#78716C',
-                          cursor: 'pointer',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '6px'
-                        }}
+                        className={styles.vendorCollectionHeaderButton}
                       >
-                        <FontAwesomeIcon icon={expandedCollections[collect.id] ? faEyeSlash : faEye} />
-                        <span style={{fontSize: '12px', fontWeight: 500}}>View Product</span>
+                        <FontAwesomeIcon icon={expandedCollections[collect.id] ? faEye : faEyeSlash} />
                       </button>
-                      <FontAwesomeIcon icon={faTrashCan} className={`${styles.icon} ${styles.red}`} style={{color: '#DC2626', cursor: 'pointer'}} onClick={() => handleDeleteCollection(collect.id)}/>
-                      <label className={styles.switch}>
-                          <input 
-                            type="checkbox" 
-                            checked={isCollectionVisible(collect.is_visible)}
-                            onChange={() => handleCollectionVisibilityToggle(collect)}
-                          />
-                          <span className={`${styles.slider} round`}></span>
+                      <label className={`${styles.switch} ${styles.vendorCollectionHeaderSwitch}`}>
+                        <input
+                          type="checkbox"
+                          checked={isCollectionVisible(collect.is_visible)}
+                          onChange={() => handleCollectionVisibilityToggle(collect)}
+                        />
+                        <span className={`${styles.slider} round`}></span>
                       </label>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteCollection(collect.id)}
+                        className={`${styles.vendorCollectionHeaderButton} ${styles.vendorCollectionHeaderButtonDanger}`}
+                        aria-label="Delete collection"
+                        title="Delete collection"
+                      >
+                        <FontAwesomeIcon icon={faTrashCan} />
+                      </button>
                     </div>
                   </div>
+                  {!isCollectionMobile && (
+                    <div className={`d-flex align-items-center flex-wrap gap-3 ${styles.vendorOnlineCardActions} ${styles.vendorCollectionCardActions} ${styles.vendorCollectionDesktopActions}`}>
+                      <div className='d-flex align-items-center gap-3'>
+                        <button
+                          type="button"
+                          onClick={() => toggleCollectionProducts(collect.id)}
+                          title={expandedCollections[collect.id] ? 'Hide products in this collection' : 'View products in this collection'}
+                          aria-label={expandedCollections[collect.id] ? 'Hide products in this collection' : 'View products in this collection'}
+                          style={{
+                            border: 'none',
+                            background: 'transparent',
+                            padding: 0,
+                            color: expandedCollections[collect.id] ? '#0273F9' : '#78716C',
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px'
+                          }}
+                        >
+                          <FontAwesomeIcon icon={expandedCollections[collect.id] ? faEye : faEyeSlash} />
+                          <span style={{fontSize: '12px', fontWeight: 500}}>View Product</span>
+                        </button>
+                        <FontAwesomeIcon icon={faTrashCan} className={`${styles.icon} ${styles.red}`} style={{color: '#DC2626', cursor: 'pointer'}} onClick={() => handleDeleteCollection(collect.id)}/>
+                        <label className={styles.switch}>
+                            <input 
+                              type="checkbox" 
+                              checked={isCollectionVisible(collect.is_visible)}
+                              onChange={() => handleCollectionVisibilityToggle(collect)}
+                            />
+                            <span className={`${styles.slider} round`}></span>
+                        </label>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className={styles.vendorCollectionMobileMeta}>
+                  <small style={{color: '#1C1917', fontSize: '12px'}} className='nx'>
+                    Products in collection
+                  </small>
+                  <small style={{color: '#1C1917', fontSize: '12px'}} className='nx d-block'>
+                    {collect.totalItems} Product added
+                  </small>
                 </div>
 
                 {expandedCollections[collect.id] && (
-                <div className="row p-3 m-3 rounded-3" style={{background: '#fafafa'}}>
+                <div className={`row p-3 m-3 rounded-3 ${styles.vendorCollectionProductsGrid}`} style={{background: '#fafafa'}}>
                   {Array.isArray(collectionServices[collect.id]) &&
                   collectionServices[collect.id].length > 0 ? (
                     collectionServices[collect.id].map((item) => {
                       return (
                       <div 
-                        className={`col-12 col-sm-6 col-lg-4 ${styles.vendorOnlineCard}`} 
+                        className={`col-12 col-sm-6 col-lg-4 ${styles.vendorOnlineCard} ${styles.vendorCollectionProductCard}`} 
                         key={item.id} 
                         style={{position: 'relative', aspectRatio: '1'}}
                         onMouseEnter={() => setHoveredProductId(item.id)}
@@ -1151,7 +1203,7 @@ const Collection = ({setItemData, autoExpandProducts = false}) => {
                             }}
                           />
                         </div>
-                        {hoveredProductId === item.id && (
+                        {(isCollectionMobile || hoveredProductId === item.id) && (
                           <>
                             <div 
                               style={{
@@ -1217,7 +1269,7 @@ const Collection = ({setItemData, autoExpandProducts = false}) => {
                 </div>
                 )}
 
-                <div className="d-flex justify-content-between mx-2">
+                <div className={`d-flex justify-content-between mx-2 ${styles.vendorCollectionDesktopFooter}`}>
                   <div>
                     <small style={{color: '#1C1917', fontSize: '12px'}} className='nx mt-4 mb-0'>Products in collection</small>
                     <small style={{color: '#1C1917', fontSize: '12px'}} className='nx d-block'>{collect.totalItems} Product added</small>
@@ -1317,9 +1369,9 @@ const Collection = ({setItemData, autoExpandProducts = false}) => {
                         </div>
 
 
-                        <div className="text-end mt-4">
-                            <button className={`${styles['sk-btn']} me-2`}>Cancel</button>
-                            <button className={`${styles['si-btn']} btn-lg px-5 py-3`}>
+                        <div className={`${styles.vendorServiceFormActions} text-end mt-4`}>
+                            <button className={`${styles['sk-btn']} ${styles.vendorServiceFormCancel} me-2`}>Cancel</button>
+                            <button className={`${styles['si-btn']} ${styles.vendorServiceFormSubmit} btn-lg px-5 py-3`}>
                                 {
                                     loading ?(
                                         <>
@@ -1557,9 +1609,9 @@ const Collection = ({setItemData, autoExpandProducts = false}) => {
                   </div>
                 )}
 
-	                <div className="d-flex justify-content-between align-items-center mt-4 p-3 border-top">
-	                  <small style={{color: '#78716C'}}>{selectedProducts.length} product(s) selected</small>
-                  <div className="gap-2" style={{display: 'flex'}}>
+	                <div className={styles.vendorCollectionBulkFooter}>
+	                  <small className={styles.vendorCollectionBulkFooterCount} style={{color: '#78716C'}}>{selectedProducts.length} product(s) selected</small>
+                  <div className={styles.vendorCollectionBulkFooterActions}>
                     <button 
                       className={`${styles['sk-btn']}`}
                       onClick={hideModal}
@@ -1568,7 +1620,7 @@ const Collection = ({setItemData, autoExpandProducts = false}) => {
                       Cancel
                     </button>
                     <button 
-                      className={`${styles['si-btn']}`}
+                      className={`${styles['si-btn']} py-3`}
                       onClick={handleBulkProductSubmit}
                       type="button"
                     >
@@ -1621,9 +1673,9 @@ const Collection = ({setItemData, autoExpandProducts = false}) => {
                     </label>
                   </div>
 
-                  <div className="text-end mt-4">
-                    <button type="button" className={`${styles['sk-btn']} me-2`} onClick={hideModal}>Cancel</button>
-                    <button type="submit" className={`${styles['si-btn']}`}>Update</button>
+                  <div className={`${styles.vendorServiceFormActions} text-end mt-4`}>
+                    <button type="button" className={`${styles['sk-btn']} ${styles.vendorServiceFormCancel} me-2`} onClick={hideModal}>Cancel</button>
+                    <button type="submit" className={`${styles['si-btn']} ${styles.vendorServiceFormSubmit}`}>Update</button>
                   </div>
                 </form>
               </div>
@@ -1715,9 +1767,9 @@ const Collection = ({setItemData, autoExpandProducts = false}) => {
                     </label>
                   </div>
 
-                  <div className="text-end mt-4">
-                    <button type="button" className={`${styles['sk-btn']} me-2`} onClick={hideModal}>Cancel</button>
-                    <button type="submit" className={`p-3 ${styles['si-btn']}`}>
+                  <div className={`${styles.vendorServiceFormActions} text-end mt-4`}>
+                    <button type="button" className={`${styles['sk-btn']} ${styles.vendorServiceFormCancel} me-2`} onClick={hideModal}>Cancel</button>
+                    <button type="submit" className={`p-3 ${styles['si-btn']} ${styles.vendorServiceFormSubmit}`}>
                       {
                         loading ? (
                           <>

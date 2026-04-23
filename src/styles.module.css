@@ -4820,19 +4820,23 @@
     align-items: center !important;
     z-index: 1000 !important;
     overflow-y: auto !important; /* Allow overlay to scroll */
-    padding: 20px 0 !important; /* Add vertical padding */
+    padding: 20px !important; /* Add breathing room around the modal */
+    box-sizing: border-box;
+    -webkit-overflow-scrolling: touch;
 }
 
 .modal-content2 {
     background: white !important;
     border-radius: 10px !important;
-    width: 1050px;
-    max-width: 50%;
-    max-height: 90vh !important; /* Limit height */
+    width: min(1050px, calc(100vw - 40px));
+    max-width: calc(100vw - 40px);
+    max-height: calc(100vh - 40px); /* Fallback for browsers without dynamic viewport units */
+    max-height: calc(100dvh - 40px) !important; /* Limit height */
     overflow-y: auto !important; /* Enable scrolling inside modal */
     margin: auto !important; /* Center the modal */
     position: relative !important;
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2) !important;
+    box-sizing: border-box;
 }
 
 body.modal-open {
@@ -4844,6 +4848,25 @@ body.modal-open {
 
 .modal-body {
   padding: 0 !important;
+}
+
+@media (max-width: 767.98px) {
+    .modal-overlay {
+        align-items: flex-start !important;
+        padding: 12px !important;
+    }
+
+    .modal-content2 {
+        width: 100% !important;
+        max-width: 100% !important;
+        max-height: calc(100vh - 24px) !important;
+        max-height: calc(100dvh - 24px) !important;
+        border-radius: 16px !important;
+    }
+
+    .modal-body {
+        padding: 0 !important;
+    }
 }
 
 .modal-close {
@@ -5020,13 +5043,67 @@ body.modal-open {
   width: 100%;
 }
 
+.vendorServiceCardShell {
+  overflow: hidden;
+}
+
+.vendorServiceCardTop {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.vendorServiceDragHandle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  border: 0;
+  background: transparent;
+  padding: 8px 4px;
+  color: #78716c;
+}
+
+.vendorServiceCardTitleArea {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.vendorServiceCardTitleLine {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.vendorServiceCardTitleLine p {
+  margin: 0;
+  min-width: 0;
+  line-height: 1.35;
+}
+
+.vendorServiceCardBody {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
 .vendorServiceCardHeader {
   gap: 14px;
+}
+
+.vendorServiceCardHeaderStack {
+  min-width: 0;
 }
 
 .vendorServiceCardTitle {
   min-width: 0;
   align-items: center;
+}
+
+.vendorServiceCardTitleWrap {
+  flex: 1 1 auto;
+  flex-wrap: wrap;
 }
 
 .vendorServiceCardTitle p {
@@ -5042,6 +5119,43 @@ body.modal-open {
   align-items: center;
   justify-content: flex-end;
   gap: 4px;
+}
+
+.vendorServiceCardActionRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.vendorServiceIconButton {
+  width: 38px;
+  height: 38px;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background: #ffffff;
+  color: #78716c;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+}
+
+.vendorServiceIconButtonDanger {
+  border-color: #fecaca;
+  color: #dc2626;
+}
+
+.vendorServiceCardDescription {
+  margin-bottom: 0;
+  color: #78716c;
+  line-height: 1.55;
+}
+
+.vendorServiceMobileToggle,
+.vendorServiceMobileActions,
+.vendorServiceMobileIconButton {
+  display: none;
 }
 
 .vendorServiceCollectionCard {
@@ -5075,6 +5189,95 @@ body.modal-open {
   justify-content: flex-end;
 }
 
+.vendorServiceCollectionMobileCard,
+.vendorServiceCardMobileCard {
+  display: none;
+}
+
+.vendorServiceCollectionMobileTopRow,
+.vendorServiceCardMobileTopRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.vendorServiceCollectionMobileCopy,
+.vendorServiceCardMobileCopy {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.vendorServiceCollectionMobileTitleRow,
+.vendorServiceCardMobileTitleRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.vendorServiceCollectionMobileFooter,
+.vendorServiceCardMobileFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 14px;
+  padding: 14px 16px 16px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.vendorServiceCollectionMobileLeftActions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.vendorServiceCollectionMobileActionButton,
+.vendorServiceCardMobileActionButton {
+  width: 54px;
+  height: 54px;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  background: #ffffff;
+  color: #78716c;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+}
+
+.vendorServiceCollectionMobileDangerButton,
+.vendorServiceCardMobileDangerButton {
+  color: #dc2626;
+}
+
+.vendorServiceCollectionMobileAddButton {
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.vendorServiceCardMobileMeta {
+  color: #78716c;
+  display: inline-block;
+}
+
+.vendorServiceCollectionDragHandle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  background: transparent;
+  color: #78716c;
+  padding: 0;
+  flex: 0 0 auto;
+}
+
+.vendorServiceCardMobileDescription {
+  margin: 1px 0;
+}
+
 .vendorOnlinePage {
   width: 100%;
   min-width: 0;
@@ -5095,7 +5298,7 @@ body.modal-open {
 .vendorOnlineActions {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: space-between;
   gap: 12px;
   flex-wrap: wrap;
 }
@@ -5174,6 +5377,97 @@ body.modal-open {
   width: 100%;
 }
 
+.vendorCollectionCard {
+  min-width: 0;
+}
+
+.vendorCollectionCardHeader {
+  min-width: 0;
+}
+
+.vendorCollectionCardTitle {
+  min-width: 0;
+}
+
+.vendorCollectionCardName {
+  margin-bottom: 0;
+  word-break: break-word;
+}
+
+.vendorCollectionCardActions {
+  min-width: 0;
+}
+
+.vendorCollectionMobileHeaderActions {
+  display: none;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: nowrap;
+}
+
+.vendorCollectionBulkFooter {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-top: 16px;
+  padding: 12px 16px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.vendorCollectionBulkFooterCount {
+  min-width: 0;
+}
+
+.vendorCollectionBulkFooterActions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: nowrap;
+  align-items: center;
+}
+
+.vendorCollectionHeaderButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid rgba(120, 113, 108, 0.35);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #78716c;
+  cursor: pointer;
+}
+
+.vendorCollectionHeaderButtonDanger {
+  color: #dc2626;
+}
+
+.vendorCollectionHeaderSwitch {
+  margin: 0;
+}
+
+.vendorCollectionDesktopActions {
+  flex: 0 0 auto;
+}
+
+.vendorCollectionDesktopFooter {
+  gap: 12px;
+}
+
+.vendorCollectionMobileMeta {
+  display: none;
+}
+
+.vendorCollectionProductsGrid {
+  min-width: 0;
+}
+
+.vendorCollectionProductCard {
+  min-width: 0;
+}
+
 .vendorOnlineCardHeader {
   gap: 12px;
 }
@@ -5214,7 +5508,7 @@ body.modal-open {
   /* box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); */
   font-family: sans-serif;
   max-width: 600px;
-  margin: 20px auto 20px 12px;
+  margin: 20px 12px 10px 0;
   border: 2px solid #eee;
 }
 
@@ -5803,47 +6097,129 @@ body.modal-open {
   .vendorServiceCard {
     max-width: none;
     margin: 14px 0;
-    padding: 14px;
+    padding: 14px 0 0;
+    background: #ffffff !important;
+    border: 2px solid #eeeeee !important;
+    border-radius: 12px;
+    box-shadow: none;
+  }
+
+  .vendorServiceCardMobileCard {
+    display: block;
+    padding: 0 16px 0;
   }
 
   .vendorServiceCardHeader {
-    align-items: flex-start;
-    flex-direction: column;
-    padding-inline: 28px 0 !important;
+    display: none !important;
   }
 
-  .vendorServiceCardTitle {
-    width: 100%;
+  .vendorServiceCardMobileTopRow {
     align-items: flex-start;
   }
 
-  .vendorServiceCardTitle p {
+  .vendorServiceCardMobileCopy {
+    min-width: 0;
+  }
+
+  .vendorServiceCardMobileTitleRow p {
     margin-bottom: 0;
+    font-size: 14px;
+    line-height: 1.35;
     white-space: normal;
+    color: #1c1917;
+    font-weight: 600;
+  }
+
+  .vendorServiceCardMobileTitleRow svg {
+    font-size: 13px;
+    color: #78716c;
   }
 
   .vendorServiceCardActions {
-    width: 100%;
-    justify-content: flex-start;
-    gap: 10px;
+    display: none;
+  }
+
+  .vendorServiceCardActions svg {
+    font-size: 14px;
+  }
+
+  .vendorServiceDragHandle svg {
+    font-size: 12px;
   }
 
   .vendorServiceCard .description {
-    padding-inline: 28px 0 !important;
-    line-height: 1.55;
+    display: none !important;
+  }
+
+  .vendorServiceCardMobileDescription {
+    padding-inline: 16px !important;
+    line-height: 1.45;
+    font-size: 13px;
+    color: #78716c;
+    margin-top: 8px;
+    margin-bottom: 0;
+  }
+
+  .vendorServiceMobileToggle {
+    display: flex;
+    justify-content: flex-end;
+    padding-right: 2px;
+  }
+
+  .vendorServiceMobileActions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 14px;
+    padding: 14px 16px 16px;
+    border-top: 1px solid #e5e7eb;
+  }
+
+  .vendorServiceMobileIconButton {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 54px;
+    height: 54px;
+    border: 1px solid #e5e7eb;
+    border-radius: 14px;
+    background: #ffffff;
+    color: #78716c;
+    flex: 0 0 auto;
+  }
+
+  .vendorServiceMobileIconButtonDanger {
+    color: #dc2626;
+  }
+
+  .vendorServiceCard .sid {
+    display: none !important;
+  }
+
+  .sido {
+    display: none !important;
   }
 
   .vendorServiceCollectionCard {
-    padding: 14px;
+    background: #ffffff !important;
+    border: 2px solid #eeeeee !important;
+    border-radius: 16px;
+    padding: 14px 0 0;
+    box-shadow: none;
+  }
+
+  .vendorServiceCollectionMobileCard {
+    display: block;
+    padding: 0 16px 0;
   }
 
   .vendorServiceCollectionHeader {
-    flex-direction: column;
-    padding: 16px 0 0 26px !important;
+    display: none !important;
   }
 
   .vendorServiceCollectionActions {
-    width: 100%;
+    display: none !important;
   }
 
   .vendorServiceCollectionActionRow {
@@ -5853,13 +6229,95 @@ body.modal-open {
   }
 
   .vendorServiceCollectionAdd {
-    justify-content: stretch;
-    margin-top: 14px !important;
+    display: none !important;
   }
 
   .vendorServiceCollectionAdd > button {
     width: 100%;
     margin-inline: 0 !important;
+  }
+
+  .vendorServiceCollectionMobileFooter {
+    padding: 14px 16px 16px;
+  }
+
+  .vendorServiceCollectionMobileTitleRow h6 {
+    margin-bottom: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #1c1917;
+    font-size: 18px;
+    font-weight: 600;
+  }
+
+  .vendorServiceCollectionMobileTitleRow svg {
+    font-size: 13px;
+  }
+
+  .vendorServiceCollectionMobileCopy p {
+    color: #1c1917;
+    font-size: 14px;
+  }
+
+  .vendorServiceCollectionMobileCopy small {
+    color: #1c1917;
+    font-size: 12px;
+  }
+
+  .vendorServiceCollectionMobileAddButton {
+    padding-inline: 16px !important;
+    padding-block: 12px !important;
+    font-size: 12px !important;
+  }
+
+  .vendorServiceFormActions {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 12px;
+    align-items: center;
+  }
+
+  .vendorServiceFormActions > button {
+    flex: 1 1 0;
+    min-width: 0;
+    margin-inline: 0 !important;
+    padding-inline: 12px !important;
+    white-space: nowrap;
+  }
+
+  .vendorServiceFormCancel,
+  .vendorServiceFormSubmit {
+    font-size: 13px;
+  }
+
+  .vendorServiceFormSubmit {
+    padding-block: 12px !important;
+  }
+
+  .vendorServiceCollectionModalActions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: nowrap;
+    gap: 12px;
+  }
+
+  .vendorServiceCollectionModalActions > button {
+    flex: 1 1 0;
+    min-width: 0;
+    margin-inline: 0 !important;
+    white-space: nowrap;
+    padding-inline: 12px !important;
+  }
+
+  .vendorServiceCollectionModalCancel,
+  .vendorServiceCollectionModalSubmit {
+    font-size: 13px;
+  }
+
+  .vendorServiceCollectionModalSubmit {
+    padding-block: 12px !important;
   }
 
   .sido {
@@ -5938,6 +6396,85 @@ body.modal-open {
     width: 100%;
     justify-content: flex-start;
     flex-wrap: wrap;
+  }
+
+  .vendorCollectionCard {
+    border-radius: 12px !important;
+    cursor: default !important;
+  }
+
+  .vendorCollectionCardHeader {
+    gap: 10px !important;
+    padding-right: 0 !important;
+  }
+
+  .vendorCollectionCardTitle {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .vendorCollectionCardActions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .vendorCollectionMobileHeaderActions {
+    display: inline-flex;
+    margin-left: auto;
+  }
+
+  .vendorCollectionHeaderButton {
+    width: 34px;
+    height: 34px;
+    border-color: rgba(120, 113, 108, 0.4);
+  }
+
+  .vendorCollectionDesktopActions {
+    display: none !important;
+  }
+
+  .vendorCollectionDesktopActions > div {
+    flex-wrap: nowrap;
+    align-items: center;
+  }
+
+  .vendorCollectionMobileMeta {
+    display: block;
+    margin: 8px 0 12px;
+    padding-left: 44px;
+  }
+
+  .vendorCollectionDesktopFooter {
+    display: flex !important;
+    gap: 12px;
+    align-items: center;
+  }
+
+  .vendorCollectionBulkFooter {
+    align-items: stretch;
+    flex-direction: column;
+    padding: 12px;
+  }
+
+  .vendorCollectionBulkFooterActions {
+    width: 100%;
+  }
+
+  .vendorCollectionBulkFooterActions > button {
+    flex: 1 1 0;
+    min-width: 0;
+    width: 100%;
+    padding-inline: 12px;
+  }
+
+  .vendorCollectionProductsGrid {
+    margin: 12px 0 !important;
+    background: #fafafa !important;
+  }
+
+  .vendorCollectionProductCard {
+    margin-bottom: 12px;
+    overflow: hidden;
   }
 
   .vendorOnlinePreviewFrame {
@@ -9918,11 +10455,60 @@ input:checked + .slider:before {
   font-weight: 600;
 }
 
-.productDesignerActions {
+.productDesignerDesktopActions {
   display: flex;
   align-items: center;
   gap: 12px;
   flex-shrink: 0;
+}
+
+.productDesignerMobileActions {
+  display: none;
+}
+
+.productDesignerHeaderCopy {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.productDesignerDesktopBreadcrumb {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 20px;
+  color: #8b92a1;
+  font-size: 16px;
+  font-weight: 650;
+}
+
+.productDesignerTopbarActions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.productDesignerCloseAction {
+  display: flex;
+  align-items: center;
+}
+
+.productDesignerCloseAction .productDesignerCloseButton {
+  width: 44px;
+  min-height: 44px;
+  padding: 0;
+}
+
+.productDesignerPublishIcon {
+  display: inline-flex;
+  align-items: center;
+}
+
+.productDesignerMobileBreadcrumbRow {
+  display: none;
+  align-items: center;
+  gap: 10px;
 }
 
 .productDesignerGhostButton,
@@ -9943,10 +10529,10 @@ input:checked + .slider:before {
 
 .productDesignerPrimaryButton,
 .productDesignerPrimarySmall {
-  border-color: #5f5cf1;
-  background: #5f5cf1;
+  border-color: #0273f9;
+  background: #0273f9;
   color: #ffffff;
-  box-shadow: 0 16px 28px rgba(95, 92, 241, 0.22);
+  box-shadow: 0 16px 28px rgba(2, 115, 249, 0.22);
 }
 
 .productDesignerPrimaryButton {
@@ -10727,16 +11313,108 @@ input:checked + .slider:before {
     padding: 24px 14px;
   }
 
-  .productDesignerTopbar,
-  .productDesignerActions {
+  .productDesignerTopbar {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .productDesignerHeaderCopy {
+    gap: 10px;
+  }
+
+  .productDesignerDesktopBreadcrumb {
+    display: none;
+  }
+
+  .productDesignerMobileBreadcrumbRow {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .productDesignerDesktopActions {
+    display: none;
+  }
+
+  .productDesignerTopbarActions {
+    display: none;
+  }
+
+  .productDesignerMobileCloseAction {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+  }
+
+  .productDesignerMobileCloseAction .productDesignerCloseButton {
+    width: 44px;
+    min-height: 44px;
+    padding: 0;
+  }
+
+  .productDesignerMobileBreadcrumbRow .productDesignerBreadcrumb {
+    margin-bottom: 0;
+  }
+
+  .productDesignerMobileBreadcrumbRow .productDesignerBreadcrumb span {
+    font-size: 13px;
+  }
+
+  .productDesignerMobileBreadcrumbRow .productDesignerBreadcrumb span:first-child {
+    color: #5f5cf1;
+  }
+
+  .productDesignerMobileBreadcrumbRow + h2,
+  .productDesignerMobileBreadcrumbRow + .productDesignerDesktopBreadcrumb + h2 {
+    margin-top: 0;
+  }
+
+  .productDesignerTopbarActions {
+    justify-content: flex-end;
+    margin-bottom: 12px;
   }
 
   .productDesignerPrimaryButton,
   .productDesignerGhostButton,
   .productDesignerCloseButton {
     width: 100%;
+  }
+
+  .productDesignerPublishIcon {
+    display: none;
+  }
+
+  .productDesignerCloseAction .productDesignerCloseButton {
+    width: 44px;
+  }
+
+  .productDesignerForm {
+    display: flex;
+    flex-direction: column;
+    min-height: calc(100dvh - 48px);
+  }
+
+  .productDesignerGrid {
+    flex: 1 1 auto;
+  }
+
+  .productDesignerMobileActions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 20px;
+    flex-wrap: nowrap;
+  }
+
+  .productDesignerMobileActions .productDesignerGhostButton,
+  .productDesignerMobileActions .productDesignerPrimaryButton {
+    width: auto;
+    min-width: 0;
+    flex: 1 1 0;
+  }
+
+  .productDesignerMobileActions .productDesignerCloseButton {
+    display: none;
   }
 
   .productDesignerTwoCols,

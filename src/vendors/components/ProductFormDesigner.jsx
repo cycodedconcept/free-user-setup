@@ -9,7 +9,7 @@ import {
   faPlus,
   faRotateRight,
   faTrashCan,
-  faXmark,
+  faArrowLeft,
 } from "@fortawesome/free-solid-svg-icons";
 import styles from "../../styles.module.css";
 
@@ -158,13 +158,49 @@ const ProductFormDesigner = ({
     </label>
   );
 
+  const renderPrimaryActions = (className) => (
+    <div className={className}>
+      <button type="submit" className={styles.productDesignerGhostButton}>
+        Save Draft
+      </button>
+      <button type="submit" className={styles.productDesignerPrimaryButton} disabled={isSubmitting}>
+        {isSubmitting ? (
+          loadingLabel || (isEditMode ? "Updating..." : "Publishing...")
+        ) : (
+          <>
+            <span className={styles.productDesignerPublishIcon}>
+              <FontAwesomeIcon icon={faCheck} />
+            </span>
+            {submitLabel || (isEditMode ? "Update Product" : "Publish Product")}
+          </>
+        )}
+      </button>
+    </div>
+  );
+
+  const renderCloseButton = (className) => (
+    <div className={className}>
+      <button type="button" className={styles.productDesignerCloseButton} onClick={onClose}>
+        <FontAwesomeIcon icon={faArrowLeft} />
+      </button>
+    </div>
+  );
+
   return (
     <div className={styles.productDesignerOverlay} onClick={onClose}>
       <div className={styles.productDesignerShell} onClick={(event) => event.stopPropagation()}>
         <form className={styles.productDesignerForm} onSubmit={onSubmit}>
           <div className={styles.productDesignerTopbar}>
-            <div>
-              <div className={styles.productDesignerBreadcrumb}>
+            <div className={styles.productDesignerHeaderCopy}>
+              <div className={styles.productDesignerMobileBreadcrumbRow}>
+                {renderCloseButton(styles.productDesignerMobileCloseAction)}
+                <div className={styles.productDesignerBreadcrumb}>
+                  <span>Products</span>
+                  <span>/</span>
+                  <span>{title}</span>
+                </div>
+              </div>
+              <div className={styles.productDesignerDesktopBreadcrumb}>
                 <span>Products</span>
                 <span>/</span>
                 <span>{title}</span>
@@ -173,23 +209,9 @@ const ProductFormDesigner = ({
               <p>{subtitle}</p>
             </div>
 
-            <div className={styles.productDesignerActions}>
-              <button type="submit" className={styles.productDesignerGhostButton}>
-                Save Draft
-              </button>
-              <button type="submit" className={styles.productDesignerPrimaryButton} disabled={isSubmitting}>
-                {isSubmitting ? (
-                  loadingLabel || (isEditMode ? "Updating..." : "Publishing...")
-                ) : (
-                  <>
-                    <FontAwesomeIcon icon={faCheck} />
-                    {submitLabel || (isEditMode ? "Update Product" : "Publish Product")}
-                  </>
-                )}
-              </button>
-              <button type="button" className={styles.productDesignerCloseButton} onClick={onClose}>
-                <FontAwesomeIcon icon={faXmark} />
-              </button>
+            <div className={styles.productDesignerTopbarActions}>
+              {renderCloseButton(styles.productDesignerCloseAction)}
+              {renderPrimaryActions(styles.productDesignerDesktopActions)}
             </div>
           </div>
 
@@ -720,6 +742,8 @@ const ProductFormDesigner = ({
               </section>
             </aside>
           </div>
+
+          {renderPrimaryActions(styles.productDesignerMobileActions)}
         </form>
       </div>
     </div>
