@@ -43,14 +43,14 @@ const ManageStore = ({ setActiveTab }) => {
         <>
           {onstore ? (
         <>
-          <div className="p-4">
-            <div className="d-flex justify-content-between">
-                <div>
+          <div className={`${styles.vendorOnlinePage} p-4`}>
+            <div className={`${styles.vendorOnlineHeader} mb-3`}>
+                <div className={styles.vendorOnlineHeaderCopy}>
                     <h5 className="mb-1 my text-dark">Manage Your Store</h5>
                     <p className="text-muted">Setup your online store to get started</p>
                 </div>
                 {shop && hasStore && (
-                    <div>
+                    <div className={styles.vendorOnlineActions}>
                     <button
                         className={`${styles['onl-btn']} px-3 rounded mx-3`}
                         onClick={() => setVstore(false)}
@@ -74,8 +74,8 @@ const ManageStore = ({ setActiveTab }) => {
             <hr style={{border: '3px solid #EEEEEE'}}/>
 
             {!hasStore ? (
-                <div style={{background: '#fff', borderRadius: '12px', border: '2px solid #EEEEEE'}} className='p-3'>
-                    <div className="rounded p-5 text-center" style={{border: '3px dotted #EEEEEE', background: '#fafafa'}}>
+                <div className={`${styles.vendorOnlineSurfaceCard} p-3`} style={{background: '#fff', borderRadius: '12px', border: '2px solid #EEEEEE'}}>
+                    <div className={`rounded p-5 text-center ${styles.vendorOnlineSurfaceCardInner}`} style={{border: '3px dotted #EEEEEE', background: '#fafafa'}}>
                     <FaStore size={30} className="text-secondary mb-3" />
                     <p className="mb-1 font-weight-bold" style={{color: '#1C1917'}}>No online store available to manage</p>
                     <small className="text-muted" style={{color: '#78716C'}}>Expand your business with another location</small>
@@ -88,7 +88,7 @@ const ManageStore = ({ setActiveTab }) => {
                     {myStore && (
                     <>
                     <div className="col-md-4">
-                        <div className="card shadow-sm border-light pb-4">
+                    <div className={`card shadow-sm border-light pb-4 ${styles.vendorOnlineCard}`}>
                             <div className="card-body px-3 py-2 d-flex justify-content-between align-items-start">
                                 <p className="mb-0">{myStore?.onlineStore?.store_name}</p>
                                 <span className="badge rounded-pill text-primary bg-light">{myStore?.onlineStore?.is_published === false ? 'In Active' : 'Active'}</span>

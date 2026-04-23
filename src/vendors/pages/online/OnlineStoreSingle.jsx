@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import SidebarStore from "../sidebar/SidebarStore";
 import Topbar from "./Topbar";
 import MaincontentItem from "./MaincontentItem";
@@ -27,6 +27,26 @@ const sidebarButtons = [
 const OnlineStoreSingle = () => {
   // Set initial active tab to match the new sidebar structure
   const [activeTab, setActiveTab] = useState("online-store");
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    if (!isSidebarOpen || typeof document === "undefined") return undefined;
+
+    const previousOverflow = document.body.style.overflow;
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") {
+        setIsSidebarOpen(false);
+      }
+    };
+
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isSidebarOpen]);
 
   // Helper function to get the current page info for topbar
   const getCurrentPageInfo = (activeTab) => {
@@ -114,14 +134,27 @@ const OnlineStoreSingle = () => {
 
   return (
     <div
-      className="d-flex overflow-hidden vh-100"
+      className="vendor-layout d-flex overflow-hidden vh-100"
       style={{ background: "var(--app-bg)", color: "var(--app-text)" }}
     >
+      <button
+        className={`vendor-sidebar-overlay ${isSidebarOpen ? "vendor-sidebar-overlay-open" : ""}`}
+        type="button"
+        aria-label="Close sidebar"
+        onClick={() => setIsSidebarOpen(false)}
+      />
       <div
-        className="sidebar-container d-none d-lg-block flex-shrink-0"
+        className={`sidebar-container vendor-sidebar-container flex-shrink-0 ${
+          isSidebarOpen ? "vendor-sidebar-container-open" : ""
+        }`}
         style={{ width: "250px", height: "100vh", background: "var(--app-surface)" }}
       >
-        <SidebarStore activeTab={activeTab} setActiveTab={setActiveTab} />
+        <SidebarStore
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          onClose={() => setIsSidebarOpen(false)}
+          onNavigate={() => setIsSidebarOpen(false)}
+        />
       </div>
       <div className="main-container flex-grow-1 d-flex flex-column">
         <div
@@ -137,6 +170,7 @@ const OnlineStoreSingle = () => {
             activeTab={activeTab} 
             sidebarButtons={sidebarButtons}
             currentPageInfo={currentPageInfo}
+            onMenuClick={() => setIsSidebarOpen(true)}
           />
         </div>
         <div className="flex-grow-1 position-relative">

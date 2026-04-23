@@ -248,6 +248,33 @@
   font-weight: 500;
 }
 
+.customerHomeDetailLoader {
+  min-height: min(620px, calc(100vh - 160px));
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  padding: 40px 20px;
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at center, var(--customer-home-primary-muted, rgba(123, 115, 112, 0.12)) 0, transparent 42%),
+    var(--customer-home-surface, #f8f2f1);
+  color: var(--customer-home-text-primary, #2e2a28);
+  text-align: center;
+}
+
+.customerHomeDetailLoaderLogo {
+  width: 104px;
+  height: 104px;
+  border-radius: 50%;
+  border: 8px solid var(--customer-home-card, #ffffff);
+  object-fit: cover;
+  box-shadow: 0 18px 42px rgba(46, 42, 40, 0.16);
+  animation: customerHomeLogoPulse 1.6s ease-in-out infinite;
+}
+
 @keyframes customerHomeLogoPulse {
   0%,
   100% {
@@ -261,7 +288,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .customerHomeLoaderLogo {
+  .customerHomeLoaderLogo,
+  .customerHomeDetailLoaderLogo {
     animation: none;
   }
 }
@@ -1362,13 +1390,120 @@
   width: 100%;
 }
 
-.customerHomeShopSidebar {
+.customerHomeMobileCategoryBar {
   display: block;
+}
+
+.customerHomeMobileCategoryButton {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  width: 100%;
+  min-height: 48px;
+  padding: 10px 14px;
+  border: 1px solid var(--customer-home-border, #e2dcda);
+  border-radius: 8px;
+  background: var(--customer-home-card, #ffffff);
+  color: var(--customer-home-text-primary, #2e2a28);
+  box-shadow: 0 10px 22px rgba(46, 42, 40, 0.08);
+  cursor: pointer;
+}
+
+.customerHomeMobileCategoryText {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  text-align: left;
+}
+
+.customerHomeMobileCategoryText span {
+  color: var(--customer-home-text-secondary, #7c7471);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.customerHomeMobileCategoryText strong {
+  max-width: 100%;
+  overflow: hidden;
+  color: var(--customer-home-text-primary, #2e2a28);
+  font-size: 14px;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.customerHomeMobileCategoryIcon {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: var(--customer-home-primary, #7b7370);
+  color: var(--customer-home-button-text, #ffffff);
+  font-size: 18px;
+  line-height: 1;
+}
+
+.customerHomeShopSidebarBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  border: 0;
+  background: rgba(17, 24, 39, 0.42);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 180ms ease;
+}
+
+.customerHomeShopSidebarBackdropOpen {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.customerHomeShopSidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 90;
+  display: block;
+  width: min(86vw, 320px);
+  height: 100vh;
+  height: 100dvh;
+  padding: 16px;
+  transform: translateX(-105%);
+  transition: transform 220ms ease;
+  will-change: transform;
+}
+
+.customerHomeShopSidebarOpen {
+  transform: translateX(0);
 }
 
 .customerHomeShopSidebarCard {
   display: flex;
   flex-direction: column;
+  gap: 12px;
+  height: 100%;
+  overflow: hidden;
+  border: 1px solid var(--customer-home-border, #e2dcda);
+  border-radius: 8px;
+  background: var(--customer-home-card, #ffffff);
+  padding: 16px;
+  box-shadow: 18px 0 40px rgba(17, 24, 39, 0.18);
+}
+
+.customerHomeShopSidebarHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: 12px;
 }
 
@@ -1381,17 +1516,36 @@
   color: var(--customer-home-text-secondary, #7c7471);
 }
 
+.customerHomeShopSidebarClose {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--customer-home-border, #e2dcda);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--customer-home-text-primary, #2e2a28);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+}
+
 .customerHomeShopCategoryList {
   display: flex;
+  flex: 1;
+  flex-direction: column;
   gap: 8px;
-  overflow-x: auto;
+  overflow-y: auto;
   padding-bottom: 4px;
 }
 
 .customerHomeShopCategoryButton {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
+  width: 100%;
   min-height: 34px;
   padding: 0 12px;
   border: 1px solid var(--customer-home-border, #e2dcda);
@@ -1914,6 +2068,7 @@
   height: 320px;
   object-fit: cover;
   display: block;
+  background: var(--customer-home-surface, #e6d8d2);
 }
 
 .customerHomeVariationCarousel {
@@ -1926,12 +2081,12 @@
 .customerHomeVariationTrack {
   display: grid;
   grid-auto-flow: column;
-  grid-auto-columns: minmax(110px, 1fr);
+  grid-auto-columns: 74px;
   gap: 12px;
   overflow-x: auto;
   padding-bottom: 6px;
   scroll-snap-type: x mandatory;
-  cursor: grab;
+  cursor: default;
   user-select: none;
   scroll-behavior: smooth;
 }
@@ -1951,26 +2106,26 @@
 
 .customerHomeVariationThumb {
   scroll-snap-align: start;
-  border-radius: 14px;
+  width: 74px;
+  height: 74px;
+  border-radius: 50%;
   overflow: hidden;
   background: var(--customer-home-surface, #f2ecea);
-  border: 1px solid var(--customer-home-border, rgba(46, 42, 40, 0.08));
+  border: 2px solid var(--customer-home-border, rgba(46, 42, 40, 0.08));
   padding: 0;
-}
-
-.customerHomeVariationTrack:active {
-  cursor: grabbing;
 }
 
 .customerHomeVariationThumb img {
   width: 100%;
-  height: 90px;
+  height: 100%;
   object-fit: cover;
   display: block;
+  background: var(--customer-home-surface, #f2ecea);
 }
 
 .customerHomeVariationThumbActive {
-  box-shadow: 0 0 0 2px var(--customer-home-primary, #1c1917);
+  border-color: var(--customer-home-primary, #1c1917);
+  box-shadow: 0 0 0 4px var(--customer-home-primary-muted, rgba(28, 25, 23, 0.12));
 }
 
 .customerHomeVariationArrow {
@@ -1992,6 +2147,14 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+.customerHomeProductEyebrow {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--customer-home-primary, #6c63ff);
 }
 
 .customerHomeProductTitleLarge {
@@ -2022,6 +2185,13 @@
   font-size: 20px;
   font-weight: 700;
   color: var(--customer-home-primary, #2e2a28);
+}
+
+.customerHomeProductPriceNote {
+  margin: -4px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--customer-home-text-secondary, #7a7472);
 }
 
 .customerHomeDetailDivider {
@@ -2066,8 +2236,15 @@
 }
 
 .customerHomeVariationName {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
   font-size: 12.5px;
   font-weight: 600;
+  color: var(--customer-home-text-primary, #2e2a28);
+}
+
+.customerHomeVariationName strong {
   color: var(--customer-home-text-primary, #2e2a28);
 }
 
@@ -2102,6 +2279,7 @@
   color: var(--customer-home-text-secondary, #6b6462);
 }
 
+.customerHomeColorOption,
 .customerHomeSizeOptions {
   display: flex;
   gap: 12px;
@@ -2118,9 +2296,124 @@
   cursor: pointer;
 }
 
+.customerHomeColorOption {
+  width: 40px;
+  height: 40px;
+  border: 2px solid transparent;
+  border-radius: 999px;
+  padding: 0;
+  align-items: center;
+  justify-content: center;
+  background: var(--customer-home-card, #fff);
+  cursor: pointer;
+  box-shadow: none;
+}
+
+.customerHomeColorDot {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: var(--customer-option-color, #d9d6cf);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.45);
+}
+
 .customerHomeSizeOptionActive {
   border-color: var(--customer-home-border-accent, #7b7370);
   box-shadow: 0 0 0 1px var(--customer-home-border-accent, #7b7370);
+}
+
+.customerHomeColorOption.customerHomeSizeOptionActive {
+  border-color: var(--customer-home-primary, #6c63ff);
+  box-shadow: 0 0 0 4px rgba(108, 99, 255, 0.14);
+}
+
+.customerHomeColorOption.customerHomeSizeOptionActive .customerHomeColorDot {
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.58),
+    0 4px 10px rgba(0, 0, 0, 0.18);
+}
+
+.customerHomeOptionUnavailable {
+  opacity: 0.4;
+  cursor: not-allowed;
+  position: relative;
+}
+
+.customerHomeOptionUnavailable::after {
+  content: "";
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  top: 50%;
+  height: 1px;
+  background: currentColor;
+  transform: rotate(-18deg);
+}
+
+.customerHomeStockBar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 14px;
+  border-radius: 10px;
+  background: var(--customer-home-surface, #f7f1f1);
+  color: var(--customer-home-text-secondary, #6b6462);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.customerHomeStockDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: currentColor;
+  flex-shrink: 0;
+}
+
+.customerHomeStockBarIn {
+  background: #f0fdf4;
+  color: #16a34a;
+}
+
+.customerHomeStockBarLow {
+  background: #fffbeb;
+  color: #d97706;
+}
+
+.customerHomeStockBarOut {
+  background: #fff0f0;
+  color: #dc2626;
+}
+
+.customerHomeVariantInfoCard {
+  display: grid;
+  gap: 8px;
+  padding: 14px 16px;
+  border: 1px solid var(--customer-home-border, #e2dcda);
+  border-radius: 12px;
+  background: var(--customer-home-surface, #f7f1f1);
+}
+
+.customerHomeVariantInfoTitle {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--customer-home-text-secondary, #7a7472);
+}
+
+.customerHomeVariantInfoRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  font-size: 12px;
+  color: var(--customer-home-text-secondary, #7a7472);
+}
+
+.customerHomeVariantInfoRow strong {
+  color: var(--customer-home-text-primary, #2e2a28);
+  text-align: right;
 }
 
 .customerHomeQuantityControl {
@@ -2150,16 +2443,70 @@
   color: var(--customer-home-text-primary, #2e2a28);
 }
 
+.customerHomeProductActionRow {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
 .customerHomeAddToCartButton {
-  margin-top: 10px;
   border: none;
-  border-radius: 999px;
+  border-radius: 10px;
   padding: 14px 18px;
   background: var(--customer-home-button, #7b7370);
   color: var(--customer-home-button-text, #fff);
   font-size: 16px;
   font-weight: 700;
   cursor: pointer;
+}
+
+.customerHomeAddToCartButton:disabled,
+.customerHomeBuyNowButton:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.customerHomeBuyNowButton {
+  border: none;
+  border-radius: 10px;
+  padding: 14px 18px;
+  background: var(--customer-home-text-primary, #2e2a28);
+  color: var(--customer-home-card, #fff);
+  font-size: 15px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.customerHomeCheckoutMetaRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 11px;
+  color: var(--customer-home-text-secondary, #7a7472);
+}
+
+.customerHomeDescTabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 2px solid var(--customer-home-border, #e2dcda);
+  margin-bottom: 16px;
+}
+
+.customerHomeDescTab {
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  margin-bottom: -2px;
+  padding: 10px 16px;
+  color: var(--customer-home-text-secondary, #7a7472);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.customerHomeDescTabActive {
+  color: var(--customer-home-primary, #6c63ff);
+  border-bottom-color: var(--customer-home-primary, #6c63ff);
 }
 
 .customerCheckoutPage {
@@ -4161,13 +4508,43 @@
     gap: 24px;
   }
 
+  .customerHomeMobileCategoryBar {
+    display: none;
+  }
+
+  .customerHomeShopSidebarBackdrop {
+    display: none;
+  }
+
+  .customerHomeShopSidebar {
+    position: static;
+    z-index: auto;
+    width: auto;
+    height: auto;
+    padding: 0;
+    transform: none;
+    transition: none;
+    will-change: auto;
+  }
+
   .customerHomeShopSidebarCard {
     position: sticky;
     top: 24px;
+    height: auto;
+    overflow: visible;
     border: 1px solid var(--customer-home-border, #e2dcda);
     border-radius: 8px;
     background: var(--customer-home-card, #ffffff);
     padding: 16px;
+    box-shadow: none;
+  }
+
+  .customerHomeShopSidebarHeader {
+    display: block;
+  }
+
+  .customerHomeShopSidebarClose {
+    display: none;
   }
 
   .customerHomeShopCategoryList {
@@ -4495,6 +4872,334 @@ body.modal-open {
     overflow-y: auto;
 }
 
+.vendorStoreSetupPage {
+  width: 100%;
+  min-width: 0;
+}
+
+.vendorStoreSetupToolbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 18px;
+}
+
+.vendorStoreSetupTabs {
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+}
+
+.vendorStoreSetupTabs::-webkit-scrollbar,
+.vendorServiceTabs::-webkit-scrollbar {
+  display: none;
+}
+
+.vendorStoreSetupTab {
+  flex: 0 0 auto;
+  min-height: 42px;
+  white-space: nowrap;
+}
+
+.vendorStoreSetupActions {
+  flex: 0 0 auto;
+}
+
+.vendorStoreSetupGrid {
+  row-gap: 28px;
+}
+
+.vendorStoreSetupEditor,
+.vendorStoreSetupPreviewColumn {
+  min-width: 0;
+}
+
+.vendorStoreSetupCard,
+.vendorStoreEmptyCard,
+.vendorStoreSetupPanel {
+  width: 100%;
+}
+
+.vendorStoreSetupCardTitle {
+  line-height: 1.3;
+}
+
+.vendorStoreSetupCardText {
+  line-height: 1.45;
+}
+
+.vendorStoreEmptyInner {
+  min-height: 180px;
+}
+
+.vendorStoreUrlField {
+  min-height: 52px;
+  border-radius: 12px;
+}
+
+.vendorStoreUrlPrefix {
+  flex: 0 0 auto;
+  min-width: fit-content;
+  color: #1c1917;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.vendorStoreLinkNotice h6 {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 6px;
+  line-height: 1.45;
+}
+
+.vendorStoreSetupCardHeader {
+  min-width: 0;
+}
+
+.vendorStoreSetupFooterAction {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.vendorStoreShopTabs {
+  overflow: hidden;
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.vendorStoreShopTab {
+  min-width: 0;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.vendorStoreSetupPreviewTitle {
+  color: #1c1917;
+}
+
+.vendorServiceManager {
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.vendorServiceTabShell {
+  border-radius: 14px 14px 0 0;
+}
+
+.vendorServiceTabs {
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+}
+
+.vendorServiceTab {
+  flex: 1 0 150px;
+  min-height: 54px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.vendorServiceSectionHeader {
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.vendorServiceSectionHeader > div:first-child {
+  min-width: 0;
+}
+
+.vendorServiceSectionIntro {
+  padding: 0 4px;
+}
+
+.vendorServiceCard {
+  width: 100%;
+}
+
+.vendorServiceCardHeader {
+  gap: 14px;
+}
+
+.vendorServiceCardTitle {
+  min-width: 0;
+  align-items: center;
+}
+
+.vendorServiceCardTitle p {
+  min-width: 0;
+  overflow: hidden;
+  line-height: 1.45;
+  text-overflow: ellipsis;
+}
+
+.vendorServiceCardActions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+}
+
+.vendorServiceCollectionCard {
+  background: #f4f4f4;
+  border: 1px solid #eeeeee;
+  border-radius: 10px;
+  position: relative;
+  margin-top: 8px;
+  padding: 12px;
+}
+
+.vendorServiceCollectionHeader {
+  gap: 16px;
+}
+
+.vendorServiceCollectionHeader > div:first-child {
+  min-width: 0;
+}
+
+.vendorServiceCollectionActions {
+  flex: 0 0 auto;
+}
+
+.vendorServiceCollectionActionRow {
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.vendorServiceCollectionAdd {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.vendorOnlinePage {
+  width: 100%;
+  min-width: 0;
+}
+
+.vendorOnlineToolbar,
+.vendorOnlineHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.vendorOnlineHeaderCopy {
+  min-width: 0;
+}
+
+.vendorOnlineActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.vendorOnlineContent {
+  width: 100%;
+  min-width: 0;
+}
+
+.vendorOnlineTabsScroll {
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+}
+
+.vendorOnlineTabsScroll::-webkit-scrollbar {
+  display: none;
+}
+
+.vendorOnlineTabs {
+  display: flex;
+  align-items: stretch;
+  overflow: hidden;
+  border: 1px solid #eeeeee;
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.vendorOnlineTabButton {
+  flex: 1 0 140px;
+  min-height: 46px;
+  white-space: nowrap;
+}
+
+.vendorOnlineGrid {
+  row-gap: 24px;
+}
+
+.vendorOnlineSectionIntro {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.vendorOnlineSurfaceCard {
+  width: 100%;
+  border-radius: 12px;
+}
+
+.vendorOnlineSurfaceCardInner {
+  min-height: 180px;
+}
+
+.vendorOnlinePreviewColumn {
+  min-width: 0;
+}
+
+.vendorOnlinePreviewPanel {
+  position: sticky;
+  top: 0;
+}
+
+.vendorOnlinePreviewFrame {
+  width: 100%;
+  max-width: 430px;
+  margin: 0 auto;
+}
+
+.vendorOnlineCardGrid {
+  display: grid;
+  gap: 16px;
+}
+
+.vendorOnlineCard {
+  width: 100%;
+}
+
+.vendorOnlineCardHeader {
+  gap: 12px;
+}
+
+.vendorOnlineCardActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+.vendorOnlineShareBar {
+  width: min(100%, 560px);
+}
+
+.vendorOnlineSectionTitle {
+  color: #1c1917;
+  margin-bottom: 0;
+}
+
+.vendorOnlineSectionText {
+  color: #78716c;
+  font-size: 13px;
+}
+
 body.modal-open {
     overflow: hidden !important;
     position: fixed !important;
@@ -4540,6 +5245,704 @@ body.modal-open {
 
 .description {
   margin: 1px 0;
+}
+
+.vendorInvoicePage {
+  width: 100%;
+  min-width: 0;
+}
+
+.vendorInvoiceHeader,
+.vendorInvoiceDetailHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.vendorInvoiceHeaderCopy,
+.vendorInvoiceDetailCopy {
+  min-width: 0;
+}
+
+.vendorInvoiceHeaderActions,
+.vendorInvoiceDetailActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.vendorInvoiceCardsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+  margin: 20px 0;
+}
+
+.vendorInvoiceStatCard {
+  height: 100%;
+  border: 1px solid #eee;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.vendorInvoiceToolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.vendorInvoiceSearchBar {
+  display: flex;
+  align-items: center;
+  flex: 1 1 280px;
+  max-width: 420px;
+  min-height: 44px;
+  border: 1px solid #E5E7EB;
+  border-radius: 8px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.vendorInvoiceSearchField {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  font-size: 13px;
+  color: #1F2937;
+}
+
+.vendorInvoiceTableShell {
+  width: 100%;
+  min-width: 0;
+}
+
+.vendorInvoiceTableWrap {
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.vendorInvoiceTableWrap::-webkit-scrollbar {
+  display: none;
+}
+
+.vendorInvoiceTable {
+  min-width: 980px;
+}
+
+.vendorInvoiceModalShell {
+  width: min(960px, 100%);
+  max-height: 90vh;
+  background-color: #FFFFFF;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.24);
+}
+
+.vendorInvoiceModalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid #E5E7EB;
+}
+
+.vendorInvoiceModalBody {
+  padding: 20px 24px;
+  overflow-x: auto;
+}
+
+.vendorInvoiceSummaryCard {
+  border-radius: 12px;
+  background-color: #F9FAFB;
+}
+
+.vendorInvoiceInfoGrid {
+  row-gap: 16px;
+}
+
+.vendorInvoiceItemTableWrap {
+  overflow-x: auto;
+}
+
+.vendorInvoiceItemTable {
+  min-width: 760px;
+}
+
+.vendorInvoiceEmptyState {
+  border: 1px dashed #D1D5DB;
+  border-radius: 14px;
+}
+
+.vendorInvoicePanel {
+  border: 1px solid #eee;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.vendorInvoicePanelInner {
+  padding: 16px;
+}
+
+.vendorInvoiceCreatePage {
+  width: 100%;
+  min-width: 0;
+}
+
+.vendorInvoiceCreateHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.vendorInvoiceCreateActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.vendorInvoiceCreateSection {
+  width: 100%;
+  min-width: 0;
+  border-radius: 12px;
+}
+
+.vendorInvoiceCreateSectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.vendorInvoiceCreateItemCard {
+  width: 100%;
+}
+
+.vendorInvoiceCreateItemHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.vendorInvoiceCreateSubmitRow {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.vendorInvoiceCreateModal {
+  width: min(1100px, 100%);
+  max-height: 90vh;
+  background-color: #fff;
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.22);
+}
+
+.vendorInvoiceCreateModalHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid #E5E7EB;
+}
+
+.vendorInvoiceCreateModalActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.vendorInvoiceCreateModalBody {
+  max-height: calc(90vh - 78px);
+  overflow-y: auto;
+  background-color: #F8FAFC;
+}
+
+@media (max-width: 991.98px) {
+  .vendorInvoiceCreateHeader {
+    flex-direction: column;
+  }
+
+  .vendorInvoiceCreateActions {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .vendorInvoiceCreateActions > button {
+    flex: 1 1 0;
+    min-width: 0;
+    width: 100%;
+  }
+
+  .vendorInvoiceCreateModal {
+    border-radius: 16px;
+  }
+
+  .vendorInvoiceCreateModalHeader {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .vendorInvoiceCreatePage {
+    padding: 12px !important;
+  }
+
+  .vendorInvoiceCreateSection {
+    padding: 16px !important;
+  }
+
+  .vendorInvoiceCreateSectionHeader,
+  .vendorInvoiceCreateItemHeader {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .vendorInvoiceCreateSectionHeader > button,
+  .vendorInvoiceCreateItemHeader > button {
+    width: 100%;
+  }
+
+  .vendorInvoiceCreateSubmitRow {
+    justify-content: stretch;
+  }
+
+  .vendorInvoiceCreateSubmitRow > button {
+    width: 100%;
+    flex: 1 1 0;
+  }
+
+  .vendorInvoiceCreateActions {
+    flex-direction: column;
+  }
+
+  .vendorInvoiceCreateActions > button {
+    width: 100%;
+  }
+
+  .vendorInvoiceCreateModal {
+    border-radius: 14px;
+  }
+
+  .vendorInvoiceCreateModalHeader {
+    padding-inline: 16px !important;
+  }
+
+  .vendorInvoiceCreateModalActions {
+    width: 100%;
+  }
+
+  .vendorInvoiceCreateModalActions > button {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+}
+
+@media (max-width: 991.98px) {
+  .vendorInvoiceHeader,
+  .vendorInvoiceDetailHeader {
+    flex-direction: column;
+  }
+
+  .vendorInvoiceHeaderActions,
+  .vendorInvoiceDetailActions {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .vendorInvoiceHeaderActions > div,
+  .vendorInvoiceDetailActions > div {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  .vendorInvoiceHeaderActions > button,
+  .vendorInvoiceHeaderActions > div > button,
+  .vendorInvoiceDetailActions > div > button,
+  .vendorInvoiceDetailActions > button {
+    width: 100%;
+  }
+
+  .vendorInvoiceSearchBar {
+    max-width: none;
+    width: 100%;
+  }
+
+  .vendorInvoiceModalShell {
+    border-radius: 16px;
+  }
+
+  .vendorInvoiceModalHeader {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .vendorInvoiceModalBody {
+    padding: 16px;
+  }
+
+  .vendorInvoiceModalHeader > button {
+    width: 100%;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .vendorInvoiceCardsGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .vendorInvoicePanelInner {
+    padding: 14px;
+  }
+
+  .vendorInvoiceToolbar {
+    align-items: stretch;
+  }
+
+  .vendorInvoiceToolbar > div {
+    width: 100%;
+  }
+
+  .vendorInvoiceToolbar > div:last-child {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .vendorInvoiceToolbar > div:last-child > button {
+    width: 100%;
+  }
+
+  .vendorInvoiceSearchBar {
+    flex-basis: 100%;
+  }
+
+  .vendorInvoiceTable {
+    min-width: 920px;
+  }
+
+  .vendorInvoiceDetailActions {
+    gap: 8px;
+  }
+
+  .vendorInvoiceDetailActions > button,
+  .vendorInvoiceDetailActions > div {
+    width: 100%;
+  }
+
+  .vendorInvoiceItemTable {
+    min-width: 680px;
+  }
+}
+
+@media (max-width: 991.98px) {
+  .vendorStoreSetupToolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .vendorStoreSetupActions {
+    width: 100%;
+  }
+
+  .vendorStoreSetupActions > button {
+    min-width: 0;
+  }
+
+  .vendorStoreSetupPreviewColumn {
+    position: static !important;
+    top: auto !important;
+    margin-top: 8px !important;
+  }
+
+  .vendorStoreSetupPreviewColumn .preview {
+    max-width: 430px;
+    margin: 0 auto;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .vendorStoreSetupPage {
+    padding: 0 2px 24px;
+  }
+
+  .vendorStoreSetupToolbar {
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+
+  .vendorStoreSetupTabs {
+    gap: 8px !important;
+    padding: 4px;
+    border: 1px solid #eeeeee;
+    border-radius: 12px;
+    background: #ffffff;
+  }
+
+  .vendorStoreSetupTab {
+    min-height: 38px;
+    padding: 0 12px 0 !important;
+    border-radius: 10px;
+    border-bottom: 0 !important;
+    background: #fafafa !important;
+    font-size: 13px;
+  }
+
+  .vendorStoreSetupActions {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .vendorStoreSetupActions > button {
+    width: 100%;
+    padding-inline: 10px;
+  }
+
+  .vendorStoreSetupCard,
+  .vendorStoreEmptyCard {
+    border-width: 1px !important;
+    border-radius: 12px !important;
+  }
+
+  .vendorStoreSetupCard {
+    padding: 16px !important;
+  }
+
+  .vendorStoreEmptyInner {
+    min-height: 150px;
+    padding: 28px 16px !important;
+  }
+
+  .vendorStoreUrlField {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .vendorStoreUrlPrefix {
+    width: 100%;
+    min-height: 42px;
+  }
+
+  .vendorStoreLinkNotice h6 {
+    font-size: 13px;
+  }
+
+  .vendorStoreSetupCardHeader {
+    flex-direction: column;
+  }
+
+  .vendorStoreSetupFooterAction {
+    justify-content: stretch;
+  }
+
+  .vendorStoreSetupFooterAction > button {
+    width: 100%;
+  }
+
+  .vendorStoreShopTabs {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin-bottom: 16px !important;
+  }
+
+  .vendorStoreShopTab {
+    min-height: 44px;
+    padding-block: 10px !important;
+    font-size: 13px;
+  }
+
+  .vendorStoreSetupPreviewTitle {
+    margin-top: 8px !important;
+    margin-bottom: 14px !important;
+    font-size: 16px;
+  }
+
+  .vendorStoreSetupPreviewColumn .preview {
+    width: 100%;
+    max-width: 390px;
+    height: 520px;
+    border-radius: 28px;
+  }
+
+  .vendorServiceManager {
+    margin-top: 16px !important;
+    border: 1px solid #eeeeee;
+  }
+
+  .vendorServiceTab {
+    flex-basis: 132px;
+    min-height: 48px;
+    padding-block: 12px !important;
+    font-size: 14px !important;
+  }
+
+  .vendorServiceSectionHeader {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .vendorServiceSectionHeader button {
+    width: 100%;
+  }
+
+  .vendorServiceCard {
+    max-width: none;
+    margin: 14px 0;
+    padding: 14px;
+  }
+
+  .vendorServiceCardHeader {
+    align-items: flex-start;
+    flex-direction: column;
+    padding-inline: 28px 0 !important;
+  }
+
+  .vendorServiceCardTitle {
+    width: 100%;
+    align-items: flex-start;
+  }
+
+  .vendorServiceCardTitle p {
+    margin-bottom: 0;
+    white-space: normal;
+  }
+
+  .vendorServiceCardActions {
+    width: 100%;
+    justify-content: flex-start;
+    gap: 10px;
+  }
+
+  .vendorServiceCard .description {
+    padding-inline: 28px 0 !important;
+    line-height: 1.55;
+  }
+
+  .vendorServiceCollectionCard {
+    padding: 14px;
+  }
+
+  .vendorServiceCollectionHeader {
+    flex-direction: column;
+    padding: 16px 0 0 26px !important;
+  }
+
+  .vendorServiceCollectionActions {
+    width: 100%;
+  }
+
+  .vendorServiceCollectionActionRow {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    gap: 12px !important;
+  }
+
+  .vendorServiceCollectionAdd {
+    justify-content: stretch;
+    margin-top: 14px !important;
+  }
+
+  .vendorServiceCollectionAdd > button {
+    width: 100%;
+    margin-inline: 0 !important;
+  }
+
+  .sido {
+    left: 14px;
+  }
+}
+
+@media (max-width: 420px) {
+  .vendorStoreSetupActions {
+    grid-template-columns: 1fr;
+  }
+
+  .vendorStoreSetupPreviewColumn .preview {
+    border-radius: 22px;
+  }
+}
+
+@media (max-width: 991.98px) {
+  .vendorOnlineToolbar,
+  .vendorOnlineHeader {
+    flex-direction: column;
+  }
+
+  .vendorOnlineActions {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .vendorOnlineActions > button {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  .vendorOnlineActions > div {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  .vendorOnlineActions > div > button {
+    width: 100%;
+  }
+
+  .vendorOnlinePreviewPanel {
+    position: static !important;
+    top: auto !important;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .vendorOnlineTabs {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .vendorOnlineTabButton {
+    min-width: 0;
+    min-height: 42px;
+    font-size: 13px !important;
+  }
+
+  .vendorOnlineSurfaceCard,
+  .vendorOnlineSurfaceCardInner {
+    border-radius: 12px !important;
+  }
+
+  .vendorOnlineSurfaceCardInner {
+    padding: 16px !important;
+  }
+
+  .vendorOnlineCardHeader {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .vendorOnlineCardActions {
+    width: 100%;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .vendorOnlinePreviewFrame {
+    max-width: 390px;
+  }
 }
 
 .icon {
@@ -8030,7 +9433,8 @@ input:checked + .slider:before {
 .vendorProductThumb img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
+  background: #f8fafc;
 }
 
 .vendorProductThumbFallback {
@@ -8182,6 +9586,281 @@ input:checked + .slider:before {
   padding: 28px 16px !important;
   text-align: center;
   color: #78716c !important;
+}
+
+.vendorProductDetailMedia {
+  width: 100%;
+  min-height: 320px;
+  max-height: 420px;
+  aspect-ratio: 4 / 5;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.vendorProductDetailMedia img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.vendorProductDetailBody {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 22px;
+  background: #f8fafc;
+}
+
+.vendorProductDetailHeaderCard {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 18px 20px;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  background: #ffffff;
+}
+
+.vendorProductDetailThumb {
+  width: 82px;
+  height: 82px;
+  border-radius: 12px;
+  background: #f1f5f9;
+  border: 1px solid #e5e7eb;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #94a3b8;
+  flex-shrink: 0;
+}
+
+.vendorProductDetailThumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.vendorProductDetailHeaderInfo {
+  min-width: 0;
+  flex: 1;
+}
+
+.vendorProductDetailHeaderInfo h4 {
+  margin: 0 0 8px;
+  color: #1f2937;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.vendorProductDetailBadges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.vendorProductDetailBadges > span:not(.vendorProductStatusPill) {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: #f1f5f9;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.vendorProductDetailActions {
+  flex-shrink: 0;
+}
+
+.vendorProductDetailStatsGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.vendorProductDetailStat {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.vendorProductDetailStat span,
+.vendorProductDetailStat small {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.vendorProductDetailStat strong {
+  color: #1f2937;
+  font-size: 19px;
+  line-height: 1.2;
+}
+
+.vendorProductDetailStatAccent {
+  background: #0273f9;
+}
+
+.vendorProductDetailStatAccent span,
+.vendorProductDetailStatAccent strong,
+.vendorProductDetailStatAccent small {
+  color: #ffffff;
+}
+
+.vendorProductDetailTabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.vendorProductDetailTab {
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  padding: 10px 18px;
+  background: transparent;
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.vendorProductDetailTabActive {
+  color: #0273f9;
+  border-bottom-color: #0273f9;
+}
+
+.vendorProductDetailVariantSummary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.vendorProductDetailVariantSummary article,
+.vendorProductDetailOverviewGrid article {
+  padding: 16px;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.vendorProductDetailVariantSummary article {
+  min-width: 220px;
+}
+
+.vendorProductDetailVariantSummary span {
+  display: block;
+  margin-bottom: 10px;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.vendorProductDetailVariantSummary div,
+.vendorProductDetailComboTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.vendorProductDetailVariantSummary small,
+.vendorProductDetailComboTags span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: #eff6ff;
+  color: #0273f9;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.vendorProductDetailTableWrap {
+  overflow-x: auto;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.vendorProductDetailVariantTable {
+  width: 100%;
+  min-width: 780px;
+  border-collapse: collapse;
+}
+
+.vendorProductDetailVariantTable th,
+.vendorProductDetailVariantTable td {
+  padding: 12px 14px;
+  border-bottom: 1px solid #f1f5f9;
+  color: #374151;
+  font-size: 13px;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.vendorProductDetailVariantTable th {
+  background: #f8fafc;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.vendorProductDetailVariantTable tr:last-child td {
+  border-bottom: none;
+}
+
+.vendorProductDetailOverviewGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.vendorProductDetailOverviewGrid h6 {
+  margin: 0 0 12px;
+  color: #1f2937;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.vendorProductDetailOverviewGrid p {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 0 0 10px;
+  color: #64748b;
+  font-size: 13px;
+}
+
+.vendorProductDetailOverviewGrid p:last-child {
+  margin-bottom: 0;
+}
+
+.vendorProductDetailOverviewGrid strong {
+  color: #1f2937;
+  text-align: right;
+}
+
+.vendorProductDetailDescription {
+  display: block !important;
+  justify-content: flex-start !important;
+  line-height: 1.7;
 }
 
 .productDesignerOverlay {
@@ -9018,6 +10697,30 @@ input:checked + .slider:before {
     min-height: 220px;
     margin: 12px;
     padding: 28px 16px;
+  }
+
+  .vendorProductDetailMedia {
+    min-height: 240px;
+    max-height: 320px;
+  }
+
+  .vendorProductDetailBody {
+    padding: 16px;
+  }
+
+  .vendorProductDetailHeaderCard,
+  .vendorProductDetailActions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .vendorProductDetailActions > button {
+    width: 100%;
+  }
+
+  .vendorProductDetailStatsGrid,
+  .vendorProductDetailOverviewGrid {
+    grid-template-columns: 1fr;
   }
 
   .productDesignerShell {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { FaBars } from "react-icons/fa";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -9,9 +9,17 @@ import {
 import { Logo, El } from "../../../assets";
 import "./sidebar.css";
 
-const SidebarStore = ({ activeTab, setActiveTab }) => {
+const SidebarStore = ({ activeTab, setActiveTab, onClose, onNavigate }) => {
   const [expandedItems, setExpandedItems] = useState({});
-  const [userName, setUserName] = useState('')
+  const [userName] = useState(() => {
+    if (typeof window === "undefined") return "";
+    try {
+      const storedUser = JSON.parse(localStorage.getItem("user") || "null");
+      return storedUser?.tenantName || "Mycroshop";
+    } catch {
+      return "Mycroshop";
+    }
+  });
 
   const toggleExpanded = (key) => {
     setExpandedItems(prev => ({
@@ -19,18 +27,6 @@ const SidebarStore = ({ activeTab, setActiveTab }) => {
       [key]: !prev[key]
     }));
   };
-
-  const getName = () => {
-    let getValue = localStorage.getItem('user');
-    let myValue = JSON.parse(getValue);
-    setUserName(myValue.tenantName)
-  }
-
-  useEffect(() => {
-    getName();
-  }, [])
-
-
 
   const sidebarButtons = [
     {
@@ -46,11 +42,13 @@ const SidebarStore = ({ activeTab, setActiveTab }) => {
       toggleExpanded(btn.key);
     } else {
       setActiveTab(btn.key);
+      onNavigate?.();
     }
   };
 
   const handleSubmenuClick = (parentKey, submenuKey) => {
     setActiveTab(`${parentKey}-${submenuKey}`);
+    onNavigate?.();
   };
 
   const isActiveParent = (btn) => {
@@ -63,7 +61,7 @@ const SidebarStore = ({ activeTab, setActiveTab }) => {
   return (
     <>
       <div
-        className="sidebar d-flex flex-column p-3"
+        className="sidebar vendor-sidebar d-flex flex-column p-3"
         style={{
           minHeight: "100vh",
           overflowY: "auto",
@@ -74,9 +72,16 @@ const SidebarStore = ({ activeTab, setActiveTab }) => {
         }}
       >
         {/* Logo Section */}
-        <div className="d-flex align-items-center mb-4 justify-content-between">
-          <img src={Logo} alt="" className="w-50" />
-          <FaBars className="mr-2" style={{ cursor: "pointer", color: "var(--app-text)" }} />
+        <div className="vendor-sidebar-header d-flex align-items-center mb-4 justify-content-between">
+          <img src={Logo} alt="" className="vendor-sidebar-logo" />
+          <button
+            className="vendor-sidebar-close"
+            type="button"
+            aria-label="Close sidebar"
+            onClick={onClose}
+          >
+            <FaBars aria-hidden="true" />
+          </button>
         </div>
 
         {/* Profile Section */}
@@ -109,12 +114,12 @@ const SidebarStore = ({ activeTab, setActiveTab }) => {
                   }}
                   onMouseEnter={(e) => {
                     if (!isActiveParent(btn)) {
-                      e.target.style.background = "var(--app-sidebar-hover)";
+                      e.currentTarget.style.background = "var(--app-sidebar-hover)";
                     }
                   }}
                   onMouseLeave={(e) => {
                     if (!isActiveParent(btn)) {
-                      e.target.style.background = "transparent";
+                      e.currentTarget.style.background = "transparent";
                     }
                   }}
                 >
@@ -162,12 +167,12 @@ const SidebarStore = ({ activeTab, setActiveTab }) => {
                         }}
                         onMouseEnter={(e) => {
                           if (activeTab !== `${btn.key}-${subItem.key}`) {
-                            e.target.style.background = "#F8F9FA";
+                            e.currentTarget.style.background = "#F8F9FA";
                           }
                         }}
                         onMouseLeave={(e) => {
                           if (activeTab !== `${btn.key}-${subItem.key}`) {
-                            e.target.style.background = "transparent";
+                            e.currentTarget.style.background = "transparent";
                           }
                         }}
                       >

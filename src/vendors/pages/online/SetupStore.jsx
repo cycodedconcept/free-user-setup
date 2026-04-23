@@ -370,36 +370,36 @@ useEffect(() => {
 
   return (
     <>
-          <div className="d-flex justify-content-between">
+          <div className={`${styles.vendorOnlinePage} d-flex justify-content-between`}>
             <div className={`${styles['set-btn']} d-flex align-items-center justify-content-center`} style={{background: "linear-gradient(to right, #0273F9BF, #014493BD)", borderRadius: '28px', width: '58%'}}>
                 <p className='text-light mt-3 me-3'><b>Try Pro for free</b></p>
                 <button className={styles['try-btn']}><img src={Flash} alt="" className='mx-2'/>Upgrade</button>
             </div>
           </div>
-        <div className="row">
+        <div className={`${styles.vendorOnlineGrid} row`}>
             <div className="col-sm-12 col-md-12 col-lg-7 mt-5">
                 <h5 className="text-center mt-3 mb-5">StoreFront Setup</h5>
                 {front ? (
                     <>
                       {add ? (
                             <>
-                                <div className={`${styles['outer-box']} p-2`} style={{background: '#fff', borderRadius: '12px', border: '2px solid #EEEEEE'}}>
-                                    <div className={`${styles['inner-box']} text-center p-5`} style={{background: '#FAFAFA', borderRadius: '12px'}}>
+                                <div className={`${styles['outer-box']} ${styles.vendorOnlineSurfaceCard} p-2`} style={{background: '#fff', borderRadius: '12px', border: '2px solid #EEEEEE'}}>
+                                    <div className={`${styles['inner-box']} ${styles.vendorOnlineSurfaceCardInner} text-center p-5`} style={{background: '#FAFAFA', borderRadius: '12px'}}>
                                         <p style={{color: '#78716C'}}>No store information available</p>
                                         <button className={`btn ${styles['add-btn']} px-4`} onClick={() => {setAdd(false)}}>Setup Store</button>
                                     </div>
                                 </div>
 
-                                <div className="text-end mt-4">
+                                <div className={`${styles.vendorOnlineActions} text-end mt-4`}>
                                     <button className={styles['sk-btn']}>Skip</button>
                                 </div>
                             </>
                             ) : (
                             <>
                                 <form onSubmit={saveContent}>
-                                    <div className={`${styles['store-info']} p-3`} style={{background: "#fff", border: '2px solid #EEEEEE', borderRadius: '12px'}}>
-                                        <h6 style={{color: '#1C1917'}} className='mx'>Store Information</h6>
-                                        <p style={{color: '#78716C', fontSize: '13px'}}>Let’s start with the basic information about your store</p>
+                                    <div className={`${styles['store-info']} ${styles.vendorOnlineSurfaceCard} p-3`} style={{background: "#fff", border: '2px solid #EEEEEE', borderRadius: '12px'}}>
+                                        <h6 style={{color: '#1C1917'}} className={`${styles.vendorOnlineSectionTitle} mx`}>Store Information</h6>
+                                        <p className={styles.vendorOnlineSectionText}>Let’s start with the basic information about your store</p>
 
                                         
                                         <label for="formGroupExampleInput" className="form-label">Store Name</label>
@@ -418,7 +418,7 @@ useEffect(() => {
                                                 Username <span style={{color: '#78716C'}}>(for your store link)</span>
                                             </label>
 
-                                            <div className={`d-flex overflow-hidden ${styles['store-input-wrapper']}`} style={{border: '1px solid #EEEEEE'}}>
+                                            <div className={`d-flex overflow-hidden ${styles['store-input-wrapper']} ${styles.vendorStoreUrlField}`} style={{border: '1px solid #EEEEEE'}}>
                                                 <span className="px-3 d-flex align-items-center mx" style={{background: '#EAF4FF'}}>
                                                     mycroshop.com/
                                                 </span>
@@ -451,7 +451,7 @@ useEffect(() => {
                                         ></textarea>
 
                                         <small className="d-block" style={{color: '#909396'}}>This will appear on your store page. Keep it short and engaging</small>
-                                        <div style={{background: '#EEF8FF'}} className='p-3 mt-4 rounded'>
+                                        <div style={{background: '#EEF8FF'}} className={`p-3 mt-4 rounded ${styles.vendorStoreLinkNotice}`}>
                                             <h6 style={{color: '#0273F9'}} className='mx mb-0'>
                                                 <FontAwesomeIcon icon={faInfoCircle} style={{color: '#0273F9'}} className='me-2'/>
                                                 <span className='nx'>Your store link will be </span>
@@ -461,7 +461,7 @@ useEffect(() => {
                                             </h6>
                                         </div>
                                     </div>
-                                    <div className="text-end mt-3">
+                                    <div className={`${styles.vendorOnlineActions} text-end mt-3`}>
                                         <button type="submit" className={`${styles['btn-lg']} ${styles['si-btn']} px-4 py-3`}>
                                             {
                                                 loading ?(
@@ -483,12 +483,12 @@ useEffect(() => {
                     </>
                 ) : (
                 <>
-                    <div>
-                    <div className="d-flex justify-content-between border-bottom" style={{borderBottom: '1px solid #EEEEEE'}}>
+                    <div className={styles.vendorOnlineContent}>
+                    <div className={`${styles.vendorOnlineTabsScroll} d-flex justify-content-between border-bottom`} style={{borderBottom: '1px solid #EEEEEE'}}>
                         {tabs.map((tab) => (
                         <button
                             key={tab.name}
-                            className={`flex-fill border-0 bg-transparent py-3 text-center ${
+                            className={`${styles.vendorOnlineTabButton} flex-fill border-0 bg-transparent py-3 text-center ${
                             activeTab === tab.name ? 'text-primary border-bottom border-primary border-3' : 'text-muted'
                             }`}
                             onClick={() => {
@@ -519,7 +519,7 @@ useEffect(() => {
                         ))}
                     </div>
 
-                    <div className="mt-4">
+                    <div className={`${styles.vendorOnlineContent} mt-4`}>
                         {activeTab === 'Services' && <Service setPer={setPer} setVog={setVog}/>}
                         {activeTab === 'Appearance' && <Appearance />}
                         {activeTab === 'Product' && <Product setProCol={setProCol}/>}
@@ -533,11 +533,11 @@ useEffect(() => {
 
             
 
-            <div className="col-sm-12 col-md-12 col-lg-5 mt-5" style={{position: 'sticky', top: 0}}>
+            <div className={`${styles.vendorOnlinePreviewColumn} col-sm-12 col-md-12 col-lg-5 mt-5`} style={{position: 'sticky', top: 0}}>
                 <h5 className="text-center mt-3 mb-4">Preview</h5>
                 
                 <>
-                    <div className={`${styles.preview} d-flex flex-column text-center`}>
+                    <div className={`${styles.preview} ${styles.vendorOnlinePreviewFrame} d-flex flex-column text-center`}>
                         {proCol ? (
                             <>
                               {vog ? (

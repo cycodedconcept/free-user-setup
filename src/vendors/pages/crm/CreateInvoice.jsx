@@ -6,6 +6,7 @@ import { createInvoice, resetStatus, updateInvoice } from '../../../slice/invoic
 import { getMyOnlineStore } from '../../../slice/onlineStoreSlice';
 import InvoiceDetails from '../invoice/InvoiceDetails';
 import Swal from 'sweetalert2';
+import styles from "../../../styles.module.css";
 
 const readStoredItemId = () => {
   const storedItemId = localStorage.getItem("itemId");
@@ -674,8 +675,8 @@ const CreateInvoice = ({ onBack, invoice = null, mode = 'create' }) => {
 
   return (
     <>
-      <div className="p-3">
-        <div className="d-flex justify-content-between align-items-center mb-3">
+      <div className={`${styles.vendorInvoiceCreatePage} p-3`}>
+        <div className={`${styles.vendorInvoiceCreateHeader} mb-3`}>
           <div className="d-flex align-items-center gap-3">
             {onBack && (
               <button 
@@ -699,7 +700,7 @@ const CreateInvoice = ({ onBack, invoice = null, mode = 'create' }) => {
               </small>
             </div>
           </div>
-          <div className="d-flex gap-2">
+          <div className={styles.vendorInvoiceCreateActions}>
             <button
               type="button"
               onClick={handleOpenPreview}
@@ -732,7 +733,7 @@ const CreateInvoice = ({ onBack, invoice = null, mode = 'create' }) => {
 
         <form onSubmit={handleSubmit} className="mt-4">
           {/* Invoice Details */}
-          <div className="bg-white rounded-3 p-4 mb-4" style={{border: '1px solid #eee'}}>
+          <div className={`${styles.vendorInvoiceCreateSection} bg-white rounded-3 p-4 mb-4`} style={{border: '1px solid #eee'}}>
             <h6 className="mb-3" style={{fontSize: '15px'}}>Invoice Details</h6>
             
             <div className="row">
@@ -777,8 +778,8 @@ const CreateInvoice = ({ onBack, invoice = null, mode = 'create' }) => {
           </div>
 
           {/* Invoice Items */}
-          <div className="bg-white rounded-3 p-4 mb-4" style={{border: '1px solid #eee'}}>
-            <div className="d-flex justify-content-between align-items-center mb-3">
+          <div className={`${styles.vendorInvoiceCreateSection} bg-white rounded-3 p-4 mb-4`} style={{border: '1px solid #eee'}}>
+            <div className={`${styles.vendorInvoiceCreateSectionHeader} mb-3`}>
               <h6 style={{fontSize: '15px', margin: 0}}>Invoice Items</h6>
               <button
                 type="button"
@@ -791,8 +792,8 @@ const CreateInvoice = ({ onBack, invoice = null, mode = 'create' }) => {
             </div>
 
             {items.map((item, index) => (
-              <div key={index} className="p-3 mb-3 rounded-3" style={{backgroundColor: '#F9FAFB', border: '1px solid #E5E7EB'}}>
-                <div className="d-flex justify-content-between align-items-center mb-2">
+              <div key={index} className={`${styles.vendorInvoiceCreateItemCard} p-3 mb-3 rounded-3`} style={{backgroundColor: '#F9FAFB', border: '1px solid #E5E7EB'}}>
+                <div className={`${styles.vendorInvoiceCreateItemHeader} mb-2`}>
                   <small style={{fontWeight: '600', color: '#374151'}}>Item {index + 1}</small>
                   {items.length > 1 && (
                     <button
@@ -884,7 +885,7 @@ const CreateInvoice = ({ onBack, invoice = null, mode = 'create' }) => {
           {/* Tax, Discount & Notes */}
           <div className="row">
             <div className="col-md-6 mb-4">
-              <div className="bg-white rounded-3 p-4 h-100" style={{border: '1px solid #eee'}}>
+              <div className={`${styles.vendorInvoiceCreateSection} bg-white rounded-3 p-4 h-100`} style={{border: '1px solid #eee'}}>
                 <h6 className="mb-3" style={{fontSize: '15px'}}>Additional Info <span style={{fontSize: '12px', color: '#9CA3AF', fontWeight: 'normal'}}>(Optional)</span></h6>
                 
                 <div className="mb-3">
@@ -930,7 +931,7 @@ const CreateInvoice = ({ onBack, invoice = null, mode = 'create' }) => {
             </div>
 
             <div className="col-md-6 mb-4">
-              <div className="bg-white rounded-3 p-4 h-100" style={{border: '1px solid #eee'}}>
+              <div className={`${styles.vendorInvoiceCreateSection} bg-white rounded-3 p-4 h-100`} style={{border: '1px solid #eee'}}>
                 <h6 className="mb-3" style={{fontSize: '15px'}}>Invoice Summary</h6>
                 
                 <div className="d-flex justify-content-between mb-2">
@@ -959,7 +960,7 @@ const CreateInvoice = ({ onBack, invoice = null, mode = 'create' }) => {
           </div>
 
           {/* Submit Button */}
-          <div className="d-flex justify-content-end gap-2">
+          <div className={styles.vendorInvoiceCreateSubmitRow}>
             <button
               type="button"
               className="btn"
@@ -1003,18 +1004,10 @@ const CreateInvoice = ({ onBack, invoice = null, mode = 'create' }) => {
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            style={{
-              width: 'min(1100px, 100%)',
-              maxHeight: '90vh',
-              backgroundColor: '#fff',
-              borderRadius: '18px',
-              overflow: 'hidden',
-              boxShadow: '0 24px 60px rgba(15, 23, 42, 0.22)'
-            }}
+            className={styles.vendorInvoiceCreateModal}
           >
             <div
-              className="d-flex justify-content-between align-items-center px-4 py-3"
-              style={{borderBottom: '1px solid #E5E7EB'}}
+              className={`${styles.vendorInvoiceCreateModalHeader} px-4 py-3`}
             >
               <div>
                 <h6 className="mb-0">Invoice Preview</h6>
@@ -1022,7 +1015,7 @@ const CreateInvoice = ({ onBack, invoice = null, mode = 'create' }) => {
                   #{createdInvoicePreview?.invoice_number || createdInvoicePreview?.id || 'New Invoice'}
                 </small>
               </div>
-              <div className="d-flex align-items-center gap-2">
+              <div className={styles.vendorInvoiceCreateModalActions}>
                 <button
                   type="button"
                   className="btn"
@@ -1061,7 +1054,7 @@ const CreateInvoice = ({ onBack, invoice = null, mode = 'create' }) => {
               </div>
             </div>
 
-            <div style={{maxHeight: 'calc(90vh - 78px)', overflowY: 'auto', backgroundColor: '#F8FAFC'}}>
+            <div className={styles.vendorInvoiceCreateModalBody}>
               {invoicePreviewUrl ? (
                 <div className="p-4 d-flex justify-content-center">
                   <img

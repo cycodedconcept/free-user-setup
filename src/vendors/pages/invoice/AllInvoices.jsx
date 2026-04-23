@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import stylesItem from '../../../Tabs.module.css';
+import styles from "../../../styles.module.css";
 import InvoiceCards from './InvoiceCards';
 import { useDispatch, useSelector } from 'react-redux';
 import { getAllInvoice, updateInvoiceStatus } from '../../../slice/invoiceSlice';
@@ -551,18 +552,10 @@ const AllInvoices = () => {
         >
           <div
             onClick={(event) => event.stopPropagation()}
-            style={{
-              width: 'min(960px, 100%)',
-              maxHeight: '90vh',
-              backgroundColor: '#FFFFFF',
-              borderRadius: '20px',
-              overflow: 'hidden',
-              boxShadow: '0 24px 60px rgba(15, 23, 42, 0.24)'
-            }}
+            className={styles.vendorInvoiceModalShell}
           >
             <div
-              className="d-flex justify-content-between align-items-center px-4 py-3"
-              style={{ borderBottom: '1px solid #E5E7EB' }}
+              className={`${styles.vendorInvoiceModalHeader} px-4 py-3`}
             >
               <div>
                 <h6 className="mb-1">Invoice Receipts</h6>
@@ -585,7 +578,7 @@ const AllInvoices = () => {
                 Close
               </button>
             </div>
-            <div style={{ padding: '20px 24px', overflowX: 'auto' }}>
+            <div className={styles.vendorInvoiceModalBody}>
               {invoiceReceiptsLoading ? (
                 <div className="text-center py-5">
                   <div className="spinner-border text-primary" role="status">
@@ -609,7 +602,8 @@ const AllInvoices = () => {
                   {invoiceReceiptsError?.message || invoiceReceiptsError?.error || 'Unable to load receipts for this invoice.'}
                 </div>
               ) : invoiceReceipts.length > 0 ? (
-                <table className="table table-borderless align-middle mb-0">
+                <div className={styles.vendorInvoiceItemTableWrap}>
+                <table className={`table table-borderless align-middle mb-0 ${styles.vendorInvoiceItemTable}`}>
                   <thead>
                     <tr style={{ borderBottom: '1px solid #E5E7EB' }}>
                       <th style={{ fontSize: '13px', color: '#78716C' }}>Receipt Number</th>
@@ -678,14 +672,11 @@ const AllInvoices = () => {
                     })}
                   </tbody>
                 </table>
+                </div>
               ) : (
                 <div
-                  className="text-center py-5"
-                  style={{
-                    border: '1px dashed #D1D5DB',
-                    borderRadius: '14px',
-                    color: '#6B7280'
-                  }}
+                  className={`text-center py-5 ${styles.vendorInvoiceEmptyState}`}
+                  style={{ color: '#6B7280' }}
                 >
                   <p style={{ marginBottom: '6px', fontSize: '14px', color: '#111827' }}>No receipts found</p>
                   <small>No generated receipts are available for this invoice yet.</small>
@@ -697,12 +688,12 @@ const AllInvoices = () => {
       )}
       {view === 'list' ? (
         <>
-            <div className="d-flex justify-content-between">
-                <div>
+            <div className={`${styles.vendorInvoicePage} ${styles.vendorInvoiceHeader}`}>
+                <div className={styles.vendorInvoiceHeaderCopy}>
                     <h6 className="bx">Invoices</h6>
                     <small className="d-block">Manage and track all your invoices</small>
                 </div>
-                <div>
+                <div className={styles.vendorInvoiceHeaderActions}>
                     <button className={`mx ms-auto rounded-3 ${stylesItem.jBtn}`} onClick={() => setView('create')}>Create New Invoice</button>
                 </div>
             </div>
@@ -710,22 +701,13 @@ const AllInvoices = () => {
             <InvoiceCards cardDetails={invoiceCards} />
 
             {/* Invoice Table */}
-            <div className="bg-white rounded-3 p-3 mt-4" style={{border: '1px solid #eee'}}>
+            <div className={`${styles.vendorInvoicePage} ${styles.vendorInvoicePanel} p-3 mt-4`}>
             <form
-              className="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3"
+              className={`${styles.vendorInvoiceToolbar} mb-3`}
               onSubmit={handleSearchSubmit}
             >
               <div
-                className="d-flex align-items-center"
-                style={{
-                  flex: '1 1 280px',
-                  maxWidth: '420px',
-                  minHeight: '44px',
-                  border: '1px solid #E5E7EB',
-                  borderRadius: '8px',
-                  background: '#fff',
-                  overflow: 'hidden'
-                }}
+                className={styles.vendorInvoiceSearchBar}
               >
                 <span className="px-3" style={{color: '#9CA3AF'}}>
                   <FontAwesomeIcon icon={faSearch} />
@@ -735,14 +717,7 @@ const AllInvoices = () => {
                   value={searchInput}
                   onChange={(event) => setSearchInput(event.target.value)}
                   placeholder="Search invoice ID, customer, status..."
-                  style={{
-                    flex: 1,
-                    minWidth: 0,
-                    border: 'none',
-                    outline: 'none',
-                    fontSize: '13px',
-                    color: '#1F2937'
-                  }}
+                  className={styles.vendorInvoiceSearchField}
                 />
               </div>
 
@@ -779,7 +754,8 @@ const AllInvoices = () => {
                 </small>
               ) : null}
             </form>
-            <table className="table table-borderless">
+            <div className={styles.vendorInvoiceTableWrap}>
+            <table className={`table table-borderless ${styles.vendorInvoiceTable}`}>
                 <thead>
                 <tr style={{borderBottom: '1px solid #eee'}}>
                     <th style={{fontSize: '13px', color: '#78716C'}}>Invoice ID</th>
@@ -822,6 +798,7 @@ const AllInvoices = () => {
                         <td>
                           <div style={{position: 'relative'}} ref={openDropdown === invoice.id ? dropdownRef : null}>
                             <button 
+                              type="button"
                               className="btn btn-sm" 
                               style={{fontSize: '14px', color: '#6B7280'}}
                               onClick={() => toggleDropdown(invoice.id)}
@@ -842,6 +819,7 @@ const AllInvoices = () => {
                                 minWidth: '180px'
                               }}>
                                 <button
+                                  type="button"
                                   onClick={() => handlePreview(invoice)}
                                   style={{
                                     display: 'flex',
@@ -862,6 +840,7 @@ const AllInvoices = () => {
                                   <FontAwesomeIcon icon={faEye} style={{color: '#0273F9'}} /> Preview
                                 </button>
                                 <button
+                                  type="button"
                                   onClick={() => handleUpdate(invoice)}
                                   disabled={isUpdateDisabled(invoice)}
                                   style={{
@@ -891,6 +870,7 @@ const AllInvoices = () => {
                                   <FontAwesomeIcon icon={faPen} style={{color: '#F59E0B'}} /> Update
                                 </button>
                                 <button
+                                  type="button"
                                   onClick={() => handleUpdatePaymentStatus(invoice)}
                                   style={{
                                     display: 'flex',
@@ -911,6 +891,7 @@ const AllInvoices = () => {
                                   <FontAwesomeIcon icon={faMoneyBillWave} style={{color: '#10B981'}} /> Update Status
                                 </button>
                                 <button
+                                  type="button"
                                   onClick={() => handleGenerateReceipt(invoice)}
                                   disabled={generatingReceiptId === invoice.id}
                                   style={{
@@ -939,6 +920,7 @@ const AllInvoices = () => {
                                   {generatingReceiptId === invoice.id ? 'Generating...' : 'Generate Receipt'}
                                 </button>
                                 <button
+                                  type="button"
                                   onClick={() => handleGetReceipts(invoice)}
                                   disabled={fetchingReceiptsInvoiceId === invoice.id}
                                   style={{
@@ -967,6 +949,7 @@ const AllInvoices = () => {
                                   {fetchingReceiptsInvoiceId === invoice.id ? 'Loading Receipts...' : 'Get Receipts'}
                                 </button>
                                 <button
+                                  type="button"
                                   onClick={() => handleDelete(invoice)}
                                   style={{
                                     display: 'flex',
@@ -1001,6 +984,7 @@ const AllInvoices = () => {
 	                )}
                 </tbody>
             </table>
+            </div>
 
             {/* Pagination */}
             <Pagination

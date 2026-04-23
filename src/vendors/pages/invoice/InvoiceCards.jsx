@@ -1,10 +1,11 @@
 import React from 'react'
+import styles from "../../../styles.module.css";
 
 const InvoiceCards = ({ cardDetails = [] }) => {
 
   const cardItem = cardDetails.map((item) => 
-    <div key={item.id} style={{flex: 1}}>
-      <div style={{border: '1px solid #eee', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between'}} className='rounded-3 py-3 px-2 bg-white'>
+    <div key={item.id} className={styles.vendorInvoiceStatCard}>
+      <div className="rounded-3 py-3 px-2 h-100 d-flex flex-column justify-content-between">
         <div className="d-flex justify-content-between">
           <div className='mt-2'>
             <small className="d-block" style={{fontSize: '12px'}}>{item.name}</small>
@@ -20,7 +21,7 @@ const InvoiceCards = ({ cardDetails = [] }) => {
   )
   return (
     <>
-        <div className="d-flex my-4" style={{gap: '6px'}}>
+        <div className={styles.vendorInvoiceCardsGrid}>
           {cardItem}
         </div>
     </>

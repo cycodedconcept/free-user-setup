@@ -52,6 +52,16 @@ const readStoredProducts = () => {
   }
 };
 
+const parseMaybeJson = (value) => {
+  if (typeof value !== "string") return value;
+
+  try {
+    return JSON.parse(value);
+  } catch {
+    return value;
+  }
+};
+
 const resolveProductId = (product, index) =>
   product?.id ||
   product?.product_id ||
@@ -95,6 +105,88 @@ const formatCurrency = (amount) =>
 
 const resolveErrorMessage = (error) =>
   error?.message || error?.error || error || "Unable to load products right now.";
+
+const normalizeDetailOption = (option = {}) => ({
+  value:
+    option?.value ||
+    option?.option_value ||
+    option?.option_display_name ||
+    option?.label ||
+    "Option",
+  price: Number(option?.price ?? option?.price_adjustment ?? option?.price_delta ?? 0) || 0,
+  stock: Number(option?.stock ?? option?.quantity ?? option?.available_stock ?? 0) || 0,
+  sku: option?.sku || "",
+  barcode: option?.barcode || "",
+  active: option?.is_available !== 0 && option?.is_active !== false,
+});
+
+const normalizeDetailVariation = (variation = {}) => {
+  const parsedOptions = parseMaybeJson(
+    variation?.options ?? variation?.variation_options ?? variation?.values ?? []
+  );
+
+  return {
+    name: variation?.variation_name || variation?.name || "Variation",
+    type: variation?.variation_type || variation?.type || variation?.variation_name || "Option",
+    options: Array.isArray(parsedOptions) ? parsedOptions.map(normalizeDetailOption) : [],
+  };
+};
+
+const resolveDetailVariations = (product = {}) => {
+  const parsedVariations = parseMaybeJson(
+    product?.variations ??
+      product?.product_variations ??
+      product?.variation_groups ??
+      product?.variant_groups ??
+      []
+  );
+
+  return Array.isArray(parsedVariations)
+    ? parsedVariations
+        .map(normalizeDetailVariation)
+        .filter((variation) => variation.name || variation.options.length)
+    : [];
+};
+
+const buildDetailVariantRows = (variationList = [], basePrice = 0, baseSku = "") => {
+  const validVariations = variationList.filter((variation) => variation.options.length > 0);
+  const safeSku = (baseSku || "SKU").toString().trim().toUpperCase();
+
+  if (!validVariations.length) return [];
+
+  return validVariations
+    .reduce((rows, variation) => {
+      if (!rows.length) {
+        return variation.options.map((option) => ({
+          labels: [{ type: variation.type, value: option.value }],
+          skuParts: [String(option.value || "").slice(0, 3).toUpperCase()],
+          price: basePrice + option.price,
+          stock: option.stock,
+          active: option.active,
+          barcode: option.barcode,
+          sku: option.sku,
+        }));
+      }
+
+      return rows.flatMap((row) =>
+        variation.options.map((option) => ({
+          labels: [...row.labels, { type: variation.type, value: option.value }],
+          skuParts: [...row.skuParts, String(option.value || "").slice(0, 3).toUpperCase()],
+          price: row.price + option.price,
+          stock: Math.min(row.stock, option.stock),
+          active: row.active && option.active,
+          barcode: option.barcode || row.barcode,
+          sku: option.sku || row.sku,
+        }))
+      );
+    }, [])
+    .map((row, index) => ({
+      ...row,
+      id: `${row.sku || safeSku}-${index}`,
+      sku: row.sku || `${safeSku}-${row.skuParts.join("-")}`,
+      combination: row.labels.map((label) => label.value).join(" / "),
+    }));
+};
 
 const generateSKU = (name) => {
   if (!name.trim()) return "";
@@ -191,6 +283,7 @@ const Product = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
+  const [productDetailTab, setProductDetailTab] = useState("variants");
   const [openActionMenuId, setOpenActionMenuId] = useState(null);
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingProductId, setEditingProductId] = useState(null);
@@ -292,6 +385,33 @@ const Product = () => {
       total + resolveProductPrice(product) * Math.max(resolveProductStock(product), 0),
     0
   );
+  const selectedProductDetailVariations = React.useMemo(
+    () => resolveDetailVariations(selectedProduct || {}),
+    [selectedProduct]
+  );
+  const selectedProductVariantRows = React.useMemo(
+    () =>
+      buildDetailVariantRows(
+        selectedProductDetailVariations,
+        resolveProductPrice(selectedProduct || {}),
+        resolveProductSku(selectedProduct || {})
+      ),
+    [selectedProduct, selectedProductDetailVariations]
+  );
+  const selectedProductPrices = selectedProductVariantRows.length
+    ? selectedProductVariantRows.map((row) => row.price)
+    : [resolveProductPrice(selectedProduct || {})];
+  const selectedProductMinPrice = Math.min(...selectedProductPrices);
+  const selectedProductMaxPrice = Math.max(...selectedProductPrices);
+  const selectedProductTotalStock = selectedProductVariantRows.length
+    ? selectedProductVariantRows.reduce((total, row) => total + Math.max(row.stock, 0), 0)
+    : resolveProductStock(selectedProduct || {});
+  const selectedProductActiveVariantCount = selectedProductVariantRows.filter(
+    (row) => row.active
+  ).length;
+  const selectedProductLowStockCount = selectedProductVariantRows.filter(
+    (row) => row.stock > 0 && row.stock < 5
+  ).length;
 
   const summaryCards = [
     {
@@ -396,6 +516,7 @@ const Product = () => {
 
   const openProductDetails = (product) => {
     setOpenActionMenuId(null);
+    setProductDetailTab("variants");
     setSelectedProduct(product);
   };
 
@@ -408,6 +529,7 @@ const Product = () => {
 
   const closeProductDetails = () => {
     setSelectedProduct(null);
+    setProductDetailTab("variants");
   };
 
   const toggleActionMenu = (productId) => {
@@ -1221,7 +1343,7 @@ const Product = () => {
               background: "#fff",
               borderRadius: "12px",
               width: "90%",
-              maxWidth: "860px",
+              maxWidth: "1080px",
               maxHeight: "90vh",
               overflow: "auto",
             }}
@@ -1244,249 +1366,211 @@ const Product = () => {
               />
             </div>
 
-            <div className="p-4">
-              <div className="row g-4">
-                <div className="col-md-5">
-                  <div
-                    style={{
-                      border: "1px solid #eee",
-                      borderRadius: "14px",
-                      background: "#fafafa",
-                      padding: "18px",
-                    }}
-                  >
-                    <div
-                      style={{
-                        width: "100%",
-                        aspectRatio: "1 / 1",
-                        borderRadius: "12px",
-                        overflow: "hidden",
-                        background: "#E5E7EB",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
+            <div className={styles.vendorProductDetailBody}>
+              <section className={styles.vendorProductDetailHeaderCard}>
+                <div className={styles.vendorProductDetailThumb}>
+                  {resolveProductImage(selectedProduct) ? (
+                    <img
+                      src={resolveProductImage(selectedProduct)}
+                      alt={resolveProductName(selectedProduct)}
+                    />
+                  ) : (
+                    <FontAwesomeIcon icon={faBoxOpen} />
+                  )}
+                </div>
+
+                <div className={styles.vendorProductDetailHeaderInfo}>
+                  <h4>{resolveProductName(selectedProduct)}</h4>
+                  <div className={styles.vendorProductDetailBadges}>
+                    <span
+                      className={`${styles.vendorProductStatusPill} ${
+                        resolveProductStatus(selectedProduct) === "in-stock"
+                          ? styles.vendorProductStatusPillSuccess
+                          : styles.vendorProductStatusPillWarning
+                      }`}
                     >
-                      {resolveProductImage(selectedProduct) ? (
-                        <img
-                          src={resolveProductImage(selectedProduct)}
-                          alt={resolveProductName(selectedProduct)}
-                          style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                        />
-                      ) : (
-                        <FontAwesomeIcon
-                          icon={faBoxOpen}
-                          style={{ fontSize: "40px", color: "#9CA3AF" }}
-                        />
-                      )}
-                    </div>
-
-                    <div className="mt-3">
-                      <span
-                        className={`${styles.vendorProductStatusPill} ${
-                          resolveProductStatus(selectedProduct) === "in-stock"
-                            ? styles.vendorProductStatusPillSuccess
-                            : styles.vendorProductStatusPillWarning
-                        }`}
-                      >
-                        {resolveProductStatus(selectedProduct) === "in-stock"
-                          ? "In Stock"
-                          : "Low Stock"}
-                      </span>
-                    </div>
+                      {resolveProductStatus(selectedProduct) === "in-stock" ? "Active" : "Low Stock"}
+                    </span>
+                    <span>{resolveProductCategory(selectedProduct)}</span>
+                    <span>
+                      {selectedProductDetailVariations.length} Variation
+                      {selectedProductDetailVariations.length === 1 ? "" : "s"} ·{" "}
+                      {selectedProductVariantRows.length || 1} Variant
+                      {(selectedProductVariantRows.length || 1) === 1 ? "" : "s"}
+                    </span>
+                    <span>SKU: {resolveProductSku(selectedProduct)}</span>
                   </div>
                 </div>
 
-                <div className="col-md-7">
-                  <div className="d-flex justify-content-between align-items-start gap-3">
-                    <div>
-                      <h4 className="mb-1" style={{ color: "#1C1917" }}>
-                        {resolveProductName(selectedProduct)}
-                      </h4>
-                      <small style={{ color: "#78716C" }}>
-                        SKU: {resolveProductSku(selectedProduct)}
-                      </small>
-                    </div>
-                    <div style={{ textAlign: "right" }}>
-                      <small className="d-block" style={{ color: "#78716C" }}>
-                        Unit Price
-                      </small>
-                      <strong style={{ color: "#0273F9", fontSize: "20px" }}>
-                        {formatCurrency(resolveProductPrice(selectedProduct))}
-                      </strong>
-                    </div>
-                  </div>
-
-                  <div className="row mt-4 g-3">
-                    <div className="col-sm-6">
-                      <div
-                        style={{
-                          border: "1px solid #eee",
-                          borderRadius: "12px",
-                          padding: "14px",
-                          background: "#fff",
-                        }}
-                      >
-                        <small className="d-block" style={{ color: "#78716C" }}>
-                          Product ID
-                        </small>
-                        <strong>{resolveProductId(selectedProduct, 0)}</strong>
-                      </div>
-                    </div>
-                    <div className="col-sm-6">
-                      <div
-                        style={{
-                          border: "1px solid #eee",
-                          borderRadius: "12px",
-                          padding: "14px",
-                          background: "#fff",
-                        }}
-                      >
-                        <small className="d-block" style={{ color: "#78716C" }}>
-                          Category
-                        </small>
-                        <strong>{resolveProductCategory(selectedProduct)}</strong>
-                      </div>
-                    </div>
-                    <div className="col-sm-6">
-                      <div
-                        style={{
-                          border: "1px solid #eee",
-                          borderRadius: "12px",
-                          padding: "14px",
-                          background: "#fff",
-                        }}
-                      >
-                        <small className="d-block" style={{ color: "#78716C" }}>
-                          Stock
-                        </small>
-                        <strong>{resolveProductStock(selectedProduct)}</strong>
-                      </div>
-                    </div>
-                    <div className="col-sm-6">
-                      <div
-                        style={{
-                          border: "1px solid #eee",
-                          borderRadius: "12px",
-                          padding: "14px",
-                          background: "#fff",
-                        }}
-                      >
-                        <small className="d-block" style={{ color: "#78716C" }}>
-                          Image URL
-                        </small>
-                        <strong style={{ wordBreak: "break-word" }}>
-                          {selectedProduct?.image_url || selectedProduct?.product_image || "N/A"}
-                        </strong>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div
-                    className="mt-4"
-                    style={{
-                      border: "1px solid #eee",
-                      borderRadius: "12px",
-                      padding: "16px",
-                      background: "#fff",
-                    }}
+                <div className={styles.vendorProductDetailActions}>
+                  <Button
+                    type="button"
+                    variant="secondaryBorder"
+                    size="sm"
+                    onClick={() => openEditProductModal(selectedProduct)}
                   >
-                    <small className="d-block mb-2" style={{ color: "#78716C" }}>
-                      Description
-                    </small>
-                    <p className="mb-0" style={{ color: "#44403C", lineHeight: 1.7 }}>
-                      {resolveProductDescription(selectedProduct)}
-                    </p>
-                  </div>
+                    Edit Product
+                  </Button>
                 </div>
+              </section>
+
+              <section className={styles.vendorProductDetailStatsGrid}>
+                <article className={`${styles.vendorProductDetailStat} ${styles.vendorProductDetailStatAccent}`}>
+                  <span>Price Range</span>
+                  <strong>
+                    {selectedProductMinPrice === selectedProductMaxPrice
+                      ? formatCurrency(selectedProductMinPrice)
+                      : `${formatCurrency(selectedProductMinPrice)} - ${formatCurrency(selectedProductMaxPrice)}`}
+                  </strong>
+                  <small>Across variants</small>
+                </article>
+                <article className={styles.vendorProductDetailStat}>
+                  <span>Total Stock</span>
+                  <strong>{selectedProductTotalStock.toLocaleString("en-NG")}</strong>
+                  <small>Units available</small>
+                </article>
+                <article className={styles.vendorProductDetailStat}>
+                  <span>Active Variants</span>
+                  <strong>
+                    {selectedProductVariantRows.length
+                      ? selectedProductActiveVariantCount
+                      : resolveProductStatus(selectedProduct) === "in-stock"
+                        ? 1
+                        : 0}
+                  </strong>
+                  <small>Visible on store</small>
+                </article>
+                <article className={styles.vendorProductDetailStat}>
+                  <span>Low Stock</span>
+                  <strong>{selectedProductLowStockCount}</strong>
+                  <small>Below 5 units</small>
+                </article>
+              </section>
+
+              <div className={styles.vendorProductDetailTabs}>
+                {[
+                  { key: "variants", label: "Variants" },
+                  { key: "overview", label: "Overview" },
+                ].map((tab) => (
+                  <button
+                    key={tab.key}
+                    type="button"
+                    className={`${styles.vendorProductDetailTab} ${
+                      productDetailTab === tab.key ? styles.vendorProductDetailTabActive : ""
+                    }`}
+                    onClick={() => setProductDetailTab(tab.key)}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
               </div>
 
-              {Array.isArray(selectedProduct?.variations) &&
-                selectedProduct.variations.length > 0 && (
-                  <div
-                    className="mt-4"
-                    style={{
-                      border: "1px solid #eee",
-                      borderRadius: "12px",
-                      padding: "18px",
-                      background: "#fff",
-                    }}
-                  >
-                    <h6 className="mb-3">Variants</h6>
-                    <div className="row g-3">
-                      {selectedProduct.variations.map((variation, variationIndex) => (
-                        <div
-                          key={`${variation?.variation_name || "variation"}-${variationIndex}`}
-                          className="col-md-6"
-                        >
-                          <div
-                            style={{
-                              border: "1px solid #eee",
-                              borderRadius: "12px",
-                              padding: "14px",
-                              background: "#FAFAFA",
-                              height: "100%",
-                            }}
-                          >
-                            <div className="d-flex justify-content-between align-items-start gap-2">
-                              <div>
-                                <strong style={{ color: "#1C1917" }}>
-                                  {variation?.variation_name || "Variant"}
-                                </strong>
-                                <small className="d-block" style={{ color: "#78716C" }}>
-                                  Type: {variation?.variation_type || "N/A"}
-                                </small>
-                              </div>
-                              <span
-                                style={{
-                                  background: "#E8F4FF",
-                                  color: "#0273F9",
-                                  borderRadius: "999px",
-                                  fontSize: "12px",
-                                  padding: "4px 10px",
-                                }}
-                              >
-                                {Array.isArray(variation?.options)
-                                  ? `${variation.options.length} option(s)`
-                                  : "0 option"}
-                              </span>
-                            </div>
-
-                            {Array.isArray(variation?.options) && variation.options.length > 0 ? (
-                              <div className="mt-3 d-flex flex-column gap-2">
-                                {variation.options.map((option, optionIndex) => (
-                                  <div
-                                    key={`${option?.value || "option"}-${optionIndex}`}
-                                    style={{
-                                      border: "1px solid #e7e5e4",
-                                      borderRadius: "10px",
-                                      padding: "10px 12px",
-                                      background: "#fff",
-                                    }}
-                                  >
-                                    <div className="d-flex justify-content-between gap-3">
-                                      <strong>{option?.value || "Option"}</strong>
-                                      <span style={{ color: "#0273F9" }}>
-                                        {formatCurrency(Number(option?.price || 0))}
-                                      </span>
-                                    </div>
-                                    <small style={{ color: "#78716C" }}>
-                                      Stock: {option?.stock ?? 0}
-                                    </small>
-                                  </div>
-                                ))}
-                              </div>
-                            ) : (
-                              <small className="d-block mt-3" style={{ color: "#78716C" }}>
-                                No options available.
+              {productDetailTab === "variants" ? (
+                <>
+                  <div className={styles.vendorProductDetailVariantSummary}>
+                    {selectedProductDetailVariations.length ? (
+                      selectedProductDetailVariations.map((variation) => (
+                        <article key={`${variation.name}-${variation.type}`}>
+                          <span>
+                            {variation.name} ({variation.options.length} options)
+                          </span>
+                          <div>
+                            {variation.options.map((option) => (
+                              <small key={`${variation.name}-${option.value}`}>
+                                {option.value}
                               </small>
-                            )}
+                            ))}
                           </div>
+                        </article>
+                      ))
+                    ) : (
+                      <article>
+                        <span>No variations configured</span>
+                        <div>
+                          <small>Base product only</small>
                         </div>
-                      ))}
-                    </div>
+                      </article>
+                    )}
                   </div>
-                )}
+
+                  <div className={styles.vendorProductDetailTableWrap}>
+                    <table className={styles.vendorProductDetailVariantTable}>
+                      <thead>
+                        <tr>
+                          <th>Combination</th>
+                          <th>Price</th>
+                          <th>Stock</th>
+                          <th>SKU</th>
+                          <th>Barcode</th>
+                          <th>Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(selectedProductVariantRows.length
+                          ? selectedProductVariantRows
+                          : [
+                              {
+                                id: resolveProductId(selectedProduct, 0),
+                                combination: "Base product",
+                                price: resolveProductPrice(selectedProduct),
+                                stock: resolveProductStock(selectedProduct),
+                                sku: resolveProductSku(selectedProduct),
+                                barcode: selectedProduct?.barcode || "N/A",
+                                active: resolveProductStatus(selectedProduct) === "in-stock",
+                              },
+                            ]
+                        ).map((variant) => (
+                          <tr key={variant.id}>
+                            <td>
+                              <div className={styles.vendorProductDetailComboTags}>
+                                {(variant.labels || [{ type: "Product", value: variant.combination }]).map(
+                                  (label) => (
+                                    <span key={`${variant.id}-${label.type}-${label.value}`}>
+                                      {label.value}
+                                    </span>
+                                  )
+                                )}
+                              </div>
+                            </td>
+                            <td>{formatCurrency(variant.price)}</td>
+                            <td>
+                              <span
+                                className={`${styles.vendorProductStatusPill} ${
+                                  variant.stock > 4
+                                    ? styles.vendorProductStatusPillSuccess
+                                    : styles.vendorProductStatusPillWarning
+                                }`}
+                              >
+                                {variant.stock} unit{variant.stock === 1 ? "" : "s"}
+                              </span>
+                            </td>
+                            <td>{variant.sku || "N/A"}</td>
+                            <td>{variant.barcode || "N/A"}</td>
+                            <td>{variant.active ? "Active" : "Inactive"}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
+              ) : (
+                <section className={styles.vendorProductDetailOverviewGrid}>
+                  <article>
+                    <h6>Product Details</h6>
+                    <p><span>Name</span><strong>{resolveProductName(selectedProduct)}</strong></p>
+                    <p><span>Category</span><strong>{resolveProductCategory(selectedProduct)}</strong></p>
+                    <p><span>Product ID</span><strong>{resolveProductId(selectedProduct, 0)}</strong></p>
+                    <p><span>Base SKU</span><strong>{resolveProductSku(selectedProduct)}</strong></p>
+                    <p><span>Status</span><strong>{resolveProductStatus(selectedProduct) === "in-stock" ? "Active" : "Low Stock"}</strong></p>
+                  </article>
+                  <article>
+                    <h6>Description</h6>
+                    <p className={styles.vendorProductDetailDescription}>
+                      {resolveProductDescription(selectedProduct)}
+                    </p>
+                  </article>
+                </section>
+              )}
             </div>
           </div>
         </div>

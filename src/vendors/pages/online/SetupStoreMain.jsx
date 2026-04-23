@@ -1255,14 +1255,15 @@ const SetupStoreMain = () => {
     <>
       {ms ? (
         <>
-          <div className="d-flex justify-content-between">
-            <div className="d-flex gap-4 border-bottom" style={{borderBottom: '1px solid #EEEEEE'}}>
+          <div className={styles.vendorStoreSetupPage}>
+          <div className={styles.vendorStoreSetupToolbar}>
+            <div className={`${styles.vendorStoreSetupTabs} d-flex gap-4 border-bottom`} style={{borderBottom: '1px solid #EEEEEE'}}>
                 {topTabs.map((tab) => (
                     <button
                         key={tab.id}
                         type="button"
                         onClick={() => handleActiveTabChange(tab.target)}
-                        className="bg-transparent pb-2"
+                        className={`${styles.vendorStoreSetupTab} bg-transparent pb-2`}
                         style={{
                             border: "none",
                             color: isTopTabActive(tab.id) ? '#1C1917' : '#78716C',
@@ -1274,37 +1275,37 @@ const SetupStoreMain = () => {
                     </button>
                 ))}
             </div>
-            <div className='d-flex gap-2 flex-nowrap'>
+            <div className={`${styles.vendorStoreSetupActions} d-flex gap-2 flex-nowrap`}>
                 <Button variant='greenButton' size='md' className='flex-grow-1 text-nowrap'>Publish Store</Button>
                 <Button variant='blueButton' size='md' className='flex-grow-1 text-nowrap'>Save Changes</Button>
             </div>
           </div>
-        <div className="row">
-            <div className="col-sm-12 col-md-12 col-lg-7">
+        <div className={`${styles.vendorStoreSetupGrid} row`}>
+            <div className={`${styles.vendorStoreSetupEditor} col-sm-12 col-md-12 col-lg-7`}>
                 {/* <h5 className="text-center mt-3 mb-5">StoreFront Setup</h5> */}
                 {activeTab === 'SetupStore' ? (
                     <>
                       {add ? (
                             <>
-                                <div className={`${styles['outer-box']} p-2`} style={{background: '#fff', borderRadius: '12px', border: '2px solid #EEEEEE'}}>
-                                    <div className={`${styles['inner-box']} text-center p-5`} style={{background: '#FAFAFA', borderRadius: '12px'}}>
+                                <div className={`${styles['outer-box']} ${styles.vendorStoreEmptyCard} p-2`} style={{background: '#fff', borderRadius: '12px', border: '2px solid #EEEEEE'}}>
+                                    <div className={`${styles['inner-box']} ${styles.vendorStoreEmptyInner} text-center p-5`} style={{background: '#FAFAFA', borderRadius: '12px'}}>
                                         <p style={{color: '#78716C'}}>No store information available</p>
                                         <button className={`btn ${styles['add-btn']} px-4`} onClick={() => {setAdd(false)}}>Setup Store</button>
                                     </div>
                                 </div>
 
-                                <div className="text-end mt-4">
+                                <div className={`${styles.vendorStoreSetupFooterAction} text-end mt-4`}>
                                     <button className={styles['sk-btn']}>Skip</button>
                                 </div>
                             </>
                             ) : (
                             <>
                                 <form onSubmit={setupStep === 'store' ? saveStoreInformation : saveSocialLinks}>
-                                    <div className={`${styles['store-info']} p-3`} style={{background: "#fff", border: '2px solid #EEEEEE', borderRadius: '12px'}}>
+                                    <div className={`${styles['store-info']} ${styles.vendorStoreSetupCard} p-3`} style={{background: "#fff", border: '2px solid #EEEEEE', borderRadius: '12px'}}>
                                         {setupStep === 'store' ? (
                                             <>
-                                                <h6 style={{color: '#1C1917'}} className='mx'>Store Information</h6>
-                                                <p style={{color: '#78716C', fontSize: '13px'}}>Let’s start with the basic information about your store</p>
+                                                <h6 style={{color: '#1C1917'}} className={`${styles.vendorStoreSetupCardTitle} mx`}>Store Information</h6>
+                                                <p className={styles.vendorStoreSetupCardText} style={{color: '#78716C', fontSize: '13px'}}>Let’s start with the basic information about your store</p>
 
                                                 <label htmlFor="setup-store-name" className="form-label">Store Name</label>
                                                 <input 
@@ -1323,8 +1324,8 @@ const SetupStoreMain = () => {
                                                         Username <span style={{color: '#78716C'}}>(for your store link)</span>
                                                     </label>
 
-                                                    <div className={`d-flex overflow-hidden ${styles['store-input-wrapper']}`} style={{border: '1px solid #EEEEEE'}}>
-                                                        <span className="px-3 d-flex align-items-center mx" style={{background: '#EAF4FF'}}>
+                                                    <div className={`d-flex overflow-hidden ${styles['store-input-wrapper']} ${styles.vendorStoreUrlField}`} style={{border: '1px solid #EEEEEE'}}>
+                                                        <span className={`${styles.vendorStoreUrlPrefix} px-3 d-flex align-items-center mx`} style={{background: '#EAF4FF'}}>
                                                             mycroshop.com/
                                                         </span>
                                                         <input
@@ -1357,7 +1358,7 @@ const SetupStoreMain = () => {
                                                 ></textarea>
 
                                                 <small className="d-block" style={{color: '#909396'}}>This will appear on your store page. Keep it short and engaging</small>
-                                                <div style={{background: '#EEF8FF'}} className='p-3 mt-4 rounded'>
+                                                <div style={{background: '#EEF8FF'}} className={`${styles.vendorStoreLinkNotice} p-3 mt-4 rounded`}>
                                                     <h6 style={{color: '#0273F9'}} className='mx mb-0'>
                                                         <FontAwesomeIcon icon={faInfoCircle} style={{color: '#0273F9'}} className='me-2'/>
                                                         <span className='nx'>Your store link will be </span>
@@ -1369,7 +1370,7 @@ const SetupStoreMain = () => {
                                             </>
                                         ) : (
                                             <>
-                                                <div className="d-flex justify-content-between align-items-start gap-3">
+                                                <div className={`${styles.vendorStoreSetupCardHeader} d-flex justify-content-between align-items-start gap-3`}>
                                                     <div>
                                                         <h6 style={{color: '#1C1917'}} className='mx mb-1'>Social Links</h6>
                                                         <p style={{color: '#78716C', fontSize: '13px'}} className='mb-0'>
@@ -1430,7 +1431,7 @@ const SetupStoreMain = () => {
                                             </>
                                         )}
                                     </div>
-                                    <div className="text-end mt-3">
+                                    <div className={`${styles.vendorStoreSetupFooterAction} text-end mt-3`}>
                                         <button type="submit" className={`${styles['btn-lg']} ${styles['si-btn']} px-4 py-3`}>
                                             {
                                                 loading ?(
@@ -1481,14 +1482,14 @@ const SetupStoreMain = () => {
                         ))}
                     </div> */}
 
-                    <div className="mt-4">
+                    <div className={`${styles.vendorStoreSetupPanel} mt-4`}>
                         {isTopTabActive('shop') && (
-                            <div className="d-flex mb-4" style={{border: '1px solid #EEEEEE'}}>
+                            <div className={`${styles.vendorStoreShopTabs} d-flex mb-4`} style={{border: '1px solid #EEEEEE'}}>
                                 {shopTabs.map((tab) => (
                                     <button
                                         key={tab.target}
                                         type="button"
-                                        className="flex-fill bg-transparent py-3"
+                                        className={`${styles.vendorStoreShopTab} flex-fill bg-transparent py-3`}
                                         onClick={() => handleActiveTabChange(tab.target)}
                                         style={{
                                             border: 'none',
@@ -1521,8 +1522,8 @@ const SetupStoreMain = () => {
 
             
 
-            <div className="col-sm-12 col-md-12 col-lg-5 mt-5" style={{position: 'sticky', top: 0}}>
-                <h5 className="text-center mt-3 mb-4">Preview</h5>
+            <div className={`${styles.vendorStoreSetupPreviewColumn} col-sm-12 col-md-12 col-lg-5 mt-5`} style={{position: 'sticky', top: 0}}>
+                <h5 className={`${styles.vendorStoreSetupPreviewTitle} text-center mt-3 mb-4`}>Preview</h5>
 
                 <StorefrontMobilePreview
                     themeStyle={previewThemeStyle}
@@ -1536,6 +1537,7 @@ const SetupStoreMain = () => {
                     serviceCollections={previewServiceCollections}
                 />
             </div>
+        </div>
         </div>
         </>
        ) : (<ViewStore />)}

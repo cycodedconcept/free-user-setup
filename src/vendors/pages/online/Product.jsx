@@ -1510,8 +1510,8 @@ const Product = ({setProCol}) => {
       
        {prod ? (
         <>
-          <div className="outer-box p-2" style={{background: '#fff', borderRadius: '12px', border: '2px solid #EEEEEE'}}>
-            <div className="inner-box text-center p-5" style={{background: '#FAFAFA', borderRadius: '12px'}}>
+          <div className={`${styles.vendorOnlinePage} outer-box p-2`} style={{background: '#fff', borderRadius: '12px', border: '2px solid #EEEEEE'}}>
+            <div className={`${styles.vendorOnlineSurfaceCardInner} inner-box text-center p-5`} style={{background: '#FAFAFA', borderRadius: '12px'}}>
               <p style={{color: '#78716C'}}>No Product information available</p>
               <button className={`btn ${styles['add-btn']} px-4`} onClick={() => setMode(true)}>Add Product</button>
             </div>
@@ -1520,8 +1520,8 @@ const Product = ({setProCol}) => {
         </>
         ) : (
         <>
-        <div style={{background: '#fff', border: '1px solid #eee', borderRadius: '8px'}} className='px-3 py-2'>
-          <div className='mt-2'>
+        <div className={`${styles.vendorOnlinePage} ${styles.vendorOnlineSurfaceCard}`} style={{background: '#fff', border: '1px solid #eee', borderRadius: '8px'}}>
+          <div className={`${styles.vendorOnlineSectionIntro} px-3 pt-3 pt-md-2`}>
             <p className="mx mb-2 p-0">Add Products</p>
             <p className="mb-0 mb-3" style={{ fontSize: '13px', color: '#78716C' }}>
               Add products to your store. You can add more products later.
@@ -1529,7 +1529,7 @@ const Product = ({setProCol}) => {
 
           </div>
 
-          <div className="d-flex justify-content-between mt-4">
+          <div className={`${styles.vendorOnlineActions} px-3 mt-4`}>
             <div>
               <p className='m-0'>{serlist} Products added</p>
               <small className="d-block" style={{color: '#78716C'}}>0 pinned to top</small>
@@ -1539,7 +1539,7 @@ const Product = ({setProCol}) => {
             </div>
           </div>
 
-          <div className="row mt-4">
+          <div className="row mt-4 px-3">
             {loading ? (
               <div className="d-flex justify-content-center py-5">
                 <div className="spinner-border text-primary" />
@@ -1549,7 +1549,7 @@ const Product = ({setProCol}) => {
             ) : Array.isArray(productItem) && productItem.length > 0 ? (
               productItem.map((product) => (
                 <div className="col-12 col-sm-6 col-md-6 col-lg-4 mb-4" key={product.id}>
-                  <div className="item-section" style={{height: '280px', display: 'flex', flexDirection: 'column', overflow: 'hidden', borderRadius: '8px'}}>
+                  <div className={`${styles.vendorOnlineCard} item-section`} style={{height: '280px', display: 'flex', flexDirection: 'column', overflow: 'hidden', borderRadius: '8px'}}>
                     <div className="item-img" style={{flex: '0 0 180px', overflow: 'hidden'}}>
                       <img src={getImageSrc(product.image_url)} alt="" className='w-100' style={{height: '100%', objectFit: 'cover'}}/>
                     </div>

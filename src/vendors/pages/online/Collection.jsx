@@ -1007,8 +1007,8 @@ const Collection = ({setItemData, autoExpandProducts = false}) => {
 
   return (
     <>
-      <div style={{background: '#fff', border: '1px solid #eee', borderRadius: '8px'}} className='px-3 py-2'>
-        <div className='mt-2'>
+      <div className={`${styles.vendorOnlinePage} ${styles.vendorOnlineSurfaceCard}`} style={{background: '#fff', border: '1px solid #eee', borderRadius: '8px'}}>
+        <div className={`${styles.vendorOnlineSectionIntro} px-3 pt-3 pt-md-2`}>
           <p className="mx mb-2 p-0">Organize Collections</p>
           <p className="mb-0 mb-3" style={{ fontSize: '13px', color: '#78716C' }}>
             Group your products into collections to make them easy to browse.
@@ -1016,7 +1016,7 @@ const Collection = ({setItemData, autoExpandProducts = false}) => {
 
         </div>
 
-        <div className="d-flex justify-content-between my-4">
+        <div className={`${styles.vendorOnlineActions} px-3 my-4`}>
           <div className='mt-3'>
             <p className='m-0'>{colData.length} {colData.length > 1 ? 'Collections' : 'Collection'} created</p>
           </div>
@@ -1032,7 +1032,7 @@ const Collection = ({setItemData, autoExpandProducts = false}) => {
         {hasCollection ? (
           <>
             <div className="outer-box p-2" style={{background: '#fff', borderRadius: '12px', border: '2px dashed #EEEEEE'}}>
-              <div className="inner-box text-center p-5" style={{borderRadius: '12px'}}>
+              <div className={`${styles.vendorOnlineSurfaceCardInner} inner-box text-center p-5`} style={{borderRadius: '12px'}}>
                 <p style={{color: '#78716C'}}>No collections created yet</p>
                 <button className={`btn ${styles['add-btn']} px-3`} onClick={() => setCmode(true)} type='button'><span style={{fontSize: '17px'}}>+</span> Create Your First Collection</button>
               </div>
@@ -1071,7 +1071,7 @@ const Collection = ({setItemData, autoExpandProducts = false}) => {
                     transition: 'all 0.2s ease',
                     cursor: draggedCollection === index ? 'grabbing' : 'grab'
                 }}>
-                <div className={`d-flex justify-content-between align-items-start flex-wrap gap-3 pe-1 ${styles.vala2}`}>
+                <div className={`d-flex justify-content-between align-items-start flex-wrap gap-3 pe-1 ${styles.vala2} ${styles.vendorOnlineCardHeader}`}>
                   <div className="d-flex align-items-center gap-2" style={{minWidth: 0}}>
                     <div className={`d-inline-flex ${styles.sido}`} style={{position: 'static', transform: 'none'}}>
                       <FontAwesomeIcon icon={faEllipsisV} className='me-1' style={{color: '#78716C', width: 'auto'}}/>
@@ -1082,7 +1082,7 @@ const Collection = ({setItemData, autoExpandProducts = false}) => {
                       <FontAwesomeIcon icon={faPen} style={{color: '#78716C', cursor: 'pointer'}} className='ms-2' onClick={() => openEditCollection(collect)}/>
                     </h6>
                   </div>
-                  <div className="d-flex align-items-center flex-wrap gap-3">
+                  <div className={`d-flex align-items-center flex-wrap gap-3 ${styles.vendorOnlineCardActions}`}>
                     <div className='d-flex align-items-center gap-3'>
                       <button
                         type="button"
@@ -1123,7 +1123,7 @@ const Collection = ({setItemData, autoExpandProducts = false}) => {
                     collectionServices[collect.id].map((item) => {
                       return (
                       <div 
-                        className="col-md-4" 
+                        className={`col-12 col-sm-6 col-lg-4 ${styles.vendorOnlineCard}`} 
                         key={item.id} 
                         style={{position: 'relative', aspectRatio: '1'}}
                         onMouseEnter={() => setHoveredProductId(item.id)}

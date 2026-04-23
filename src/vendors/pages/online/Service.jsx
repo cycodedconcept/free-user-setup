@@ -195,6 +195,19 @@ const Service = ({setPer, setVog, onServiceCollectionChange}) => {
 
   const isServiceVisible = (value) => value === true || value === 1 || value === '1';
   const isCollectionVisible = (value) => value === true || value === 1 || value === '1';
+  const isCollectionServicePinned = (service) => {
+    const serviceId = service?.id ?? service?.service_id;
+
+    if (
+      serviceId !== undefined &&
+      serviceId !== null &&
+      Object.prototype.hasOwnProperty.call(pinnedServices, serviceId)
+    ) {
+      return Boolean(pinnedServices[serviceId]);
+    }
+
+    return service?.is_pinned === true || service?.is_pinned === 1 || service?.is_pinned === '1';
+  };
 
   const handleServiceVisibilityToggle = async (serviceId, checked) => {
     const previousList = [...servicesList];
@@ -1473,28 +1486,25 @@ useEffect(() => {
 
         const {is_pinned, sort_order} = chitem;
 
-        if (!is_pinned || !sort_order) {
-            Swal.fire({
-                icon: "info",
-                title: "Missing Fields",
-                text: "Please fill in all fields",
-                confirmButtonColor: '#0273F9'
-            });
-            return;
-        }
+        // if (sort_order === '' || sort_order === null || sort_order === undefined) {
+        //     Swal.fire({
+        //         icon: "info",
+        //         title: "Missing Fields",
+        //         text: "Please provide a sort order",
+        //         confirmButtonColor: '#0273F9'
+        //     });
+        //     return;
+        // }
 
         const dataToSend = {
             sort_order,
             is_pinned: is_pinned ? 1 : 0,
         }
         
-        // Track pinned service if is_pinned is true
-        if (is_pinned) {
-            setPinnedServices(prev => ({
-                ...prev,
-                [sid]: true
-            }));
-        }
+        setPinnedServices(prev => ({
+            ...prev,
+            [sid]: Boolean(is_pinned)
+        }));
 
         dispatch(updateServiceInCollection({token, coid: wid, serviceid: sid, ...dataToSend}))
     }
@@ -1724,17 +1734,17 @@ useEffect(() => {
 
   return (
     <>
-       <div className="min-vh-100 mt-5" style={{ backgroundColor: '#f8f9fa' }}>
+       <div className={`${styles.vendorServiceManager} min-vh-100 mt-5`} style={{ backgroundColor: '#f8f9fa' }}>
             {/* Tab Navigation */}
-            <div className="bg-white border-bottom p-0" >
+            <div className={`${styles.vendorServiceTabShell} bg-white border-bottom p-0`} >
                 <div className="container-fluid">
                 <div className="row">
                     <div className="col-12 p-0">
-                    <div className="d-flex">
+                    <div className={`${styles.vendorServiceTabs} d-flex`}>
                         {tabs2.map((tab) => (
                         <button
                             key={tab}
-                            className={`flex-fill border-0 py-3 text-center position-relative ${
+                            className={`${styles.vendorServiceTab} flex-fill border-0 py-3 text-center position-relative ${
                             activeTab2 === tab ? 'mx' : 'text-muted'
                             }`}
                             onClick={() => setActiveTab2(tab)}
@@ -1770,7 +1780,7 @@ useEffect(() => {
                         <div className="row">
                             <div className="col-12">
                                 {/* Header Section */}
-                                <div className="mb-4 d-flex justify-content-between">
+                                <div className={`${styles.vendorServiceSectionHeader} mb-4 d-flex justify-content-between`}>
                                     <div>
                                         <p className="mx mb-2">Add Your Services</p>
                                         <small className="mb-0" style={{ fontSize: '13px', color: '#78716C' }}>
@@ -1795,7 +1805,7 @@ useEffect(() => {
                                         ) : Array.isArray(servicesList) && servicesList.length > 0 ? (
                                               servicesList.map((store, index) => (
                                                 <div 
-                                                  className={styles['service-card']} 
+                                                  className={`${styles['service-card']} ${styles.vendorServiceCard}`} 
                                                   key={store.id}
                                                   draggable
                                                   onDragStart={(e) => handleDragStart(e, index)}
@@ -1811,12 +1821,12 @@ useEffect(() => {
                                                     cursor: draggedService === index ? 'grabbing' : 'grab'
                                                   }}
                                                 >
-                                                <div className={`${styles.header} d-flex justify-content-between px-4`}>
-                                                <div className='d-flex'>
+                                                <div className={`${styles.header} ${styles.vendorServiceCardHeader} d-flex justify-content-between px-4`}>
+                                                <div className={`${styles.vendorServiceCardTitle} d-flex`}>
                                                 <p className='mx me-2'>{store.service_title} ({formatDuration(store.duration_minutes)})</p> 
                                                 <FontAwesomeIcon icon={faPen} style={{color: '#78716C', cursor: 'pointer'}} onClick={() => openUpdateModal(store.id)}/>
                                                 </div>
-                                                <div>
+                                                <div className={styles.vendorServiceCardActions}>
                                                 <FontAwesomeIcon icon={faExternalLinkAlt} className={styles.icon} style={{color: '#78716C', cursor: 'pointer'}} onClick={() => openUpdateModal(store.id)}/>
                                                 <FontAwesomeIcon icon={faTrashCan} className={`${styles['icon']} ${styles['red']} me-3`} style={{color: '#DC2626', cursor: 'pointer'}} onClick={() => deleteServiceHandler(store.id, store.service_title)}/>
                                                 <label className={styles.switch}>
@@ -1856,8 +1866,8 @@ useEffect(() => {
                                 {ser ? (
                                     <>
                                     {/* Main Content Card */}
-                                        <div className={`${styles['outer-box']} p-2`} style={{background: '#fff', borderRadius: '12px', border: '2px solid #EEEEEE'}}>
-                                            <div className={`${styles['inner-box']} text-center p-5`} style={{background: '#FAFAFA', borderRadius: '12px'}}>
+                                        <div className={`${styles['outer-box']} ${styles.vendorStoreEmptyCard} p-2`} style={{background: '#fff', borderRadius: '12px', border: '2px solid #EEEEEE'}}>
+                                            <div className={`${styles['inner-box']} ${styles.vendorStoreEmptyInner} text-center p-5`} style={{background: '#FAFAFA', borderRadius: '12px'}}>
                                                 <p style={{color: '#78716C'}}>No service information available</p>
                                                 <button className={`btn ${styles['add-btn']} px-4`} onClick={() => {setSmode(true)}}>Add Services</button>
                                             </div>
@@ -1874,7 +1884,7 @@ useEffect(() => {
                 <>
                 {item ? (
                     <>
-                        <div className='mt-4'>
+                        <div className={`${styles.vendorServiceSectionIntro} mt-4`}>
                             <p className="mx mb-2 p-0">Add Your Collections</p>
                             <p className="mb-0 mb-3" style={{ fontSize: '13px', color: '#78716C' }}>
                             Group your services into different collections
@@ -1884,8 +1894,8 @@ useEffect(() => {
                             {totalcollection} {totalcollection === 1 ? "Collection" : "Collections"} created
                             </p>
                         </div>
-                        <div className={`${styles['outer-box']} p-2`} style={{background: '#fff', borderRadius: '12px', border: '2px dotted #EEEEEE'}}>
-                            <div className={`${styles['inner-box']} text-center p-5`} style={{background: '#FAFAFA', borderRadius: '12px'}}>
+                        <div className={`${styles['outer-box']} ${styles.vendorStoreEmptyCard} p-2`} style={{background: '#fff', borderRadius: '12px', border: '2px dotted #EEEEEE'}}>
+                            <div className={`${styles['inner-box']} ${styles.vendorStoreEmptyInner} text-center p-5`} style={{background: '#FAFAFA', borderRadius: '12px'}}>
                                 <p style={{color: '#78716C'}}>No collections created yet</p>
                                 <button className={`btn ${styles['add-btn']} px-4`} onClick={() => setCmode(true)}><span style={{fontSize: '18px'}}>+</span> Create Your First Collection</button>
                             </div>
@@ -1893,7 +1903,7 @@ useEffect(() => {
                     </>
                     ) : (
                         <>
-                        <div className="d-flex justify-content-between mt-4">
+                        <div className={`${styles.vendorServiceSectionHeader} d-flex justify-content-between mt-4`}>
                             <div>
                                 <p className="mx mb-2 p-0">Add Your Collections</p>
                                 <p className="mb-0 mb-3" style={{ fontSize: '13px', color: '#78716C' }}>
@@ -1912,8 +1922,16 @@ useEffect(() => {
                             ) : error ? (
                                 <p className="text-danger text-center">Something went wrong</p>
                             ) : Array.isArray(collectionList) && collectionList.length > 0 ? (
-                                collectionList.map((collect, index) => (
+                                collectionList.map((collect, index) => {
+                                    const isPinnedCollection =
+                                        collect.is_pinned === true ||
+                                        collect.is_pinned === 1 ||
+                                        collect.is_pinned === '1';
+                                    const pinnedCount = isPinnedCollection ? Number(collect.totalItems) || 0 : 0;
+
+                                    return (
                                     <div 
+                                        className={styles.vendorServiceCollectionCard}
                                         key={collect.id} 
                                         draggable
                                         onDragStart={(e) => handleCollectionDragStart(e, index)}
@@ -1936,17 +1954,17 @@ useEffect(() => {
                                             transition: 'all 0.2s ease',
                                             cursor: draggedCollection === index ? 'grabbing' : 'grab'
                                         }}>
-                                        <div className={`d-flex justify-content-between ${styles.vala}`}>
+                                        <div className={`${styles.vendorServiceCollectionHeader} d-flex justify-content-between ${styles.vala}`}>
                                             <div>
                                                <h6>
                                                    {collect.collection_name} 
                                                    <FontAwesomeIcon icon={faPen} style={{color: '#78716C', cursor: 'pointer'}} className='ms-2' onClick={() => openEditCollection(collect)}/>
                                                </h6>
-                                               <p style={{color: '#1C1917'}} className='nx mt-4 mb-0'>{collect.totalItems}  {collect.totalItems === 1 ? 'Service' : 'Services'} added</p>
-                                               <small style={{color: '#1C1917'}} className='nx d-block'>{collect.is_pinned === true ? 1 : 0} Services pinned</small>
+                                               <p style={{color: '#1C1917'}} className='nx mt-4 mb-0'>{collect.totalItems}  {collect.totalItems > 1 ? 'Services' : 'Service'} added</p>
+                                               <small style={{color: '#1C1917'}} className='nx d-block'>{pinnedCount} {pinnedCount === 1 ? 'Service' : 'Services'} pinned</small>
                                             </div>
-                                            <div>
-                                                <div className='d-flex gap-3'>
+                                            <div className={styles.vendorServiceCollectionActions}>
+                                                <div className={`${styles.vendorServiceCollectionActionRow} d-flex gap-3`}>
                                                 <button
                                                     type="button"
                                                     onClick={() => handleCollectionCheckbox(collect.id)}
@@ -1976,7 +1994,7 @@ useEffect(() => {
                                                     <span className={`${styles.slider} round`}></span>
                                                 </label>
                                             </div>
-                                            <div className="text-end mt-4">
+                                            <div className={`${styles.vendorServiceCollectionAdd} text-end mt-4`}>
                                               <button className={`${styles['si-btn']} px-4 mx rounded-2`} style={{fontSize: '12px'}} onClick={() => showCollect(collect)}>Add Services</button>
                                             </div>
                                             </div>
@@ -1991,21 +2009,26 @@ useEffect(() => {
                                             <>
                                             {Array.isArray(collectionServices[collect.id]) && collectionServices[collect.id].length > 0 ? (
                                                 [...collectionServices[collect.id]].sort((a, b) => {
-                                                    // Sort pinned services to top
-                                                    const aPinned = pinnedServices[a.id] ? 1 : 0;
-                                                    const bPinned = pinnedServices[b.id] ? 1 : 0;
+                                                    const aPinned = isCollectionServicePinned(a) ? 1 : 0;
+                                                    const bPinned = isCollectionServicePinned(b) ? 1 : 0;
                                                     return bPinned - aPinned;
                                                 }).map((item) =>
-                                                    <div className={styles['service-card']} key={item.id}>
-                                                        <div className={`${styles.header} d-flex justify-content-between position-relative px-4`}>
-                                                            <div className='d-flex gap-3'>
+                                                    <div className={`${styles['service-card']} ${styles.vendorServiceCard}`} key={item.id}>
+                                                        <div className={`${styles.header} ${styles.vendorServiceCardHeader} d-flex justify-content-between position-relative px-4`}>
+                                                            <div className={`${styles.vendorServiceCardTitle} d-flex gap-3`}>
                                                                 <p className='mx'>{item.service_title}</p> 
                                                                 <FontAwesomeIcon icon={faPen} style={{color: '#78716C'}} onClick={() => showSerMode(item.id, collect.id)}/>
                                                             </div>
-                                                            <div>
-                                                                {pinnedServices[item.id] && (
-                                                                  <FontAwesomeIcon icon={faThumbtack} style={{color: '#0273F9', cursor: 'pointer'}} className='mt-1' title="Service is pinned"/>
-                                                                )}
+                                                            <div className={styles.vendorServiceCardActions}>
+                                                                <FontAwesomeIcon
+                                                                  icon={faThumbtack}
+                                                                  style={{
+                                                                    color: isCollectionServicePinned(item) ? '#0273F9' : '#78716C',
+                                                                    cursor: 'pointer'
+                                                                  }}
+                                                                  className='mt-1'
+                                                                  title={isCollectionServicePinned(item) ? 'Service is pinned' : 'Service is not pinned'}
+                                                                />
                                                                 <FontAwesomeIcon icon={faTrashCan} className={`${styles.icon} ${styles.red} me-3`} style={{color: '#DC2626'}} onClick={() => delColService(collect.id, item.id, item.service_title)}/>
                                                                 <label className={styles.switch}>
                                                                     <input 
@@ -2030,7 +2053,7 @@ useEffect(() => {
                                             </>
                                         )}
                                     </div>
-                                ))
+                                )})
                             ) : (
                             <p className="text-center text-muted">No collections available</p>
                         )}

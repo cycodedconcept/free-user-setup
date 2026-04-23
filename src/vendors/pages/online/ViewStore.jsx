@@ -178,13 +178,13 @@ const ViewStore = ({ initialSeeStore = true }) => {
       </style>
       {seeStore ? (
         <>
-          <div className="p-4">
-            <div className="d-flex justify-content-between">
-                <div>
+          <div className={`${styles.vendorOnlinePage} p-4`}>
+            <div className={`${styles.vendorOnlineHeader} mb-3`}>
+                <div className={styles.vendorOnlineHeaderCopy}>
                   <h5 className="mb-1 my text-dark">Manage Your Store</h5>
                   <p className="text-muted">Choose which store you’d like to manage today</p>
                 </div>
-                <div>
+                <div className={styles.vendorOnlineActions}>
                     <button
                         className={`${styles['onl-btn']} px-3 rounded`}
                         onClick={() => setSeeStore(false)}
@@ -200,7 +200,7 @@ const ViewStore = ({ initialSeeStore = true }) => {
                 {myStore && (
                 <>
                 <div className="col-md-4">
-                    <div className="card shadow-sm border-light pb-4">
+                    <div className={`card shadow-sm border-light pb-4 ${styles.vendorOnlineCard}`}>
                         <div className="card-body px-3 py-2 d-flex justify-content-between align-items-start">
                             <p className="mb-0">{myStore?.onlineStore?.store_name}</p>
                             <span className="badge rounded-pill text-primary bg-light">{myStore?.onlineStore?.is_published === false ? 'In Active' : 'Active'}</span>
@@ -225,12 +225,12 @@ const ViewStore = ({ initialSeeStore = true }) => {
         </>
         ) : (
         <>
-            <div className="d-flex justify-content-between">
-                <div>
+            <div className={`${styles.vendorOnlinePage} ${styles.vendorOnlineHeader}`}>
+                <div className={styles.vendorOnlineHeaderCopy}>
                     <h5 className="mb-1 my text-dark">Online Store View</h5>
                     <p className="text-muted">Preview of how your online store looks like</p>
                 </div>
-                <div className='d-flex gap-2'>
+                <div className={`${styles.vendorOnlineActions} ${styles.vendorOnlineHeaderCopy}`}>
                     <div>
                       <Button variant='noBackground' size='xsm' className='w-100'><FontAwesomeIcon icon={faPen} style={{color: '#1C1917', cursor: 'pointer'}} className='mx-1'/>Edit</Button>
                     </div>
@@ -245,8 +245,8 @@ const ViewStore = ({ initialSeeStore = true }) => {
 
             {myStore && (
                 <>
-                    <div className="d-flex justify-content-center align-items-center">
-                        <div className={`d-flex justify-content-between p-3 m-0 w-50`} style={{background: '#EAF4FF', borderRadius: '10px', border: '1px solid #0273F9'}}>
+                    <div className={`d-flex justify-content-center align-items-center ${styles.vendorOnlineShareBar} mx-auto`}>
+                        <div className={`d-flex justify-content-between p-3 m-0 w-100 ${styles.vendorOnlineShareBar}`} style={{background: '#EAF4FF', borderRadius: '10px', border: '1px solid #0273F9'}}>
                             <p className='m-0'><span style={{color: '#78716C'}}>mycroshop</span>/{myStore?.onlineStore?.username}</p>
                             <p
                               style={{color: '#0273F9', cursor: 'pointer'}}
@@ -259,7 +259,7 @@ const ViewStore = ({ initialSeeStore = true }) => {
                         </div>
                     </div>
                     <div className="d-flex justify-content-center align-items-center mt-4">
-                <div className={`${styles.preview} d-flex flex-column text-center w-50`} style={{border: '2px solid #1C1917'}}>
+                <div className={`${styles.preview} ${styles.vendorOnlinePreviewFrame} d-flex flex-column text-center w-100`} style={{border: '2px solid #1C1917'}}>
                 <div style={{margin: '5% auto'}}>
                     <div className='mb-2'>
                         <img src={myStore?.onlineStore?.profile_logo_url} alt="" className='rounded-pill w-50'/>
@@ -268,14 +268,15 @@ const ViewStore = ({ initialSeeStore = true }) => {
                     <p>{myStore?.onlineStore?.store_description}</p>
                 </div>
                 <div className="container" style={{ maxWidth: '400px' }}>
-                        <div className="text-center" role="tablist">
+                        <div className={`${styles.vendorOnlineTabsScroll} text-center`} role="tablist">
+                          <div className={styles.vendorOnlineTabs}>
                             {itemService.map((tab, index) => (
                             <button
                                 key={tab.id}
                                 type="button"
                                 role="tab"
                                 onClick={() => setChange(tab.id)}
-                                className={`btn ${change === tab.id ? styles['btn-alt'] : styles['btn-pl']}`}
+                                className={`btn ${styles.vendorOnlineTabButton} ${change === tab.id ? styles['btn-alt'] : styles['btn-pl']}`}
                                 style={{
                                 borderRadius: index === 0 ? '0.375rem 0 0 0.375rem' : 
                                             index === itemService.length - 1 ? '0 0.375rem 0.375rem 0' : '0',
@@ -290,6 +291,7 @@ const ViewStore = ({ initialSeeStore = true }) => {
                                 {tab.label}
                             </button>
                             ))}
+                          </div>
                         </div>
                         
                         <div>

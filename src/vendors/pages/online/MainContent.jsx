@@ -9,12 +9,13 @@ import Domain from "../domain/Domain";
 import Product from "../product/Product";
 import InventoryProduct from "../inventory/Product";
 import InventoryCollection from "../inventory/Collection";
+import styles from "../../../styles.module.css";
 
 const MainContent = ({ activeTab, setActiveTab }) => {
   const noPaddingTabs = ["crm-ai-assistant"];
   return (
     <>
-      <div className={!noPaddingTabs.includes(activeTab) ? "p-4" : ""}>
+      <div className={`${styles.vendorOnlineContent} ${!noPaddingTabs.includes(activeTab) ? "p-4" : ""}`}>
         {/* Home Page */}
         {activeTab === "dashboard" && (
           <Home setActiveTab={setActiveTab} />

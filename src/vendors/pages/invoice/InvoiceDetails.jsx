@@ -1,6 +1,7 @@
 import React from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faArrowLeft, faPrint, faDownload, faEnvelope } from '@fortawesome/free-solid-svg-icons';
+import styles from "../../../styles.module.css";
 
 const InvoiceDetails = ({ invoice, onBack, showHeader = true }) => {
   if (!invoice) {
@@ -52,7 +53,7 @@ const InvoiceDetails = ({ invoice, onBack, showHeader = true }) => {
     <>
       <div className={showHeader ? "p-3" : ""}>
         {showHeader && (
-          <div className="d-flex justify-content-between align-items-center mb-4">
+          <div className={`${styles.vendorInvoiceDetailHeader} mb-4`}>
             <div className="d-flex align-items-center gap-3">
               <button 
                 onClick={onBack} 
@@ -71,7 +72,7 @@ const InvoiceDetails = ({ invoice, onBack, showHeader = true }) => {
                 <small className="d-block" style={{color: '#78716C'}}>View invoice details</small>
               </div>
             </div>
-            <div className="d-flex gap-2">
+            <div className={styles.vendorInvoiceDetailActions}>
               <button
                 className="btn"
                 style={{padding: '8px 16px', border: '1px solid #E5E7EB', borderRadius: '8px', fontSize: '13px', backgroundColor: '#fff'}}
@@ -95,7 +96,7 @@ const InvoiceDetails = ({ invoice, onBack, showHeader = true }) => {
         )}
 
         {/* Invoice Content */}
-        <div className="bg-white rounded-3 p-4" style={{border: '1px solid #eee'}}>
+        <div className={`${styles.vendorInvoicePanel} p-4`}>
           {/* Invoice Header Info */}
           <div className="d-flex justify-content-between mb-4 pb-4" style={{borderBottom: '1px solid #eee'}}>
             <div>
@@ -115,7 +116,7 @@ const InvoiceDetails = ({ invoice, onBack, showHeader = true }) => {
           </div>
 
           {/* Invoice Details Grid */}
-          <div className="row mb-4">
+          <div className={`row mb-4 ${styles.vendorInvoiceInfoGrid}`}>
             <div className="col-md-6">
               <div className="mb-4">
                 <small style={{color: '#6B7280', fontSize: '12px'}}>From</small>
@@ -155,7 +156,8 @@ const InvoiceDetails = ({ invoice, onBack, showHeader = true }) => {
           {/* Items Table */}
           <div className="mb-4">
             <h6 style={{fontSize: '14px', marginBottom: '12px'}}>Invoice Items</h6>
-            <table className="table table-borderless" style={{backgroundColor: '#F9FAFB', borderRadius: '8px'}}>
+            <div className={styles.vendorInvoiceItemTableWrap}>
+            <table className={`table table-borderless ${styles.vendorInvoiceItemTable}`} style={{backgroundColor: '#F9FAFB', borderRadius: '8px'}}>
               <thead>
                 <tr style={{borderBottom: '1px solid #E5E7EB'}}>
                   <th style={{fontSize: '12px', color: '#6B7280', padding: '12px'}}>Item</th>
@@ -196,6 +198,7 @@ const InvoiceDetails = ({ invoice, onBack, showHeader = true }) => {
                 )}
               </tbody>
             </table>
+            </div>
           </div>
 
           {/* Summary */}
@@ -209,7 +212,7 @@ const InvoiceDetails = ({ invoice, onBack, showHeader = true }) => {
               )}
             </div>
             <div className="col-md-6">
-              <div className="p-3 rounded-3" style={{backgroundColor: '#F9FAFB'}}>
+              <div className={`p-3 ${styles.vendorInvoiceSummaryCard}`}>
                 <div className="d-flex justify-content-between mb-2">
                   <span style={{fontSize: '13px', color: '#6B7280'}}>Subtotal</span>
                   <span style={{fontSize: '13px'}}>{invoice.currency || '₦'} {subtotal.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>

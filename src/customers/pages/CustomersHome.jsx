@@ -28,6 +28,7 @@ import { buildCustomerThemeStyle, writeStoredCustomerTheme } from "../customerTh
 const EMPTY_ARRAY = [];
 const WEEKDAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const DESCRIPTION_WORD_STEP = 50;
+const FOOTER_DESCRIPTION_WORD_LIMIT = 30;
 
 const fallbackServiceImages = [serviceOne, serviceTwo, serviceThree];
 const fallbackProductImages = [productOne, productTwo, productThree, productFour, productFive, productSix];
@@ -327,6 +328,17 @@ const getVariationName = (variation) =>
     .toString()
     .trim();
 
+const getVariationType = (variation) =>
+  (
+    variation?.variation_type ||
+    variation?.type ||
+    variation?.variation_name ||
+    ""
+  )
+    .toString()
+    .trim()
+    .toLowerCase();
+
 const getVariationOptionLabel = (option) =>
   (
     option?.option_display_name ||
@@ -336,6 +348,47 @@ const getVariationOptionLabel = (option) =>
   )
     .toString()
     .trim();
+
+const getOptionStock = (option) => {
+  const stock = Number(option?.stock ?? option?.quantity ?? option?.available_stock);
+  return Number.isFinite(stock) ? stock : null;
+};
+
+const getOptionPriceAdjustment = (option) =>
+  parseAmount(option?.price_adjustment ?? option?.price ?? option?.price_delta ?? 0) || 0;
+
+const getOptionSwatchColor = (optionLabel) => {
+  const label = optionLabel.toString().trim().toLowerCase();
+  const namedColors = {
+    black: "#1a1a1a",
+    white: "#f4f1eb",
+    cream: "#e8dcc8",
+    brown: "#8b5e3c",
+    tan: "#b6865b",
+    navy: "#1e3a5f",
+    blue: "#2563eb",
+    red: "#dc2626",
+    green: "#16a34a",
+    yellow: "#f59e0b",
+    pink: "#ec4899",
+    purple: "#7c3aed",
+    grey: "#71717a",
+    gray: "#71717a",
+  };
+
+  return optionLabel?.startsWith?.("#") ? optionLabel : namedColors[label] || "#d9d6cf";
+};
+
+const getPriceRangeLabel = (prices, fallbackLabel) => {
+  const validPrices = prices.filter((price) => Number.isFinite(price));
+  if (!validPrices.length) return fallbackLabel || "Contact for price";
+
+  const minPrice = Math.min(...validPrices);
+  const maxPrice = Math.max(...validPrices);
+  return minPrice === maxPrice
+    ? formatNaira(minPrice)
+    : `${formatNaira(minPrice)} - ${formatNaira(maxPrice)}`;
+};
 
 const getSelectedVariationEntries = (variationGroups, selectedVariationOptions = {}) =>
   (Array.isArray(variationGroups) ? variationGroups : [])
@@ -656,6 +709,15 @@ const resolveStoreFooterHours = (storeData) => {
   return ["Mon - Sat: 9am - 8pm", "Sunday: 12pm - 6pm"];
 };
 
+const truncateWords = (value, maxWords) => {
+  if (typeof value !== "string") return "";
+
+  const words = value.trim().split(/\s+/).filter(Boolean);
+  if (words.length <= maxWords) return words.join(" ");
+
+  return `${words.slice(0, maxWords).join(" ")}...`;
+};
+
 const CustomerStoreFooter = ({
   storeName,
   storeDescription,
@@ -668,9 +730,10 @@ const CustomerStoreFooter = ({
   onServices,
   onViewCart,
 }) => {
-  const footerDescription =
+  const rawFooterDescription =
     (typeof storeDescription === "string" && storeDescription.trim()) ||
     "Premium products and services, delivered with care.";
+  const footerDescription = truncateWords(rawFooterDescription, FOOTER_DESCRIPTION_WORD_LIMIT);
   const primaryAddress = addresses[0] || "Available online";
   const quickLinks = [
     showProducts ? { label: "Shop All", onClick: onShopAll } : null,
@@ -793,6 +856,21 @@ const CustomerStoreFooter = ({
   );
 };
 
+const ProductDetailLoader = ({ storeLogo, storeName }) => (
+  <div className={styles.customerHomeDetailLoader} role="status" aria-live="polite">
+    <img
+      className={styles.customerHomeDetailLoaderLogo}
+      src={storeLogo || storeAvatar}
+      alt=""
+      aria-hidden="true"
+    />
+    <div className={styles.customerHomeLoaderText}>
+      <span>Preparing product details</span>
+      <small>{storeName || "Store"} is getting this product ready</small>
+    </div>
+  </div>
+);
+
 const getServiceBookingMeta = (service) => {
   if (!service) {
     return { name: "", duration: "", price: "" };
@@ -829,6 +907,33 @@ const StorefrontShell = ({
   const heroStyle = hasBannerImage
     ? { "--customer-home-banner-image": `url(${JSON.stringify(storeBannerImage)})` }
     : undefined;
+  const [isCategorySidebarOpen, setIsCategorySidebarOpen] = useState(false);
+  const activeCategoryLabel =
+    categoryItems.find((item) => item.id === activeCategoryId)?.label || "All";
+
+  useEffect(() => {
+    if (!isCategorySidebarOpen || typeof document === "undefined") return undefined;
+
+    const previousOverflow = document.body.style.overflow;
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") {
+        setIsCategorySidebarOpen(false);
+      }
+    };
+
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isCategorySidebarOpen]);
+
+  const handleCategorySelect = (categoryId) => {
+    onSelectCategory(categoryId);
+    setIsCategorySidebarOpen(false);
+  };
 
   return (
   <section className={styles.customerHomeShopShell}>
@@ -891,10 +996,54 @@ const StorefrontShell = ({
       ) : null}
     </section>
 
+    <div className={styles.customerHomeMobileCategoryBar}>
+      <Button
+        className={styles.customerHomeMobileCategoryButton}
+        type="button"
+        aria-haspopup="dialog"
+        aria-expanded={isCategorySidebarOpen}
+        onClick={() => setIsCategorySidebarOpen(true)}
+        unstyled
+      >
+        <span className={styles.customerHomeMobileCategoryText}>
+          <span>Categories</span>
+          <strong>{activeCategoryLabel}</strong>
+        </span>
+        <span className={styles.customerHomeMobileCategoryIcon} aria-hidden="true">
+          ☰
+        </span>
+      </Button>
+    </div>
+
     <div className={styles.customerHomeShopLayout}>
-      <aside className={styles.customerHomeShopSidebar}>
+      <Button
+        className={`${styles.customerHomeShopSidebarBackdrop} ${
+          isCategorySidebarOpen ? styles.customerHomeShopSidebarBackdropOpen : ""
+        }`}
+        type="button"
+        aria-label="Close categories"
+        onClick={() => setIsCategorySidebarOpen(false)}
+        unstyled
+      />
+      <aside
+        className={`${styles.customerHomeShopSidebar} ${
+          isCategorySidebarOpen ? styles.customerHomeShopSidebarOpen : ""
+        }`}
+        aria-label="Categories"
+      >
         <div className={styles.customerHomeShopSidebarCard}>
-          <p className={styles.customerHomeShopSidebarTitle}>Categories</p>
+          <div className={styles.customerHomeShopSidebarHeader}>
+            <p className={styles.customerHomeShopSidebarTitle}>Categories</p>
+            <Button
+              className={styles.customerHomeShopSidebarClose}
+              type="button"
+              aria-label="Close categories"
+              onClick={() => setIsCategorySidebarOpen(false)}
+              unstyled
+            >
+              ×
+            </Button>
+          </div>
           <div className={styles.customerHomeShopCategoryList}>
             {categoryItems.map((item) => (
               <Button
@@ -903,7 +1052,7 @@ const StorefrontShell = ({
                 }`}
                 key={item.id}
                 type="button"
-                onClick={() => onSelectCategory(item.id)}
+                onClick={() => handleCategorySelect(item.id)}
                 unstyled
               >
                 {item.label}
@@ -1663,6 +1812,7 @@ const ProductDetailView = ({
   isInCart = false,
 }) => {
   const [quantity, setQuantity] = useState(1);
+  const [activeDescriptionTab, setActiveDescriptionTab] = useState("description");
   const variationGroups = useMemo(
     () =>
       sortByOrder(product?.variations).map((variation) => ({
@@ -1721,6 +1871,9 @@ const ProductDetailView = ({
     });
     return images;
   }, [variationGroups]);
+  useEffect(() => {
+    setActiveImage(primarySelectedOption?.image_url || product?.image);
+  }, [primarySelectedOption?.image_url, product?.image, product?.id]);
   const description =
     [
       product?.description,
@@ -1730,6 +1883,69 @@ const ProductDetailView = ({
       product?.details,
     ].find((value) => typeof value === "string" && value.trim()) ||
     "Product details available.";
+  const baseProductPrice = parseAmount(product?.price);
+  const selectedVariationEntries = useMemo(
+    () => getSelectedVariationEntries(variationGroups, selectedVariationOptions),
+    [variationGroups, selectedVariationOptions]
+  );
+  const selectedOptions = selectedVariationEntries
+    .map((entry) => {
+      const variation = variationGroups.find((group) => group?.id === entry.variationId);
+      const option = variation?.options?.find((item) => item?.id === entry.optionId);
+      return option ? { ...entry, option, variation } : null;
+    })
+    .filter(Boolean);
+  const selectedOptionsComplete =
+    variationGroups.length === 0 ||
+    variationGroups.every((variation) =>
+      variation?.options?.some((option) => option?.id === selectedVariationOptions?.[variation?.id])
+    );
+  const selectedOptionPriceAdjustment = selectedOptions.reduce(
+    (total, entry) => total + getOptionPriceAdjustment(entry.option),
+    0
+  );
+  const selectedOptionStocks = selectedOptions
+    .map((entry) => getOptionStock(entry.option))
+    .filter((stock) => stock !== null);
+  const selectedStock =
+    selectedOptionStocks.length > 0
+      ? Math.min(...selectedOptionStocks)
+      : Number.isFinite(Number(product?.stock))
+        ? Number(product.stock)
+        : null;
+  const allVariationPrices = variationGroups.flatMap((variation) =>
+    variation.options.map((option) => {
+      if (baseProductPrice === null && getOptionPriceAdjustment(option) === 0) return null;
+      return (baseProductPrice || 0) + getOptionPriceAdjustment(option);
+    })
+  );
+  const resolvedVariationPrice =
+    baseProductPrice !== null || selectedOptionPriceAdjustment
+      ? (baseProductPrice || 0) + selectedOptionPriceAdjustment
+      : null;
+  const resolvedVariationPriceLabel =
+    selectedOptionsComplete && resolvedVariationPrice !== null
+      ? formatNaira(resolvedVariationPrice)
+      : getPriceRangeLabel(allVariationPrices, product?.price || "Contact for price");
+  const priceNote = variationGroups.length
+    ? selectedOptionsComplete
+      ? selectedVariationEntries.map((entry) => entry.optionLabel).join(" · ")
+      : "Price may vary by selected options"
+    : "Ready to add to cart";
+  const selectedSku =
+    selectedOptions.map((entry) => entry.option?.sku).find(Boolean) || product?.sku || "";
+  const selectedBarcode =
+    selectedOptions.map((entry) => entry.option?.barcode).find(Boolean) || product?.barcode || "";
+  const stockState =
+    !selectedOptionsComplete
+      ? "pending"
+      : selectedStock === null
+        ? "unknown"
+        : selectedStock <= 0
+          ? "out"
+          : selectedStock < 5
+            ? "low"
+            : "in";
 
   const scrollThumbIntoView = (thumbId) => {
     const el = thumbRefs.current?.[thumbId];
@@ -1759,24 +1975,8 @@ const ProductDetailView = ({
   const metaRows = [
     { label: "SKU", value: product?.sku },
     { label: "Category", value: product?.category },
-    { label: "Stock", value: Number.isFinite(Number(product?.stock)) ? product?.stock : null },
     { label: "Barcode", value: product?.barcode },
   ].filter((row) => row.value !== null && row.value !== undefined && row.value !== "");
-  const baseProductPrice = parseAmount(product?.price);
-  const selectedVariationPrice = parseAmount(primarySelectedOption?.price_adjustment);
-  const resolvedVariationPrice =
-    selectedVariationPrice !== null
-      ? (baseProductPrice !== null ? baseProductPrice + selectedVariationPrice : selectedVariationPrice)
-      : baseProductPrice;
-  const resolvedVariationPriceLabel =
-    resolvedVariationPrice !== null
-      ? formatNaira(resolvedVariationPrice)
-      : product?.price || "Contact for price";
-  const selectedVariationEntries = useMemo(
-    () => getSelectedVariationEntries(variationGroups, selectedVariationOptions),
-    [variationGroups, selectedVariationOptions]
-  );
-
   const selectedVariationPayload = primaryVariation && primarySelectedOption
     ? {
         label:
@@ -1797,6 +1997,7 @@ const ProductDetailView = ({
         colorLabel: findVariationValue(selectedVariationEntries, ["color", "colour"]),
       }
     : null;
+  const canAddSelectedProduct = stockState !== "out";
 
   return (
     <section className={styles.customerHomeProductDetail}>
@@ -1855,10 +2056,6 @@ const ProductDetailView = ({
               <div
                 className={styles.customerHomeVariationTrack}
                 ref={carouselRef}
-                onPointerDown={handleCarouselPointerDown}
-                onPointerMove={handleCarouselPointerMove}
-                onPointerUp={handleCarouselPointerUp}
-                onPointerLeave={handleCarouselPointerUp}
                 role="listbox"
                 aria-label="Variation thumbnails"
               >
@@ -1909,10 +2106,12 @@ const ProductDetailView = ({
         </div>
 
         <div className={styles.customerHomeProductInfo}>
-          <div>
-            <h2 className={styles.customerHomeProductTitleLarge}>{product.title}</h2>
+          <div className={styles.customerHomeProductEyebrow}>
+            {(product?.category || storeName || "Storefront").toString()}
           </div>
+          <h2 className={styles.customerHomeProductTitleLarge}>{product.title}</h2>
           <div className={styles.customerHomeProductPriceLarge}>{resolvedVariationPriceLabel}</div>
+          <p className={styles.customerHomeProductPriceNote}>{priceNote}</p>
           <div className={styles.customerHomeDetailDivider} />
           {metaRows.length ? (
             <div className={styles.customerHomeProductMeta}>
@@ -1927,7 +2126,6 @@ const ProductDetailView = ({
 
           {variationGroups.length ? (
             <div className={styles.customerHomeDetailGroup}>
-              <span className={styles.customerHomeDetailLabel}>Options</span>
               <div className={styles.customerHomeVariationList}>
                 {variationGroups.map((variation) => (
                   <div
@@ -1935,7 +2133,12 @@ const ProductDetailView = ({
                     className={styles.customerHomeVariationGroup}
                   >
                     <span className={styles.customerHomeVariationName}>
-                      {variation.variation_name || variation.variation_type || "Variation"}
+                      {variation.variation_name || variation.variation_type || "Variation"}:
+                      <strong>
+                        {selectedVariationEntries.find(
+                          (entry) => entry.variationId === variation.id
+                        )?.optionLabel || " choose one"}
+                      </strong>
                     </span>
                     <div className={styles.customerHomeVariationOptions}>
                       {variation.options.map((option) => {
@@ -1949,31 +2152,62 @@ const ProductDetailView = ({
                                 baseProductPrice !== null ? baseProductPrice + optionPrice : optionPrice
                               )
                             : "";
+                        const isColorOption = getVariationType(variation).includes("color");
+                        const optionStock = getOptionStock(option);
+                        const isUnavailable = option?.is_available === 0 || optionStock === 0;
 
                         return (
                         <Button
                           key={option.id || option.option_value}
                           type="button"
-                          className={`${styles.customerHomeSizeOption} ${
+                          aria-label={isColorOption ? `Select ${optionLabel}` : undefined}
+                          title={isColorOption ? optionLabel : undefined}
+                          className={`${isColorOption ? styles.customerHomeColorOption : styles.customerHomeSizeOption} ${
                             isActive ? styles.customerHomeSizeOptionActive : ""
+                          } ${isUnavailable ? styles.customerHomeOptionUnavailable : ""
                           }`}
+                          style={
+                            isColorOption
+                              ? { "--customer-option-color": getOptionSwatchColor(optionLabel) }
+                              : undefined
+                          }
                           onClick={() => {
+                            if (isUnavailable) return;
                             setSelectedVariationOptions((prev) => ({
                               ...prev,
                               [variation.id]: option.id,
                             }));
-                            if (variation.id === primaryVariation?.id) {
+                            if (option?.image_url) {
                               setActiveImage(option?.image_url || product?.image);
                             }
                           }}
                           unstyled
+                          disabled={isUnavailable}
                         >
-                          {optionPriceLabel ? `${optionLabel} · ${optionPriceLabel}` : optionLabel}
+                          {isColorOption ? (
+                            <span className={styles.customerHomeColorDot} aria-hidden="true" />
+                          ) : (
+                            <span>{optionPriceLabel ? `${optionLabel} · ${optionPriceLabel}` : optionLabel}</span>
+                          )}
                         </Button>
                       )})}
                     </div>
                   </div>
                 ))}
+              </div>
+            </div>
+          ) : null}
+
+          {variationGroups.length && selectedOptionsComplete ? (
+            <div className={styles.customerHomeVariantInfoCard}>
+              <span className={styles.customerHomeVariantInfoTitle}>Selected variant details</span>
+              <div className={styles.customerHomeVariantInfoRow}>
+                <span>SKU</span>
+                <strong>{selectedSku || "N/A"}</strong>
+              </div>
+              <div className={styles.customerHomeVariantInfoRow}>
+                <span>Barcode</span>
+                <strong>{selectedBarcode || "N/A"}</strong>
               </div>
             </div>
           ) : null}
@@ -2001,18 +2235,83 @@ const ProductDetailView = ({
             </div>
           </div>
 
-          <Button
-            className={styles.customerHomeAddToCartButton}
-            type="button"
-            onClick={() => onAddToCart?.(product, quantity, selectedVariationPayload)}
-            unstyled
-          >
-            {isInCart ? "Added to Cart" : "Add to Cart"}
-          </Button>
+          <div className={styles.customerHomeProductActionRow}>
+            <Button
+              className={styles.customerHomeAddToCartButton}
+              type="button"
+              onClick={() => {
+                if (!canAddSelectedProduct) return;
+                onAddToCart?.(product, quantity, selectedVariationPayload);
+              }}
+              unstyled
+              disabled={!canAddSelectedProduct}
+            >
+              {isInCart ? "Added to Cart" : "Add to Cart"}
+            </Button>
+
+            <Button
+              className={styles.customerHomeBuyNowButton}
+              type="button"
+              onClick={() => {
+                if (!canAddSelectedProduct) return;
+                onAddToCart?.(product, quantity, selectedVariationPayload);
+                onViewCart?.();
+              }}
+              unstyled
+              disabled={!canAddSelectedProduct}
+            >
+              Buy Now
+            </Button>
+          </div>
+
+          <div className={styles.customerHomeCheckoutMetaRow}>
+            <span>Secure checkout</span>
+            <span>Fast delivery</span>
+            <span>Easy returns</span>
+          </div>
         </div>
-        <p className={`${styles.customerHomeProductDescLarge} ${styles.customerHomeProductDescBelow}`}>
-          {description}
-        </p>
+        <div className={styles.customerHomeProductDescBelow}>
+          <div className={styles.customerHomeDescTabs}>
+            {[
+              { id: "description", label: "Description" },
+              { id: "details", label: "Details" },
+              { id: "shipping", label: "Shipping" },
+            ].map((tab) => (
+              <Button
+                key={tab.id}
+                type="button"
+                className={`${styles.customerHomeDescTab} ${
+                  activeDescriptionTab === tab.id ? styles.customerHomeDescTabActive : ""
+                }`}
+                onClick={() => setActiveDescriptionTab(tab.id)}
+                unstyled
+              >
+                {tab.label}
+              </Button>
+            ))}
+          </div>
+
+          {activeDescriptionTab === "description" && (
+            <p className={styles.customerHomeProductDescLarge}>{description}</p>
+          )}
+          {activeDescriptionTab === "details" && (
+            <div className={styles.customerHomeProductMeta}>
+              {[...metaRows, { label: "Options", value: selectedVariationEntries.map((entry) => entry.optionLabel).join(", ") }]
+                .filter((row) => row.value)
+                .map((row) => (
+                  <div key={`detail-${row.label}`} className={styles.customerHomeProductMetaRow}>
+                    <span className={styles.customerHomeProductMetaLabel}>{row.label}</span>
+                    <span className={styles.customerHomeProductMetaValue}>{row.value}</span>
+                  </div>
+                ))}
+            </div>
+          )}
+          {activeDescriptionTab === "shipping" && (
+            <p className={styles.customerHomeProductDescLarge}>
+              Delivery details and return options will be confirmed during checkout.
+            </p>
+          )}
+        </div>
       </div>
     </section>
   );
@@ -2291,17 +2590,17 @@ const CustomersHome = () => {
   let getStoreName = localStorage.getItem("storeView");
   console.log(getStoreName)
 
-  useEffect(() => {
-    if (token && getTenantId?.tenantId) {
-      dispatch(getOnlineEcommerceStore({ token, tenant_id: getTenantId.tenantId, store: getStoreName }));
-    }
-  }, [dispatch, token, getTenantId?.tenantId, getStoreName]);
-
   // useEffect(() => {
-  //   if (token && '21') {
-  //     dispatch(getOnlineEcommerceStore({ token, tenant_id: '21', store: 'stride' }));
+  //   if (token && getTenantId?.tenantId) {
+  //     dispatch(getOnlineEcommerceStore({ token, tenant_id: getTenantId.tenantId, store: getStoreName }));
   //   }
-  // }, [dispatch, token, '21', 'stride']);
+  // }, [dispatch, token, getTenantId?.tenantId, getStoreName]);
+
+  useEffect(() => {
+    if (token && '21') {
+      dispatch(getOnlineEcommerceStore({ token, tenant_id: '21', store: 'stride' }));
+    }
+  }, [dispatch, token, '21', 'stride']);
 
   useEffect(() => {
     if (token) {
@@ -2358,6 +2657,7 @@ const CustomersHome = () => {
   const [activeTab, setActiveTab] = useState("shop");
   const [visibleDescriptionWords, setVisibleDescriptionWords] = useState(DESCRIPTION_WORD_STEP);
   const [selectedProduct, setSelectedProduct] = useState(null);
+  const [productDetailLoadingId, setProductDetailLoadingId] = useState(null);
   const [selectedProductCollection, setSelectedProductCollection] = useState(null);
   const [selectedServiceCollection, setSelectedServiceCollection] = useState(null);
   const [activeService, setActiveService] = useState(null);
@@ -2574,12 +2874,20 @@ const CustomersHome = () => {
   }, [updateScrollHint]);
 
   const productDetailsPayload = productDetails?.data?.product ?? null;
+  const selectedProductId = selectedProduct?.id ?? null;
+  const hasMatchingProductDetails = Boolean(
+    productDetailsPayload &&
+      (!selectedProductId || productDetailsPayload?.id === selectedProductId)
+  );
+  const showProductDetailLoader = Boolean(
+    selectedProductId &&
+      activeTab === "shop" &&
+      productDetailLoadingId === selectedProductId &&
+      !hasMatchingProductDetails
+  );
   const detailProduct = useMemo(() => {
     if (!selectedProduct) return null;
-    const shouldUseDetails =
-      productDetailsPayload &&
-      (!selectedProduct?.id || productDetailsPayload?.id === selectedProduct?.id);
-    if (!shouldUseDetails) return selectedProduct;
+    if (!hasMatchingProductDetails) return selectedProduct;
     return {
       id: productDetailsPayload?.id ?? selectedProduct?.id,
       title:
@@ -2609,13 +2917,24 @@ const CustomersHome = () => {
         ? productDetailsPayload.variations
         : [],
     };
-  }, [productDetailsPayload, selectedProduct]);
+  }, [hasMatchingProductDetails, productDetailsPayload, selectedProduct]);
 
   const isDetailProductInCart = useMemo(() => {
     const productId = detailProduct?.id ?? selectedProduct?.id;
     if (!productId) return false;
     return cartItems.some((item) => item?.id === productId);
   }, [cartItems, detailProduct?.id, selectedProduct?.id]);
+
+  const handleSelectProduct = (product) => {
+    const productId = product?.id ?? null;
+    setProductDetailLoadingId(productId);
+    setSelectedProduct(product);
+  };
+
+  const handleCloseProductDetail = () => {
+    setProductDetailLoadingId(null);
+    setSelectedProduct(null);
+  };
 
   const handleAddToCart = (product, quantity, selection) => {
     if (!product) return;
@@ -2693,63 +3012,76 @@ const CustomersHome = () => {
     navigate("/customer/checkout");
   };
 
-  useEffect(() => {
-    if (!resolvedTenantId || activeTab !== "shop" || !selectedProduct?.id) return;
-    dispatch(
-      getProductDetails({
-        tenant_id: resolvedTenantId,
-        token,
-        store: getStoreName,
-        productId: selectedProduct.id,
-      })
-    );
-  }, [dispatch, resolvedTenantId, activeTab, selectedProduct, token, getStoreName]);
-
-
-  useEffect(() => {
-    if (showProducts) {
-      setActiveTab((current) => (current === "shop" || !showServices ? "shop" : current));
-      return;
-    }
-    if (showServices) {
-      setActiveTab("services");
-    }
-  }, [showProducts, showServices]);
-
-  useEffect(() => {
-    if (resolvedTenantId) {
-      dispatch(updateBookingField({ field: "tenant_id", value: resolvedTenantId }));
-    }
-  }, [dispatch, resolvedTenantId]);
-
   // useEffect(() => {
   //   if (!resolvedTenantId || activeTab !== "shop" || !selectedProduct?.id) return;
   //   dispatch(
   //     getProductDetails({
-  //       tenant_id: '21',
+  //       tenant_id: resolvedTenantId,
   //       token,
-  //       store: 'stride',
+  //       store: getStoreName,
   //       productId: selectedProduct.id,
   //     })
   //   );
-  // }, [dispatch, '21', activeTab, selectedProduct, token, 'stride']);
+  // }, [dispatch, resolvedTenantId, activeTab, selectedProduct, token, getStoreName]);
 
 
   // useEffect(() => {
-  //   if (showServices) {
-  //     setActiveTab((current) => (current === "services" || !showProducts ? "services" : current));
+  //   if (showProducts) {
+  //     setActiveTab((current) => (current === "shop" || !showServices ? "shop" : current));
   //     return;
   //   }
-  //   if (showProducts) {
-  //     setActiveTab("shop");
+  //   if (showServices) {
+  //     setActiveTab("services");
   //   }
   // }, [showProducts, showServices]);
 
   // useEffect(() => {
   //   if (resolvedTenantId) {
-  //     dispatch(updateBookingField({ field: "tenant_id", value: '21' }));
+  //     dispatch(updateBookingField({ field: "tenant_id", value: resolvedTenantId }));
   //   }
-  // }, [dispatch, '21']);
+  // }, [dispatch, resolvedTenantId]);
+
+  useEffect(() => {
+    if (!resolvedTenantId || activeTab !== "shop" || !selectedProduct?.id) return;
+    const requestedProductId = selectedProduct.id;
+    let isCancelled = false;
+    setProductDetailLoadingId(requestedProductId);
+
+    dispatch(
+      getProductDetails({
+        tenant_id: '21',
+        token,
+        store: 'stride',
+        productId: selectedProduct.id,
+      })
+    ).finally(() => {
+      if (isCancelled) return;
+      setProductDetailLoadingId((currentId) =>
+        currentId === requestedProductId ? null : currentId
+      );
+    });
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [dispatch, '21', activeTab, selectedProduct, token, 'stride']);
+
+
+  useEffect(() => {
+    if (showServices) {
+      setActiveTab((current) => (current === "services" || !showProducts ? "services" : current));
+      return;
+    }
+    if (showProducts) {
+      setActiveTab("shop");
+    }
+  }, [showProducts, showServices]);
+
+  useEffect(() => {
+    if (resolvedTenantId) {
+      dispatch(updateBookingField({ field: "tenant_id", value: '21' }));
+    }
+  }, [dispatch, '21']);
 
   useEffect(() => {
     if (!bookingPayload?.callback_url) {
@@ -3016,7 +3348,7 @@ const CustomersHome = () => {
                   onClick={() => {
                     setSelectedProductCollection(null);
                     setSelectedServiceCollection(null);
-                    setSelectedProduct(null);
+                    handleCloseProductDetail();
                     setActiveService(null);
                     setBookingService(null);
                     resetBookingSchedule();
@@ -3034,7 +3366,7 @@ const CustomersHome = () => {
                   role="tab"
                   aria-selected={activeTab === "services"}
                   onClick={() => {
-                    setSelectedProduct(null);
+                    handleCloseProductDetail();
                     setSelectedProductCollection(null);
                     setSelectedServiceCollection(null);
                     setActiveService(null);
@@ -3110,24 +3442,28 @@ const CustomersHome = () => {
             </>
             )
           ) : selectedProduct ? (
+            showProductDetailLoader ? (
+              <ProductDetailLoader storeLogo={storeLogo} storeName={storeName} />
+            ) : (
             <ProductDetailView
               key={`${detailProduct?.id || selectedProduct?.id || "product-detail"}-${
                 detailProduct?.variations?.length || selectedProduct?.variations?.length || 0
               }-${detailProduct?.image || selectedProduct?.image || ""}`}
               product={detailProduct || selectedProduct}
-              onBack={() => setSelectedProduct(null)}
+              onBack={handleCloseProductDetail}
               storeName={storeName}
               cartCount={cartCount}
               onAddToCart={handleAddToCart}
               onViewCart={handleViewCart}
               isInCart={isDetailProductInCart}
             />
+            )
           ) : selectedProductCollection ? (
             <CollectionDetailView
               key={selectedProductCollection?.id || selectedProductCollection?.title || "product-collection"}
               collection={selectedProductCollection}
               onBack={() => setSelectedProductCollection(null)}
-              onSelectProduct={(product) => setSelectedProduct(product)}
+              onSelectProduct={handleSelectProduct}
               storeLogo={storeLogo}
               storeName={storeName}
             />
@@ -3138,7 +3474,7 @@ const CustomersHome = () => {
                   collections={productCollections}
                   sectionTitle={sectionTitle}
                   onSelectCollection={(collection) => setSelectedProductCollection(collection)}
-                  onSelectProduct={(product) => setSelectedProduct(product)}
+                  onSelectProduct={handleSelectProduct}
                   onViewCart={handleViewCart}
                   onViewAllProducts={
                     allProductsCollection
@@ -3172,7 +3508,7 @@ const CustomersHome = () => {
               showServices={showServices}
               onShopAll={() => {
                 setActiveTab("shop");
-                setSelectedProduct(null);
+                handleCloseProductDetail();
                 setSelectedProductCollection(null);
                 setSelectedServiceCollection(null);
                 setActiveService(null);
@@ -3181,7 +3517,7 @@ const CustomersHome = () => {
               }}
               onServices={() => {
                 setActiveTab("services");
-                setSelectedProduct(null);
+                handleCloseProductDetail();
                 setSelectedProductCollection(null);
                 setSelectedServiceCollection(null);
                 setActiveService(null);
@@ -3598,7 +3934,7 @@ const CustomersHome = () => {
             timezone={cancelledBooking.timezone}
             onClose={() => {
               setActiveTab("services");
-              setSelectedProduct(null);
+              handleCloseProductDetail();
               setActiveService(null);
               setBookingService(null);
               resetBookingSchedule();

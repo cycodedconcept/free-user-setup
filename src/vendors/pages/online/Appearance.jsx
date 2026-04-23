@@ -472,13 +472,13 @@ const Appearance = () => {
   };
 
   return (
-    <div className="imgbox p-3" style={{ background: '#fff', border: '1px solid #EEEEEE', borderRadius: '12px' }}>
-      <h6 style={{ color: '#1C1917' }}>Store Appearance</h6>
-      <small className="d-block" style={{ color: '#78716C' }}>
+    <div className={`${styles.vendorOnlinePage} imgbox p-3`} style={{ background: '#fff', border: '1px solid #EEEEEE', borderRadius: '12px' }}>
+      <h6 className={styles.vendorOnlineSectionTitle} style={{ color: '#1C1917' }}>Store Appearance</h6>
+      <small className={styles.vendorOnlineSectionText} style={{ color: '#78716C' }}>
         Upload your profile logo and banner image one step at a time.
       </small>
 
-      <div className="d-flex flex-wrap gap-2 mt-4 mb-4">
+      <div className={`d-flex flex-wrap gap-2 mt-4 mb-4 ${styles.vendorOnlineTabsScroll}`}>
         {appearanceSteps.map((step, index) => {
           const isActive = index === activeStep;
           const isDone = uploadedSteps[step.id];
@@ -505,7 +505,7 @@ const Appearance = () => {
         })}
       </div>
 
-      <div style={dropdownStyles.container}>
+      <div className={`${styles.vendorOnlineSurfaceCard} ${styles.vendorOnlineSurfaceCardInner}`} style={dropdownStyles.container}>
         <small className="d-block mb-2" style={{ color: '#1C1917', fontWeight: 600 }}>
           {currentStep.title}
         </small>
@@ -558,7 +558,7 @@ const Appearance = () => {
       </div>
 
       <div className="mt-4">
-          <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+          <div className={`${styles.vendorOnlineHeader} flex-wrap gap-2 mb-3`}>
             <div>
               <h6 style={{ color: '#1C1917', marginBottom: '4px' }}>Available Themes</h6>
               <small style={{ color: '#78716C' }}>
@@ -582,6 +582,7 @@ const Appearance = () => {
               <small className="d-block text-danger mb-3">{themeErrorMessage}</small>
             )}
             <div
+              className={styles.vendorOnlineCardGrid}
               style={{
                 display: 'grid',
                 gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
@@ -804,7 +805,7 @@ const dropdownStyles = {
   },
   bannerPreview: {
     width: '280px',
-    height: '120px',
+    height: '220px',
     margin: 'auto',
     borderRadius: '12px',
     overflow: 'hidden',
