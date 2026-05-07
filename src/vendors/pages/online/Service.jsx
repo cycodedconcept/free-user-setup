@@ -2264,24 +2264,23 @@ useEffect(() => {
                                 <div className="col-md-12 mb-3">
                                     <label htmlFor="formGroupExampleInput" className="form-label">Availability</label>
                                     
-                                    <div className="bg-white rounded border p-3">
+                                    <div className={`bg-white rounded border p-3 ${styles.vendorServiceAvailabilityCard}`}>
                                         {/* Header */}
                                         <div className="d-flex justify-content-between align-items-center mb-4">
                                             <span className="fw-normal text-dark">Add Available Time Slots</span>
                                         </div>
 
                                         {/* Day & Time Selector */}
-                                        <div className="mb-4 p-3 bg-light rounded">
-                                            <div className="row align-items-end gap-2">
+                                        <div className={`mb-4 p-3 bg-light rounded ${styles.vendorServiceAvailabilityEditor}`}>
                                                 {/* Day Dropdown */}
-                                                <div className="col-auto">
+                                                <div className={styles.vendorServiceAvailabilityField}>
                                                     <label className="form-label mb-2">Day</label>
                                                     <select 
-                                                        className="form-select form-select-sm"
+                                                        className={`form-select form-select-sm ${styles.vendorServiceAvailabilityControl}`}
 	                                                        data-form="loadStore"
 	                                                        value={currentSelectedDay}
 	                                                        onChange={(e) => handleSelectedDayChange(e.target.value)}
-	                                                        style={{ minWidth: '100px', fontSize: '14px' }}
+	                                                        style={{ fontSize: '14px' }}
 	                                                    >
                                                         {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => (
                                                             <option key={day} value={day}>{day}</option>
@@ -2290,60 +2289,59 @@ useEffect(() => {
                                                 </div>
 
                                                 {/* Time Input */}
-                                                <div className="col-auto">
+                                                <div className={styles.vendorServiceAvailabilityField}>
                                                     <label className="form-label mb-2">Time</label>
                                                     <input
                                                         type="time"
-                                                        className="form-control form-control-sm border text-center"
+                                                        className={`form-control form-control-sm border text-center ${styles.vendorServiceAvailabilityControl}`}
                                                         data-form="loadStore"
                                                         value={currentSelectedTime}
                                                         onChange={(e) => setCurrentSelectedTime(e.target.value)}
-                                                        style={{ fontSize: '14px', minWidth: '120px' }}
+                                                        style={{ fontSize: '14px' }}
                                                     />
                                                 </div>
 
                                                 {/* Max Slots Input */}
-                                                <div className="col-auto">
+                                                <div className={styles.vendorServiceAvailabilityField}>
                                                     <label className="form-label mb-2">Max Bookings / Slot</label>
                                                     <input
                                                         type="number"
                                                         min="1"
-                                                        className="form-control form-control-sm border text-center"
+                                                        className={`form-control form-control-sm border text-center ${styles.vendorServiceAvailabilityControl}`}
 	                                                        data-form="loadStore"
 	                                                        value={currentSelectedMaxSlots}
 	                                                        onChange={(e) => handleMaxBookingsPerSlotChange(e.target.value)}
-	                                                        style={{ fontSize: '14px', minWidth: '100px' }}
+	                                                        style={{ fontSize: '14px' }}
 	                                                    />
                                                 </div>
 
                                                 {/* Add Button */}
-                                                <div className="col-auto">
+                                                <div className={styles.vendorServiceAvailabilityAction}>
                                                     <button
                                                         type="button"
-                                                        className="btn btn-sm btn-primary"
+                                                        className={`btn btn-sm btn-primary ${styles.vendorServiceAvailabilityButton}`}
                                                         onClick={addTimeSlotForDay}
                                                         style={{ fontSize: '14px', padding: '6px 16px' }}
                                                     >
                                                         + Add
                                                     </button>
                                                 </div>
-                                            </div>
                                         </div>
 
                                         {/* Display Added Time Slots by Day */}
-                                        <div className="mb-3">
+                                        <div className={`${styles.vendorServiceAvailabilityList} mb-3`}>
                                             {Object.keys(availabilitySlots).length === 0 ? (
                                                 <p className="text-muted text-center mb-0">No time slots added yet</p>
                                             ) : (
-                                                <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
+                                                <div>
                                                     {Object.entries(availabilitySlots).map(([dayKey, dayData]) => {
                                                         const dayDisplay = Object.keys(dayMapping).find(key => dayMapping[key] === dayKey);
                                                         return (
                                                             <div key={dayKey} className="mb-3 p-2 border rounded">
                                                                 <div className="fw-semibold text-dark mb-2">{dayDisplay || dayKey}</div>
-                                                                <div className="d-flex flex-wrap gap-2">
+                                                                <div className={styles.vendorServiceAvailabilityChipList}>
                                                                     {dayData.time_slots.map((time) => (
-	                                                                        <div key={time} className="badge bg-primary d-flex align-items-center gap-2" style={{ fontSize: '13px', padding: '6px 10px' }}>
+	                                                                        <div key={time} className={`badge bg-primary d-flex align-items-center gap-2 ${styles.vendorServiceAvailabilityChip}`} style={{ fontSize: '13px', padding: '6px 10px' }}>
 	                                                                            {time}
                                                                                 <span style={{ opacity: 0.85 }}>
                                                                                     Max {normalizeDayAvailability(dayData).max_bookings_per_slot || 1}
@@ -2384,11 +2382,11 @@ useEffect(() => {
                                     <label for="formGroupExampleInput" className="form-label">Service Image Url (optional)</label>
                                     <input type="text" className={styles['input-item']} placeholder="Book Now" name='service_image_url' value={sdata.service_image_url} onChange={handleChange}/>
                                 </div>
-                                <div className="col-md-6 text-end">
-                                    <label className="form-check-label mx-4" htmlFor="hideSocial" style={{color: '#78716C', fontSize: '13px'}}>
+                                <div className={`col-md-6 ${styles.vendorServiceVisibilityField}`}>
+                                    <label className={`form-check-label ${styles.vendorServiceVisibilityLabel}`} htmlFor="hideSocial" style={{color: '#78716C', fontSize: '13px'}}>
                                         {sdata.is_visible ? 'Visible' : 'Hidden'}
                                     </label>
-                                    <div className='form-check form-switch text-end' style={{float: 'right'}}>
+                                    <div className={`form-check form-switch ${styles.vendorServiceVisibilitySwitch}`}>
                                         <input 
                                             className="form-check-input" 
                                             type="checkbox" 
@@ -2671,23 +2669,22 @@ useEffect(() => {
                                 <div className="col-md-12 mb-3">
                                     <label htmlFor="formGroupExampleInput" className="form-label">Availability</label>
                                     
-                                    <div className="bg-white rounded border p-3">
+                                    <div className={`bg-white rounded border p-3 ${styles.vendorServiceAvailabilityCard}`}>
                                         {/* Header */}
                                         <div className="d-flex justify-content-between align-items-center mb-4">
                                             <span className="fw-normal text-dark">Add Available Time Slots</span>
                                         </div>
 
                                         {/* Day & Time Selector */}
-                                        <div className="mb-4 p-3 bg-light rounded">
-                                            <div className="row align-items-end gap-2">
+                                        <div className={`mb-4 p-3 bg-light rounded ${styles.vendorServiceAvailabilityEditor}`}>
                                                 {/* Day Dropdown */}
-                                                <div className="col-auto">
+                                                <div className={styles.vendorServiceAvailabilityField}>
                                                     <label className="form-label mb-2">Day</label>
                                                     <select 
-                                                        className="form-select form-select-sm"
+                                                        className={`form-select form-select-sm ${styles.vendorServiceAvailabilityControl}`}
 	                                                        value={currentSelectedDay}
 	                                                        onChange={(e) => handleSelectedDayChange(e.target.value)}
-	                                                        style={{ minWidth: '100px', fontSize: '14px' }}
+	                                                        style={{ fontSize: '14px' }}
 	                                                    >
                                                         {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => (
                                                             <option key={day} value={day}>{day}</option>
@@ -2696,58 +2693,57 @@ useEffect(() => {
                                                 </div>
 
                                                 {/* Time Input */}
-                                                <div className="col-auto">
+                                                <div className={styles.vendorServiceAvailabilityField}>
                                                     <label className="form-label mb-2">Time</label>
                                                     <input
                                                         type="time"
-                                                        className="form-control form-control-sm border text-center"
+                                                        className={`form-control form-control-sm border text-center ${styles.vendorServiceAvailabilityControl}`}
                                                         value={currentSelectedTime}
                                                         onChange={(e) => setCurrentSelectedTime(e.target.value)}
-                                                        style={{ fontSize: '14px', minWidth: '120px' }}
+                                                        style={{ fontSize: '14px' }}
                                                     />
                                                 </div>
 
                                                 {/* Max Slots Input */}
-                                                <div className="col-auto">
+                                                <div className={styles.vendorServiceAvailabilityField}>
                                                     <label className="form-label mb-2">Max Bookings / Slot</label>
                                                     <input
                                                         type="number"
                                                         min="1"
-	                                                        className="form-control form-control-sm border text-center"
+	                                                        className={`form-control form-control-sm border text-center ${styles.vendorServiceAvailabilityControl}`}
 	                                                        value={currentSelectedMaxSlots}
 	                                                        onChange={(e) => handleMaxBookingsPerSlotChange(e.target.value)}
-	                                                        style={{ fontSize: '14px', minWidth: '100px' }}
+	                                                        style={{ fontSize: '14px' }}
 	                                                    />
                                                 </div>
 
                                                 {/* Add Button */}
-                                                <div className="col-auto">
+                                                <div className={styles.vendorServiceAvailabilityAction}>
                                                     <button
                                                         type="button"
-                                                        className="btn btn-sm btn-primary"
+                                                        className={`btn btn-sm btn-primary ${styles.vendorServiceAvailabilityButton}`}
                                                         onClick={addTimeSlotForDay}
                                                         style={{ fontSize: '14px', padding: '6px 16px' }}
                                                     >
                                                         + Add
                                                     </button>
                                                 </div>
-                                            </div>
                                         </div>
 
                                         {/* Display Added Time Slots by Day */}
-                                        <div className="mb-3">
+                                        <div className={`${styles.vendorServiceAvailabilityList} mb-3`}>
                                             {Object.keys(availabilitySlots).length === 0 ? (
                                                 <p className="text-muted text-center mb-0">No time slots added yet</p>
                                             ) : (
-                                                <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
+                                                <div>
                                                     {Object.entries(availabilitySlots).map(([dayKey, dayData]) => {
                                                         const dayDisplay = Object.keys(dayMapping).find(key => dayMapping[key] === dayKey);
                                                         return (
                                                             <div key={dayKey} className="mb-3 p-2 border rounded">
                                                                 <div className="fw-semibold text-dark mb-2">{dayDisplay || dayKey}</div>
-                                                                <div className="d-flex flex-wrap gap-2">
+                                                                <div className={styles.vendorServiceAvailabilityChipList}>
                                                                     {dayData.time_slots.map((time) => (
-	                                                                        <div key={time} className="badge bg-primary d-flex align-items-center gap-2" style={{ fontSize: '13px', padding: '6px 10px' }}>
+	                                                                        <div key={time} className={`badge bg-primary d-flex align-items-center gap-2 ${styles.vendorServiceAvailabilityChip}`} style={{ fontSize: '13px', padding: '6px 10px' }}>
 	                                                                            {time}
                                                                                 <span style={{ opacity: 0.85 }}>
                                                                                     Max {normalizeDayAvailability(dayData).max_bookings_per_slot || 1}
@@ -2788,11 +2784,11 @@ useEffect(() => {
                                     <label for="formGroupExampleInput" className="form-label">Service Image Url (optional)</label>
                                     <input type="text" className={styles['input-item']} placeholder="Service Image Url" name='service_image_url' value={sdata.service_image_url} onChange={handleChange}/>
                                 </div>
-                                <div className="col-md-6 text-end">
-                                    <label className="form-check-label mx-4" htmlFor="updateVisibility" style={{color: '#78716C', fontSize: '13px'}}>
+                                <div className={`col-md-6 ${styles.vendorServiceVisibilityField}`}>
+                                    <label className={`form-check-label ${styles.vendorServiceVisibilityLabel}`} htmlFor="updateVisibility" style={{color: '#78716C', fontSize: '13px'}}>
                                         {sdata.is_visible ? 'Visible' : 'Hidden'}
                                     </label>
-                                    <div className='form-check form-switch text-end' style={{float: 'right'}}>
+                                    <div className={`form-check form-switch ${styles.vendorServiceVisibilitySwitch}`}>
                                         <input 
                                             className="form-check-input" 
                                             type="checkbox" 

@@ -1,4 +1,5 @@
-import Logo from "./logo.jpg";
+import Logo from "./logo.png";
+import Logoj from "./logoj.jpeg";
 import Bg from "./bg.png";
 import Gs from "./ytr.png";
 import G12 from "./g12.png";
@@ -58,7 +59,7 @@ import Hm from "./hm.png"
 import Ben from "./ben.png"
 
 export {
-  Logo,
+  Logo, Logoj,
   Bg,
   Gs,
   G12,

@@ -14,7 +14,8 @@ import {
   faTruck,
   faUserShield,
   faCog,
-  faGlobe
+  faGlobe,
+  faShip
 } from "@fortawesome/free-solid-svg-icons";
 import { Logo, El } from "../../../assets";
 import "./sidebar.css";
@@ -138,17 +139,23 @@ const Sidebar = ({ activeTab, setActiveTab, onClose, onNavigate }) => {
       visible: false,
     },
     {
-      label: "Settings",
-      key: "settings",
-      icon: faCog,
-      visible: true,
-    },
-    {
       label: "Domains",
       key: "domains",
       icon: faGlobe,
       visible: true,
     },
+    {
+      label: "Shipping",
+      key: "shipping",
+      icon: faShip,
+      visible: true,
+    },
+    {
+      label: "Settings",
+      key: "settings",
+      icon: faCog,
+      visible: true,
+    }
   ];
 
   const handleItemClick = (btn) => {

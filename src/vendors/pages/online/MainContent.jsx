@@ -7,8 +7,9 @@ import GeneralSettings from "../settings/GeneralSettings";
 import Home from "../dashboard/Home";
 import Domain from "../domain/Domain";
 import Product from "../product/Product";
-import InventoryProduct from "../inventory/Product";
+import InventoryProduct from "../product/Product";
 import InventoryCollection from "../inventory/Collection";
+import ShippingRates from "../shipping/ShippingRates";
 import styles from "../../../styles.module.css";
 
 const MainContent = ({ activeTab, setActiveTab }) => {
@@ -72,6 +73,10 @@ const MainContent = ({ activeTab, setActiveTab }) => {
         {/* Domains */}
         {activeTab === "domains" && (
           <Domain setActiveTab={setActiveTab} />
+        )}
+
+        {activeTab === "shipping" && (
+          <ShippingRates setActiveTab={setActiveTab} />
         )}
 
         {/* Backward compatibility for old keys */}

@@ -98,10 +98,10 @@ const Login = () => {
         }}
       >
         <div className="text-center pb-5" style={{ paddingTop: '60px' }}>
-          <img src={Logo} alt="" style={{ width: '11%' }} />
+          <img src={Logo} alt="" className={`${styles['logo-img']}`} />
         </div>
 
-        <div className="d-flex justify-content-center align-items-center" style={{ minHeight: 'calc(100vh - 200px)' }}>
+        <div className={`d-flex justify-content-center align-items-center m-3 m-lg-0 ${styles.logcard}`}>
           <div className={`${styles.vLog} text-center bg-white p-4`} style={{ maxWidth: '600px', width: '100%', borderRadius: '25px' }}>
             <h4 style={{ color: '#1C1917' }}>Sign in to Mycroshop</h4>
             <small style={{ color: '#78716C' }}>Welcome back! Please log in to continue</small>
@@ -112,7 +112,7 @@ const Login = () => {
               </Link>
             </small>
 
-            <form className="mt-4 px-5" onSubmit={handleSubmit}>
+            <form className="mt-4 px-1 px-lg-5" onSubmit={handleSubmit}>
               <div className="form-group">
                 <input
                   type="text"
@@ -150,7 +150,7 @@ const Login = () => {
               </button>
             </form>
 
-            <p style={{ color: '#78716C' }} className="my-4">Or sign in with</p>
+            {/* <p style={{ color: '#78716C' }} className="my-4">Or sign in with</p>
 
             <button className={`${styles['g-btn']} mx-3`}>
               <img src={Gs} alt="" className={`mx-3 ${styles.im}`} />
@@ -159,10 +159,10 @@ const Login = () => {
             <button className={styles['g-btn']}>
               <img src={G12} alt="" className={`mx-3 ${styles.im}`} />
               Facebook
-            </button>
+            </button> */}
 
             <small className="d-block mt-3" style={{ color: '#78716C' }}>
-              By signing in you agree to Mycroshop Terms & Policies
+              By signing in you agree to Mycroshop<br className='d-block d-lg-none'/> <span className={`${styles.tc}`}>Terms</span> & <span className={`${styles.tc}`}>Policies</span>
             </small>
           </div>
         </div>

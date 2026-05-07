@@ -4,11 +4,21 @@ import styles from "../../../styles.module.css";
 import { useDispatch, useSelector } from 'react-redux';
 import { addPaymentGateway } from "../../../slice/paymentSlice";
 import { deleteBannerImage, getMyOnlineStore, resetStatus } from "../../../slice/onlineStoreSlice";
+import {
+  getWhatsappPlans,
+  subscribeWhatsappPlan,
+} from "../../../slice/whatsappPlanSlice";
 import { Ac } from "../../../assets";
 import Swal from 'sweetalert2';
 import useAppTheme from "../../../hooks/useAppTheme";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faTrashCan } from "@fortawesome/free-solid-svg-icons";
+import {
+  buildWhatsappPlanSuccessUrl,
+  readStoredVendorUser,
+  resolveVendorEmail,
+  writeWhatsappPlanPaymentContext,
+} from "./whatsappPlanPayment";
 
 const resolveStoreInfo = (myStore) =>
   myStore?.onlineStore ||
@@ -16,11 +26,51 @@ const resolveStoreInfo = (myStore) =>
   myStore?.store ||
   {};
 
+const parsePlanFeatures = (features) => {
+  if (Array.isArray(features)) {
+    return features;
+  }
+
+  if (typeof features !== "string") {
+    return [];
+  }
+
+  try {
+    const parsedFeatures = JSON.parse(features);
+    return Array.isArray(parsedFeatures) ? parsedFeatures : [];
+  } catch {
+    return features ? [features] : [];
+  }
+};
+
+const formatPlanLimit = (value, nullLabel = "Unlimited") => {
+  if (value === null || value === undefined || value === "") {
+    return nullLabel;
+  }
+
+  const numericValue = Number(value);
+  return Number.isFinite(numericValue) ? numericValue.toLocaleString("en-NG") : String(value);
+};
+
+const formatWhatsappNumberLimit = (plan) => {
+  if (plan?.is_custom) {
+    return plan?.max_whatsapp_numbers ? `${plan.max_whatsapp_numbers}+` : "Custom";
+  }
+
+  return formatPlanLimit(plan?.max_whatsapp_numbers, "0");
+};
+
 const GeneralSettings = () => {
   const dispatch = useDispatch();
   let token = localStorage.getItem("token");
   const getId = localStorage.getItem("itemId");
   const { loading } = useSelector((state) => state.payment);
+  const {
+    loading: whatsappPlansLoading,
+    error: whatsappPlansError,
+    plans: whatsappPlans,
+    subscribeLoading: whatsappSubscribeLoading,
+  } = useSelector((state) => state.whatsappPlan);
   const myStore = useSelector((state) => state.store?.myStore);
   const storeInfo = resolveStoreInfo(myStore);
   const resolvedStoreId =
@@ -33,6 +83,8 @@ const GeneralSettings = () => {
   const { theme: appearanceTheme, isDarkTheme, setTheme: setAppearanceTheme } = useAppTheme();
   const [paymentGateway, setPaymentGateway] = useState("paystack");
   const [deletingBanner, setDeletingBanner] = useState(false);
+  const [hasRequestedWhatsappPlans, setHasRequestedWhatsappPlans] = useState(false);
+  const [activeWhatsappPlanId, setActiveWhatsappPlanId] = useState(null);
   const [paymentFields, setPaymentFields] = useState({
     publishKey: "pk_live_51N7Vel****",
     secretKey: "************",
@@ -120,6 +172,19 @@ const GeneralSettings = () => {
     storeInfo?.store_description,
     storeInfo?.store_name,
   ]);
+
+  useEffect(() => {
+    setHasRequestedWhatsappPlans(false);
+  }, [token]);
+
+  useEffect(() => {
+    if (activeSection !== "whatsappPlans" || !token || hasRequestedWhatsappPlans) {
+      return;
+    }
+
+    setHasRequestedWhatsappPlans(true);
+    dispatch(getWhatsappPlans({ token }));
+  }, [activeSection, dispatch, hasRequestedWhatsappPlans, token]);
 
   const handlePaymentFieldChange = (field) => (event) => {
     setPaymentFields((prev) => ({
@@ -258,6 +323,88 @@ const GeneralSettings = () => {
     );
   };
 
+  const handleRefreshWhatsappPlans = () => {
+    if (!token) {
+      return;
+    }
+
+    setHasRequestedWhatsappPlans(true);
+    dispatch(getWhatsappPlans({ token }));
+  };
+
+  const handleGetWhatsappPlan = async (plan) => {
+    if (!token) {
+      await Swal.fire({
+        icon: "error",
+        title: "Not authenticated",
+        text: "Please log in again before subscribing to a WhatsApp plan.",
+        confirmButtonColor: "#0273F9",
+      });
+      return;
+    }
+
+    const storedUser = readStoredVendorUser();
+    const subscriberEmail = resolveVendorEmail(storedUser, storeInfo);
+
+    if (!subscriberEmail) {
+      await Swal.fire({
+        icon: "warning",
+        title: "Email Required",
+        text: "We couldn't find your account email. Please log in again and try once more.",
+        confirmButtonColor: "#0273F9",
+      });
+      return;
+    }
+
+    setActiveWhatsappPlanId(plan.id);
+
+    try {
+      const response = await dispatch(
+        subscribeWhatsappPlan({
+          token,
+          plan_id: String(plan.id),
+          email: subscriberEmail,
+          callback_url: buildWhatsappPlanSuccessUrl(),
+        })
+      ).unwrap();
+
+      const authorizationUrl = response?.data?.authorization_url;
+
+      if (!authorizationUrl) {
+        await Swal.fire({
+          icon: "error",
+          title: "Missing payment link",
+          text: "The payment link was not returned by the server.",
+          confirmButtonColor: "#0273F9",
+        });
+        return;
+      }
+
+      writeWhatsappPlanPaymentContext({
+        planId: plan.id,
+        planName: plan.name,
+        planSlug: plan.slug,
+        email: subscriberEmail,
+        reference: response?.data?.reference || "",
+        token: token || "",
+      });
+
+      window.location.assign(authorizationUrl);
+    } catch (subscriptionError) {
+      await Swal.fire({
+        icon: "error",
+        title: "Unable to start payment",
+        text: getActionErrorMessage(
+          subscriptionError,
+          "Something went wrong while starting your WhatsApp plan payment."
+        ),
+        confirmButtonColor: "#0273F9",
+      });
+    } finally {
+      setActiveWhatsappPlanId(null);
+    }
+  };
+
   const appearancePalette =
     appearanceTheme === "dark"
       ? {
@@ -388,6 +535,19 @@ const GeneralSettings = () => {
             unstyled
           >
             <span>Shipping</span>
+            <span className={styles.vendorSettingsChevron} aria-hidden="true">
+              &gt;
+            </span>
+          </Button>
+          <Button
+            className={`${styles.vendorSettingsNavItem} ${
+              activeSection === "whatsappPlans" ? styles.vendorSettingsNavActive : ""
+            }`}
+            type="button"
+            onClick={() => setActiveSection("whatsappPlans")}
+            unstyled
+          >
+            <span>WhatsApp Plans</span>
             <span className={styles.vendorSettingsChevron} aria-hidden="true">
               &gt;
             </span>
@@ -785,10 +945,123 @@ const GeneralSettings = () => {
               </div>
             </>
           )}
+
+          {activeSection === "whatsappPlans" && (
+            <section className={styles.vendorSettingsCard}>
+              <div className={styles.vendorSettingsCardTop}>
+                <div className={styles.vendorSettingsCardHeader}>
+                  <h2>WhatsApp Plans</h2>
+                  <p>Review the available WhatsApp subscription <br/>plans for your business.</p>
+                </div>
+                <button
+                  type="button"
+                  className={styles.vendorSettingsUploadButton}
+                  onClick={handleRefreshWhatsappPlans}
+                  disabled={!token || whatsappPlansLoading}
+                >
+                  {whatsappPlansLoading ? "Refreshing..." : "Refresh Plans"}
+                </button>
+              </div>
+
+              <div className={styles.vendorSettingsDivider} />
+
+              {!token ? (
+                <div className={styles.vendorSettingsPlanState}>
+                  <h3>Authentication Required</h3>
+                  <p>Please log in again to load your WhatsApp plans.</p>
+                </div>
+              ) : whatsappPlansLoading && whatsappPlans.length === 0 ? (
+                <div className={styles.vendorSettingsPlanState}>
+                  <h3>Loading Plans...</h3>
+                  <p>Fetching the latest WhatsApp pricing options for your account.</p>
+                </div>
+              ) : whatsappPlansError && whatsappPlans.length === 0 ? (
+                <div className={styles.vendorSettingsPlanState}>
+                  <h3>Unable to Load Plans</h3>
+                  <p>
+                    {getActionErrorMessage(
+                      whatsappPlansError,
+                      "We couldn't load the WhatsApp plans right now."
+                    )}
+                  </p>
+                </div>
+              ) : whatsappPlans.length > 0 ? (
+                <div className={styles.vendorSettingsPlanGrid}>
+                  {whatsappPlans.map((plan) => {
+                    const features = parsePlanFeatures(plan.features);
+
+                    return (
+                      <article
+                        key={plan.id}
+                        className={`${styles.vendorSettingsPlanCard} ${
+                          plan.is_custom ? styles.vendorSettingsPlanCardCustom : ""
+                        }`}
+                      >
+                        <div className={styles.vendorSettingsPlanCardTop}>
+                          <div className={styles.vendorSettingsPlanHead}>
+                            <div className={styles.vendorSettingsPlanTitleRow}>
+                              <h3>{plan.name}</h3>
+                              {plan.is_custom && (
+                                <span className={styles.vendorSettingsPlanBadge}>Custom</span>
+                              )}
+                            </div>
+                            <p>{plan.best_for}</p>
+                          </div>
+                          <strong className={styles.vendorSettingsPlanPrice}>
+                            {plan.price_display || "Custom pricing"}
+                          </strong>
+                        </div>
+
+                        <div className={styles.vendorSettingsPlanMetaGrid}>
+                          <div className={styles.vendorSettingsPlanMetaItem}>
+                            <span>Customers</span>
+                            <strong>{formatPlanLimit(plan.max_customers)}</strong>
+                          </div>
+                          <div className={styles.vendorSettingsPlanMetaItem}>
+                            <span>Numbers</span>
+                            <strong>{formatWhatsappNumberLimit(plan)}</strong>
+                          </div>
+                          <div className={styles.vendorSettingsPlanMetaItem}>
+                            <span>Follow-ups</span>
+                            <strong>{formatPlanLimit(plan.follow_up_limit)}</strong>
+                          </div>
+                        </div>
+
+                        {features.length > 0 && (
+                          <ul className={styles.vendorSettingsPlanFeatureList}>
+                            {features.map((feature, index) => (
+                              <li key={`${plan.slug}-${index}`}>{feature}</li>
+                            ))}
+                          </ul>
+                        )}
+
+                        <Button
+                          type="button"
+                          className={styles.vendorSettingsPlanAction}
+                          onClick={() => handleGetWhatsappPlan(plan)}
+                          disabled={whatsappSubscribeLoading}
+                          unstyled
+                        >
+                          {whatsappSubscribeLoading && activeWhatsappPlanId === plan.id
+                            ? "Processing..."
+                            : "Get Plan"}
+                        </Button>
+                      </article>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className={styles.vendorSettingsPlanState}>
+                  <h3>No Plans Available</h3>
+                  <p>There are no WhatsApp plans available for this account yet.</p>
+                </div>
+              )}
+            </section>
+          )}
         </div>
       </div>
 
-      {activeSection !== "shipping" && (
+      {activeSection !== "shipping" && activeSection !== "whatsappPlans" && (
         <div className={styles.vendorSettingsFooter}>
           <Button
             className={styles.vendorSettingsSave}

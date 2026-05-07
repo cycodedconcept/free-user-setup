@@ -20,6 +20,7 @@ import { useDispatch, useSelector } from "react-redux";
 import Swal from "sweetalert2";
 import Button from "../../../components/ui/Button";
 import Pagination from "../../../components/Pagination";
+import { logProductSubmissionPayload } from "../../../utils/logProductSubmissionPayload";
 import ProductFormDesigner from "../../components/ProductFormDesigner";
 import { createProduct } from "../../../slice/onlineStoreSlice";
 import { getInventoryCategories, getInventoryProducts } from "../../../slice/inventory";
@@ -28,6 +29,87 @@ import styles from "../../../styles.module.css";
 const INVENTORY_PAGE_LIMIT = 50;
 const DEFAULT_FALLBACK_CATEGORIES = ["Electronics", "Clothing", "Home & Garden", "Sports"];
 const shouldRenderLegacyProductModal = false;
+const VARIATION_TYPE_LABELS = {
+  color: "Color",
+  colour: "Color",
+  size: "Size",
+  material: "Material",
+  custom: "Custom",
+};
+
+const createEmptyVariation = () => ({
+  variation_name: "",
+  variation_type: "",
+  is_required: false,
+  options: [],
+});
+
+const createEmptyOption = () => ({
+  value: "",
+  display_name: "",
+  price: "",
+  stock: "",
+  sku: null,
+  image_url: "",
+  is_default: false,
+  imageFile: null,
+});
+
+const normalizeVariationType = (value = "") => {
+  const normalizedValue = String(value).trim().toLowerCase();
+  return normalizedValue === "colour" ? "color" : normalizedValue;
+};
+
+const inferVariationType = (value = "") => {
+  const normalizedValue = normalizeVariationType(value);
+
+  if (!normalizedValue) return "";
+  if (VARIATION_TYPE_LABELS[normalizedValue]) return normalizedValue;
+  if (normalizedValue.includes("color") || normalizedValue.includes("colour")) return "color";
+  if (normalizedValue.includes("size")) return "size";
+  if (normalizedValue.includes("material") || normalizedValue.includes("fabric")) return "material";
+
+  return "";
+};
+
+const resolveVariationType = (typeValue = "", nameValue = "") =>
+  inferVariationType(typeValue) || inferVariationType(nameValue) || (typeValue || nameValue ? "custom" : "");
+
+const getVariationTypeLabel = (value = "") =>
+  VARIATION_TYPE_LABELS[normalizeVariationType(value)] || value;
+
+const toSkuToken = (value = "") => {
+  const normalizedValue = String(value)
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
+  return normalizedValue || "OPT";
+};
+
+const resolveVariantSku = (skuSegments = [], baseSku = "") => {
+  const normalizedBaseSku = toSkuToken(baseSku || "SKU");
+
+  return skuSegments.reduce((currentSku, segment) => {
+    const segmentValue = String(segment?.value || "").trim().toUpperCase();
+
+    if (!segment?.isExplicit) {
+      return currentSku ? `${currentSku}-${toSkuToken(segmentValue)}` : toSkuToken(segmentValue);
+    }
+
+    if (!segmentValue) {
+      return currentSku || normalizedBaseSku;
+    }
+
+    if (!currentSku || segmentValue === currentSku || segmentValue.startsWith(`${currentSku}-`)) {
+      return segmentValue;
+    }
+
+    const explicitSuffix = segmentValue.split("-").filter(Boolean).pop() || toSkuToken(segmentValue);
+    return `${currentSku}-${explicitSuffix}`;
+  }, normalizedBaseSku);
+};
 
 const formatCurrency = (amount) =>
   new Intl.NumberFormat("en-NG", {
@@ -112,6 +194,212 @@ const getVariantRows = (product) => {
         }))
       : []
   );
+};
+
+const isLocalPreviewImage = (value = "") =>
+  typeof value === "string" && /^(data:|blob:)/i.test(value.trim());
+
+const normalizeFormOption = (option = {}) => ({
+  value:
+    option?.value ??
+    option?.option_value ??
+    option?.display_name ??
+    option?.option_display_name ??
+    "",
+  display_name:
+    option?.display_name ??
+    option?.option_display_name ??
+    option?.value ??
+    option?.option_value ??
+    "",
+  price: option?.price ?? option?.price_adjustment ?? 0,
+  stock: option?.stock ?? option?.quantity ?? 0,
+  sku: option?.sku ?? null,
+  image_url: option?.image_url ?? "",
+  is_default:
+    option?.is_default === true ||
+    option?.is_default === 1 ||
+    option?.is_default === "1" ||
+    option?.is_default === "true",
+  imageFile: option?.imageFile ?? null,
+});
+
+const normalizeFormVariation = (variation = {}) => ({
+  variation_name: variation?.variation_name ?? variation?.name ?? "",
+  variation_type: resolveVariationType(
+    variation?.variation_type ?? variation?.type ?? "",
+    variation?.variation_name ?? variation?.name ?? ""
+  ),
+  is_required:
+    variation?.is_required === true ||
+    variation?.is_required === 1 ||
+    variation?.is_required === "1" ||
+    variation?.is_required === "true",
+  options: Array.isArray(variation?.options) ? variation.options.map(normalizeFormOption) : [],
+});
+
+const buildVariationsPayload = (variationList = []) =>
+  variationList
+    .map(normalizeFormVariation)
+    .filter(
+      (variation) =>
+        variation.variation_name || variation.variation_type || variation.options.length > 0
+    )
+    .map((variation) => ({
+      variation_name: variation.variation_name,
+      variation_type: variation.variation_type,
+      is_required: variation.is_required,
+      options: variation.options.map((optionEntry) => {
+        const option = { ...optionEntry };
+        delete option.imageFile;
+        const imageUrl = isLocalPreviewImage(option?.image_url ?? "") ? "" : String(option?.image_url ?? "").trim();
+
+        const nextOption = {
+          ...option,
+          display_name: option?.display_name ?? option?.value ?? "",
+          sku: option?.sku ?? null,
+          is_default:
+            option?.is_default === true ||
+            option?.is_default === 1 ||
+            option?.is_default === "1" ||
+            option?.is_default === "true",
+        };
+
+        if (imageUrl) {
+          nextOption.image_url = imageUrl;
+        } else {
+          delete nextOption.image_url;
+        }
+
+        return nextOption;
+      }),
+    }));
+
+const isVariationReadyForSubmit = (variation = {}) => {
+  const normalizedVariation = normalizeFormVariation(variation);
+
+  return Boolean(
+    normalizedVariation.variation_name &&
+      normalizedVariation.variation_type &&
+      normalizedVariation.options.length > 0
+  );
+};
+
+const hasVariationDraft = (variation = {}, option = {}) => {
+  const hasVariationFields = Boolean(
+    variation?.variation_name ||
+      variation?.variation_type ||
+      (Array.isArray(variation?.options) && variation.options.length > 0)
+  );
+
+  const hasOptionFields = Boolean(
+    option?.value ||
+      option?.display_name ||
+      option?.price !== "" ||
+      option?.stock !== "" ||
+      option?.sku ||
+      option?.image_url
+  );
+
+  return hasVariationFields || hasOptionFields;
+};
+
+const buildSubmitVariations = (variationList = [], currentVariation = {}) =>
+  isVariationReadyForSubmit(currentVariation)
+    ? [...variationList, currentVariation]
+    : variationList;
+
+const buildVariationDraft = (variation = {}) => {
+  const normalizedVariation = normalizeFormVariation(variation);
+
+  return {
+    ...normalizedVariation,
+    variation_name:
+      normalizedVariation.variation_name ||
+      (normalizedVariation.variation_type === "custom"
+        ? ""
+        : getVariationTypeLabel(normalizedVariation.variation_type)),
+  };
+};
+
+const buildVariantPreviewRows = (variationList = [], baseSku = "", basePrice = "") => {
+  const validVariations = buildVariationsPayload(variationList).filter(
+    (variation) => variation.options.length > 0
+  );
+
+  if (!validVariations.length) {
+    return [];
+  }
+
+  return validVariations
+    .reduce((rows, variation) => {
+      if (!rows.length) {
+        return variation.options.map((option) => ({
+          labels: [option.value || option.display_name || "Option"],
+          skuSegments: [
+            {
+              value: option?.sku || option?.value || option?.display_name || "OPT",
+              isExplicit: Boolean(String(option?.sku || "").trim()),
+            },
+          ],
+          price: Number(option?.price) || 0,
+          stock: Number(option?.stock) || 0,
+          image_url: option?.image_url || "",
+          options: [
+            {
+              variation_name: variation.variation_name || variation.variation_type,
+              option_value: option?.value || option?.display_name || "",
+            },
+          ],
+        }));
+      }
+
+      return rows.flatMap((row) =>
+        variation.options.map((option) => ({
+          labels: [...row.labels, option.value || option.display_name || "Option"],
+          skuSegments: [
+            ...row.skuSegments,
+            {
+              value: option?.sku || option?.value || option?.display_name || "OPT",
+              isExplicit: Boolean(String(option?.sku || "").trim()),
+            },
+          ],
+          price: row.price + (Number(option?.price) || 0),
+          stock: Math.min(row.stock, Number(option?.stock) || 0),
+          image_url: row.image_url || option?.image_url || "",
+          options: [
+            ...row.options,
+            {
+              variation_name: variation.variation_name || variation.variation_type,
+              option_value: option?.value || option?.display_name || "",
+            },
+          ],
+        }))
+      );
+    }, [])
+    .map((row) => ({
+      combination: row.labels.join(" / "),
+      labels: row.labels,
+      sku: resolveVariantSku(row.skuSegments, baseSku),
+      price: row.price,
+      stock: row.stock,
+      image_url: row.image_url,
+      options: row.options,
+    }));
+};
+
+const summarizeVariantRows = (variantRows = [], fallbackPrice = "", fallbackStock = "") => {
+  if (!variantRows.length) {
+    return {
+      price: Number(fallbackPrice) || 0,
+      stock: Number(fallbackStock) || 0,
+    };
+  }
+
+  return {
+    price: Math.min(...variantRows.map((variant) => Number(variant.price) || 0)),
+    stock: variantRows.reduce((sum, variant) => sum + (Number(variant.stock) || 0), 0),
+  };
 };
 
 const iconWrapStyle = {
@@ -227,6 +515,7 @@ const Product = () => {
   const [categoryInput, setCategoryInput] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
+  const [isSkuManuallyEdited, setIsSkuManuallyEdited] = useState(false);
   const [productForm, setProductForm] = useState({
     name: "",
     sku: "",
@@ -234,23 +523,16 @@ const Product = () => {
     price: "",
     stock: "",
     image_url: "",
+    sort_order: "1",
     is_published: false,
     is_featured: false,
   });
   const [productImage, setProductImage] = useState(null);
   const [variations, setVariations] = useState([]);
-  const [currentVariation, setCurrentVariation] = useState({
-    variation_name: "",
-    variation_type: "",
-    options: [],
-  });
-  const [currentOption, setCurrentOption] = useState({
-    value: "",
-    price: "",
-    stock: "",
-    image_url: "",
-  });
+  const [currentVariation, setCurrentVariation] = useState(createEmptyVariation());
+  const [currentOption, setCurrentOption] = useState(createEmptyOption());
   const [showVariationSection, setShowVariationSection] = useState(false);
+  const [editingVariationIndex, setEditingVariationIndex] = useState(null);
   const deferredSearchQuery = useDeferredValue(searchQuery.trim());
   const profileInputRef = useRef(null);
   const optionImageRef = useRef(null);
@@ -460,6 +742,7 @@ const Product = () => {
       price: "",
       stock: "",
       image_url: "",
+      sort_order: "1",
       is_published: false,
       is_featured: false,
     });
@@ -468,9 +751,11 @@ const Product = () => {
     setSelectedCategory("");
     setShowCategoryDropdown(false);
     setVariations([]);
-    setCurrentVariation({ variation_name: "", variation_type: "", options: [] });
-    setCurrentOption({ value: "", price: "", stock: "", image_url: "" });
+    setCurrentVariation(createEmptyVariation());
+    setCurrentOption(createEmptyOption());
+    setEditingVariationIndex(null);
     setShowVariationSection(false);
+    setIsSkuManuallyEdited(false);
   };
 
   const openCreateProductModal = () => {
@@ -494,12 +779,17 @@ const Product = () => {
     setProductForm((previousForm) => ({
       ...previousForm,
       name,
-      sku: nextSku,
+      sku: isSkuManuallyEdited ? previousForm.sku : nextSku,
     }));
   };
 
   const handleProductFormChange = (event) => {
     const { name, value, type, checked } = event.target;
+
+    if (name === "sku") {
+      setIsSkuManuallyEdited(true);
+    }
+
     setProductForm((previousForm) => ({
       ...previousForm,
       [name]: type === "checkbox" ? checked : value,
@@ -542,19 +832,32 @@ const Product = () => {
     reader.readAsDataURL(file);
   };
 
+  const startNewVariation = () => {
+    setEditingVariationIndex(null);
+    setCurrentVariation(createEmptyVariation());
+    setCurrentOption(createEmptyOption());
+    setShowVariationSection(true);
+    setProductForm((previousForm) =>
+      variations.length > 0
+        ? previousForm
+        : {
+            ...previousForm,
+            price: "",
+            stock: "",
+          }
+    );
+  };
+
   const toggleVariationSection = () => {
     if (!showVariationSection) {
-      setProductForm((previousForm) => ({
-        ...previousForm,
-        price: "",
-        stock: "",
-      }));
-    } else {
-      setCurrentVariation({ variation_name: "", variation_type: "", options: [] });
-      setCurrentOption({ value: "", price: "", stock: "", image_url: "" });
+      startNewVariation();
+      return;
     }
 
-    setShowVariationSection((previousState) => !previousState);
+    setCurrentVariation(createEmptyVariation());
+    setCurrentOption(createEmptyOption());
+    setEditingVariationIndex(null);
+    setShowVariationSection(false);
   };
 
   const handleVariationNameChange = (event) => {
@@ -565,19 +868,39 @@ const Product = () => {
   };
 
   const handleVariationTypeChange = (event) => {
-    const variationType = event.target.value;
+    const variationType = normalizeVariationType(event.target.value);
     setCurrentVariation((previousVariation) => ({
       ...previousVariation,
       variation_type: variationType,
       variation_name:
-        previousVariation.variation_name || (variationType === "custom" ? "" : variationType),
+        previousVariation.variation_name ||
+        (variationType === "custom" ? "" : getVariationTypeLabel(variationType)),
+    }));
+  };
+
+  const handleVariationRequiredChange = (event) => {
+    setCurrentVariation((previousVariation) => ({
+      ...previousVariation,
+      is_required: event.target.checked,
     }));
   };
 
   const handleOptionValueChange = (event) => {
+    const nextValue = event.target.value;
     setCurrentOption((previousOption) => ({
       ...previousOption,
-      value: event.target.value,
+      value: nextValue,
+      display_name:
+        !previousOption.display_name || previousOption.display_name === previousOption.value
+          ? nextValue
+          : previousOption.display_name,
+    }));
+  };
+
+  const handleOptionDisplayNameChange = (event) => {
+    setCurrentOption((previousOption) => ({
+      ...previousOption,
+      display_name: event.target.value,
     }));
   };
 
@@ -595,6 +918,20 @@ const Product = () => {
     }));
   };
 
+  const handleOptionSkuChange = (event) => {
+    setCurrentOption((previousOption) => ({
+      ...previousOption,
+      sku: event.target.value || null,
+    }));
+  };
+
+  const handleOptionDefaultChange = (event) => {
+    setCurrentOption((previousOption) => ({
+      ...previousOption,
+      is_default: event.target.checked,
+    }));
+  };
+
   const handleOptionImageChange = (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -604,6 +941,7 @@ const Product = () => {
       setCurrentOption((previousOption) => ({
         ...previousOption,
         image_url: reader.result,
+        imageFile: file,
       }));
     };
     reader.readAsDataURL(file);
@@ -620,11 +958,28 @@ const Product = () => {
       return;
     }
 
+    const nextOption = {
+      value: currentOption.value,
+      display_name: currentOption.display_name || currentOption.value,
+      price: currentOption.price,
+      stock: currentOption.stock,
+      sku: currentOption.sku ?? null,
+      image_url: currentOption.image_url || "",
+      is_default: currentOption.is_default === true,
+      imageFile: currentOption.imageFile instanceof File ? currentOption.imageFile : null,
+    };
+
     setCurrentVariation((previousVariation) => ({
       ...previousVariation,
-      options: [...previousVariation.options, { ...currentOption }],
+      options: [
+        ...((Array.isArray(previousVariation.options) ? previousVariation.options : []).map((option) => ({
+          ...option,
+          is_default: nextOption.is_default ? false : option.is_default === true,
+        }))),
+        nextOption,
+      ],
     }));
-    setCurrentOption({ value: "", price: "", stock: "", image_url: "" });
+    setCurrentOption(createEmptyOption());
   };
 
   const removeOption = (index) => {
@@ -635,28 +990,55 @@ const Product = () => {
   };
 
   const addVariation = () => {
+    const nextVariation = buildVariationDraft(currentVariation);
+
     if (
-      !currentVariation.variation_name ||
-      !currentVariation.variation_type ||
-      currentVariation.options.length === 0
+      !nextVariation.variation_name ||
+      !nextVariation.variation_type ||
+      nextVariation.options.length === 0
     ) {
       Swal.fire({
         icon: "info",
         title: "Variation",
-        text: "Add a variation type, display label, and at least one option value first.",
+        text: "Add a variation type, variation name, and at least one option value first.",
         confirmButtonColor: "#0273F9",
       });
       return;
     }
 
-    setVariations((previousVariations) => [...previousVariations, currentVariation]);
-    setCurrentVariation({ variation_name: "", variation_type: "", options: [] });
+    setVariations((previousVariations) => {
+      if (editingVariationIndex === null) {
+        return [...previousVariations, nextVariation];
+      }
+
+      return previousVariations.map((variation, index) =>
+        index === editingVariationIndex ? nextVariation : variation
+      );
+    });
+    setCurrentVariation(createEmptyVariation());
+    setCurrentOption(createEmptyOption());
+    setEditingVariationIndex(null);
   };
 
   const removeVariation = (index) => {
     setVariations((previousVariations) =>
       previousVariations.filter((_, variationIndex) => variationIndex !== index)
     );
+    if (editingVariationIndex === index) {
+      setCurrentVariation(createEmptyVariation());
+      setCurrentOption(createEmptyOption());
+      setEditingVariationIndex(null);
+    } else if (editingVariationIndex !== null && editingVariationIndex > index) {
+      setEditingVariationIndex((previousIndex) => previousIndex - 1);
+    }
+  };
+
+  const editVariation = (index) => {
+    const variationToEdit = normalizeFormVariation(variations[index]);
+    setCurrentVariation(buildVariationDraft(variationToEdit));
+    setCurrentOption(createEmptyOption());
+    setEditingVariationIndex(index);
+    setShowVariationSection(true);
   };
 
   const handleCreateProduct = async (event) => {
@@ -667,9 +1049,24 @@ const Product = () => {
     }
 
     const trimmedCategory = selectedCategory.trim() || categoryInput.trim();
-    const hasVariations = variations.length > 0;
-    const priceValid = hasVariations || productForm.price !== "";
-    const stockValid = hasVariations || productForm.stock !== "";
+    const submitVariations = buildSubmitVariations(variations, currentVariation);
+    const hasVariationsForSubmit = submitVariations.length > 0;
+    const priceValid = hasVariationsForSubmit || productForm.price !== "";
+    const stockValid = hasVariationsForSubmit || productForm.stock !== "";
+
+    if (
+      showVariationSection &&
+      !hasVariationsForSubmit &&
+      hasVariationDraft(currentVariation, currentOption)
+    ) {
+      Swal.fire({
+        icon: "info",
+        title: "Save your variation",
+        text: "Finish the current variation and click Save variation before creating the product.",
+        confirmButtonColor: "#0273F9",
+      });
+      return;
+    }
 
     if (
       !productForm.name.trim() ||
@@ -698,13 +1095,30 @@ const Product = () => {
       return;
     }
 
+    const variantPreviewRows = buildVariantPreviewRows(submitVariations, productForm.sku);
+    const variantSummary = summarizeVariantRows(
+      variantPreviewRows,
+      productForm.price,
+      productForm.stock
+    );
+    const resolvedProductPrice = hasVariationsForSubmit
+      ? String(variantSummary.price)
+      : productForm.price;
+    const resolvedProductStock = hasVariationsForSubmit
+      ? String(variantSummary.stock)
+      : productForm.stock;
     const formData = new FormData();
     formData.append("name", productForm.name.trim());
     formData.append("sku", productForm.sku.trim());
     formData.append("description", productForm.description.trim());
-    formData.append("price", productForm.price);
-    formData.append("stock", productForm.stock);
+    if (!hasVariationsForSubmit) {
+      formData.append("price", resolvedProductPrice);
+    }
+    if (!hasVariationsForSubmit) {
+      formData.append("stock", resolvedProductStock);
+    }
     formData.append("category", trimmedCategory);
+    formData.append("sort_order", String(productForm.sort_order || 1));
     formData.append("is_published", productForm.is_published ? 1 : 0);
     formData.append("is_featured", productForm.is_featured ? 1 : 0);
 
@@ -716,9 +1130,24 @@ const Product = () => {
       formData.append("image_url", productForm.image_url.trim());
     }
 
-    if (variations.length > 0) {
-      formData.append("variations", JSON.stringify(variations));
+    if (submitVariations.length > 0) {
+      const variationsPayload = buildVariationsPayload(submitVariations);
+
+      formData.append("variations", JSON.stringify(variationsPayload));
+
+      submitVariations.forEach((variation, variationIndex) => {
+        (Array.isArray(variation?.options) ? variation.options : []).forEach((option, optionIndex) => {
+          if (option?.imageFile instanceof File) {
+            formData.append(
+              `variation_option_image_${variationIndex}_${optionIndex}`,
+              option.imageFile
+            );
+          }
+        });
+      });
     }
+
+    logProductSubmissionPayload("Inventory create product submission", formData);
 
     try {
       Swal.fire({
@@ -1743,18 +2172,25 @@ const Product = () => {
           variationsEnabled
           showVariationSection={showVariationSection}
           onToggleVariationSection={toggleVariationSection}
+          onStartNewVariation={startNewVariation}
           variations={variations}
           currentVariation={currentVariation}
           currentOption={currentOption}
+          editingVariationIndex={editingVariationIndex}
           onVariationNameChange={handleVariationNameChange}
           onVariationTypeChange={handleVariationTypeChange}
+          onVariationRequiredChange={handleVariationRequiredChange}
           onOptionValueChange={handleOptionValueChange}
+          onOptionDisplayNameChange={handleOptionDisplayNameChange}
           onOptionPriceChange={handleOptionPriceChange}
           onOptionStockChange={handleOptionStockChange}
+          onOptionSkuChange={handleOptionSkuChange}
+          onOptionDefaultChange={handleOptionDefaultChange}
           onOptionImageChange={handleOptionImageChange}
           onAddOption={addOption}
           onRemoveOption={removeOption}
           onAddVariation={addVariation}
+          onEditVariation={editVariation}
           onRemoveVariation={removeVariation}
           canToggleVisibility
           canMarkFeatured

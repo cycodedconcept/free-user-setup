@@ -6,6 +6,8 @@ import Login from "../components/auth/Login";
 import OnlineStore from "../vendors/pages/online/OnlineStore";
 import OnlineStoreSingle from "../vendors/pages/online/OnlineStoreSingle";
 import ViewStore from "../vendors/pages/online/ViewStore";
+import WhatsappLinkPage from "../vendors/pages/settings/WhatsappLinkPage";
+import NotFound from "../pages/NotFound";
 
 const VendorRoutes = () => {
   return (
@@ -16,6 +18,8 @@ const VendorRoutes = () => {
       <Route path="store" element={<OnlineStore />} />
       <Route path="store-set-up" element={<OnlineStoreSingle />} />
       <Route path="my-store" element={<ViewStore />} />
+      <Route path="whatsapp-link" element={<WhatsappLinkPage />} />
+      <Route path="*" element={<NotFound />} />
     </Routes>
   );
 };

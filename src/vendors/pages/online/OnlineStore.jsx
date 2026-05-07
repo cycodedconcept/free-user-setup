@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import Sidebar from "../sidebar/Sidebar";
 import Topbar from "./Topbar";
 import MainContent from "./MainContent";
+import { readPendingWhatsappPlanPayment } from "../settings/whatsappPlanPayment";
 import {
   faHome,
   faBoxes,
@@ -13,7 +15,8 @@ import {
   faTruck,
   faUserShield,
   faCog,
-  faGlobe
+  faGlobe,
+  faShip
 } from "@fortawesome/free-solid-svg-icons";
 
 const VENDOR_ACTIVE_TAB_KEY = "mycroshop.vendorActiveTab";
@@ -127,9 +130,17 @@ const sidebarButtons = [
       icon: faGlobe,
       visible: true,
     },
+    {
+      label: "Shipping",
+      key: "shipping",
+      icon: faShip,
+      visible: true,
+    },
   ];
 
 const OnlineStore = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [activeTab, setActiveTab] = useState(() => {
     if (typeof window === "undefined") return "dashboard";
     try {
@@ -147,6 +158,19 @@ const OnlineStore = () => {
       // Ignore storage errors
     }
   }, [activeTab]);
+
+  useEffect(() => {
+    const pendingWhatsappPlanPayment = readPendingWhatsappPlanPayment();
+
+    if (!pendingWhatsappPlanPayment) {
+      return;
+    }
+
+    navigate(
+      `/vendor/whatsapp-link${location.search ? location.search : ""}`,
+      { replace: true }
+    );
+  }, [location.search, navigate]);
 
   useEffect(() => {
     if (!isSidebarOpen || typeof document === "undefined") return undefined;

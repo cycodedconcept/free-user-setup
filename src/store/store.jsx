@@ -8,6 +8,7 @@ import customerReducer from '../slice/customerFacingSlice'
 import domainReducer from "../slice/domainSlice"
 import orderReducer from "../slice/order"
 import inventoryReducer from "../slice/inventory"
+import whatsappPlanReducer from "../slice/whatsappPlanSlice"
 
 const store = configureStore({
   reducer: {
@@ -19,7 +20,8 @@ const store = configureStore({
     customer: customerReducer,
     domain: domainReducer,
     order: orderReducer,
-    inventory: inventoryReducer
+    inventory: inventoryReducer,
+    whatsappPlan: whatsappPlanReducer
   },
 });
 

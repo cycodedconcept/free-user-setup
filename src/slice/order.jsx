@@ -44,6 +44,13 @@ const initialState = {
     pagination: defaultPagination,
     total: 0,
   },
+  shippingRatesLoading: false,
+  shippingRatesError: null,
+  shippingRates: [],
+  shippingRateSaving: false,
+  shippingRateSaveError: null,
+  shippingRateDeleting: false,
+  shippingRateDeleteError: null,
 };
 
 const normalizeOrdersResponse = (payload) => {
@@ -206,6 +213,46 @@ const extractCreatedReceipt = (payload) => {
       data?.download_url ||
       "",
   };
+};
+
+const sortShippingRates = (rates = []) =>
+  [...rates].sort(
+    (first, second) =>
+      (Number(first?.sort_order) || 0) - (Number(second?.sort_order) || 0) ||
+      `${first?.zone_name || ""}`.localeCompare(`${second?.zone_name || ""}`)
+  );
+
+const normalizeShippingRatesResponse = (payload) => {
+  const responseData = payload?.data ?? payload ?? {};
+  const rates =
+    (Array.isArray(responseData) && responseData) ||
+    (Array.isArray(responseData?.data) && responseData.data) ||
+    (Array.isArray(responseData?.shipping_rates) && responseData.shipping_rates) ||
+    (Array.isArray(responseData?.shippingRates) && responseData.shippingRates) ||
+    (Array.isArray(responseData?.data?.shipping_rates) &&
+      responseData.data.shipping_rates) ||
+    [];
+
+  return sortShippingRates(Array.isArray(rates) ? rates : []);
+};
+
+const extractShippingRate = (payload) => {
+  const responseData = payload?.data ?? payload ?? {};
+  const rate =
+    responseData?.shipping_rate ||
+    responseData?.shippingRate ||
+    responseData?.data?.shipping_rate ||
+    responseData?.data?.shippingRate ||
+    (responseData?.data &&
+    typeof responseData.data === "object" &&
+    !Array.isArray(responseData.data)
+      ? responseData.data
+      : null) ||
+    (typeof responseData === "object" && !Array.isArray(responseData)
+      ? responseData
+      : null);
+
+  return rate && typeof rate === "object" && !Array.isArray(rate) ? rate : null;
 };
 
 export const getOnlineStoreOrders = createAsyncThunk(
@@ -433,6 +480,149 @@ export const updateOnlineStoreOrderStatus = createAsyncThunk(
   }
 );
 
+export const getShippingRates = createAsyncThunk(
+  "order/getShippingRates",
+  async ({ token, id }, { rejectWithValue }) => {
+    try {
+      const response = await axios.get(
+        `${API_URL}/stores/online/${id}/shipping-rates`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      return response.data;
+    } catch (error) {
+      if (error.response && error.response.data) {
+        return rejectWithValue(error.response.data);
+      }
+
+      return rejectWithValue(error.message || "Something went wrong");
+    }
+  }
+);
+
+export const createShippingRate = createAsyncThunk(
+  "order/createShippingRate",
+  async (
+    {
+      token,
+      id,
+      zone_name,
+      description,
+      price,
+      min_order_amount,
+      estimated_days,
+      is_active,
+      sort_order,
+    },
+    { rejectWithValue }
+  ) => {
+    try {
+      const response = await axios.post(
+        `${API_URL}/stores/online/${id}/shipping-rates`,
+        {
+          zone_name,
+          description,
+          price,
+          min_order_amount,
+          estimated_days,
+          is_active,
+          sort_order,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      return response.data;
+    } catch (error) {
+      if (error.response && error.response.data) {
+        return rejectWithValue(error.response.data);
+      }
+
+      return rejectWithValue(error.message || "Something went wrong");
+    }
+  }
+);
+
+export const updateShippingRate = createAsyncThunk(
+  "order/updateShippingRate",
+  async (
+    {
+      token,
+      id,
+      rateId,
+      zone_name,
+      description,
+      price,
+      min_order_amount,
+      estimated_days,
+      is_active,
+      sort_order,
+    },
+    { rejectWithValue }
+  ) => {
+    try {
+      const response = await axios.put(
+        `${API_URL}/stores/online/${id}/shipping-rates/${rateId}`,
+        {
+          zone_name,
+          description,
+          price,
+          min_order_amount,
+          estimated_days,
+          is_active,
+          sort_order,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      return response.data;
+    } catch (error) {
+      if (error.response && error.response.data) {
+        return rejectWithValue(error.response.data);
+      }
+
+      return rejectWithValue(error.message || "Something went wrong");
+    }
+  }
+);
+
+export const deleteShippingRate = createAsyncThunk(
+  "order/deleteShippingRate",
+  async ({ token, id, rateId }, { rejectWithValue }) => {
+    try {
+      const response = await axios.delete(
+        `${API_URL}/stores/online/${id}/shipping-rates/${rateId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      return response.data;
+    } catch (error) {
+      if (error.response && error.response.data) {
+        return rejectWithValue(error.response.data);
+      }
+
+      return rejectWithValue(error.message || "Something went wrong");
+    }
+  }
+);
+
 export const generateReceiptFromInvoice = createAsyncThunk(
   'order/generateReceiptFromInvoice',
   async ({token, invoiceId}, {rejectWithValue}) => {
@@ -486,6 +676,12 @@ const orderSlice = createSlice({
       state.orderDetailsError = null;
       state.orderStatusUpdating = false;
       state.orderStatusUpdateError = null;
+      state.shippingRatesLoading = false;
+      state.shippingRatesError = null;
+      state.shippingRateSaving = false;
+      state.shippingRateSaveError = null;
+      state.shippingRateDeleting = false;
+      state.shippingRateDeleteError = null;
     },
     resetCreatedReceipt: (state) => {
       state.createReceiptLoading = false;
@@ -664,6 +860,85 @@ const orderSlice = createSlice({
       .addCase(updateOnlineStoreOrderStatus.rejected, (state, action) => {
         state.orderStatusUpdating = false;
         state.orderStatusUpdateError = action.payload;
+      })
+      .addCase(getShippingRates.pending, (state) => {
+        state.shippingRatesLoading = true;
+        state.shippingRatesError = null;
+      })
+      .addCase(getShippingRates.fulfilled, (state, action) => {
+        state.shippingRatesLoading = false;
+        state.shippingRatesError = null;
+        state.shippingRates = normalizeShippingRatesResponse(action.payload);
+      })
+      .addCase(getShippingRates.rejected, (state, action) => {
+        state.shippingRatesLoading = false;
+        state.shippingRatesError = action.payload;
+      })
+      .addCase(createShippingRate.pending, (state) => {
+        state.shippingRateSaving = true;
+        state.shippingRateSaveError = null;
+      })
+      .addCase(createShippingRate.fulfilled, (state, action) => {
+        state.shippingRateSaving = false;
+        state.shippingRateSaveError = null;
+
+        const createdRate = extractShippingRate(action.payload);
+
+        if (createdRate?.id) {
+          state.shippingRates = sortShippingRates([
+            ...state.shippingRates.filter((rate) => `${rate?.id}` !== `${createdRate.id}`),
+            createdRate,
+          ]);
+        }
+      })
+      .addCase(createShippingRate.rejected, (state, action) => {
+        state.shippingRateSaving = false;
+        state.shippingRateSaveError = action.payload;
+      })
+      .addCase(updateShippingRate.pending, (state) => {
+        state.shippingRateSaving = true;
+        state.shippingRateSaveError = null;
+      })
+      .addCase(updateShippingRate.fulfilled, (state, action) => {
+        state.shippingRateSaving = false;
+        state.shippingRateSaveError = null;
+
+        const updatedRate = extractShippingRate(action.payload);
+        const targetId = action.meta.arg.rateId;
+
+        if (updatedRate?.id || targetId) {
+          state.shippingRates = sortShippingRates(
+            state.shippingRates.map((rate) =>
+              `${rate?.id}` === `${updatedRate?.id || targetId}`
+                ? {
+                    ...rate,
+                    ...(updatedRate && typeof updatedRate === "object" ? updatedRate : {}),
+                  }
+                : rate
+            )
+          );
+        }
+      })
+      .addCase(updateShippingRate.rejected, (state, action) => {
+        state.shippingRateSaving = false;
+        state.shippingRateSaveError = action.payload;
+      })
+      .addCase(deleteShippingRate.pending, (state) => {
+        state.shippingRateDeleting = true;
+        state.shippingRateDeleteError = null;
+      })
+      .addCase(deleteShippingRate.fulfilled, (state, action) => {
+        state.shippingRateDeleting = false;
+        state.shippingRateDeleteError = null;
+
+        const targetId = action.meta.arg.rateId;
+        state.shippingRates = state.shippingRates.filter(
+          (rate) => `${rate?.id}` !== `${targetId}`
+        );
+      })
+      .addCase(deleteShippingRate.rejected, (state, action) => {
+        state.shippingRateDeleting = false;
+        state.shippingRateDeleteError = action.payload;
       })
       .addCase(generateReceiptFromInvoice.pending, (state) => {
         state.createReceiptLoading = true;

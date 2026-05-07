@@ -139,6 +139,10 @@ body.mycroshop-theme-dark .swal2-html-container {
   color: var(--app-text) !important;
 }
 
+.swal2-container {
+  z-index: 20000 !important;
+}
+
 .my {
   font-family: "Poppins" !important;
   font-weight: 600 !important;

@@ -13,7 +13,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import Swal from "sweetalert2";
 import styles from "../../styles.module.css";
 import Button from "../../components/ui/Button";
-import storeAvatar from "../../assets/logo.jpg";
+import storeAvatar from "../../assets/logo.png";
 import serviceOne from "../../assets/ph4.png";
 import serviceTwo from "../../assets/ph5.png";
 import serviceThree from "../../assets/ph6.png";
