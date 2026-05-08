@@ -1,6 +1,4 @@
-export const CUSTOMER_THEME_STORAGE_KEY = "mycroshop.customerTheme";
-
-export const DEFAULT_CUSTOMER_THEME = {
+const DEFAULT_STOREFRONT_THEME = {
   background_color: "#f3eceb",
   surface: "#f8f2f1",
   card: "#ffffff",
@@ -19,13 +17,14 @@ export const DEFAULT_CUSTOMER_THEME = {
 
 const getThemeColor = (theme, key) => {
   const value = theme?.[key];
-  if (typeof value !== "string") return DEFAULT_CUSTOMER_THEME[key];
+  if (typeof value !== "string") return DEFAULT_STOREFRONT_THEME[key];
+
   const trimmed = value.trim();
-  return trimmed || DEFAULT_CUSTOMER_THEME[key];
+  return trimmed || DEFAULT_STOREFRONT_THEME[key];
 };
 
-export const buildCustomerThemeStyle = (selectedTheme) => {
-  const theme = Object.keys(DEFAULT_CUSTOMER_THEME).reduce((acc, key) => {
+export const buildStorefrontThemeStyle = (selectedTheme) => {
+  const theme = Object.keys(DEFAULT_STOREFRONT_THEME).reduce((acc, key) => {
     acc[key] = getThemeColor(selectedTheme, key);
     return acc;
   }, {});
@@ -46,25 +45,4 @@ export const buildCustomerThemeStyle = (selectedTheme) => {
     "--customer-home-border": theme.border_default,
     "--customer-home-border-accent": theme.border_accent,
   };
-};
-
-export const readStoredCustomerTheme = () => {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = localStorage.getItem(CUSTOMER_THEME_STORAGE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    return parsed && typeof parsed === "object" ? parsed : null;
-  } catch {
-    return null;
-  }
-};
-
-export const writeStoredCustomerTheme = (theme) => {
-  if (typeof window === "undefined" || !theme || typeof theme !== "object") return;
-  try {
-    localStorage.setItem(CUSTOMER_THEME_STORAGE_KEY, JSON.stringify(theme));
-  } catch {
-    // Ignore storage errors
-  }
 };

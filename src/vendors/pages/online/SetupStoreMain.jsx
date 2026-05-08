@@ -14,7 +14,7 @@ import styles from "../../../styles.module.css";
 import Swal from 'sweetalert2';
 import Button from '../../../components/ui/Button';
 import { API_URL } from '../../../config/constant';
-import { buildCustomerThemeStyle } from '../../../customers/customerTheme';
+import { buildStorefrontThemeStyle } from '../../../utils/storefrontTheme';
 
 const formatPreviewPrice = (value) => {
     const numericValue = Number(value);
@@ -1015,7 +1015,7 @@ const SetupStoreMain = () => {
     'Store Description Here...'
     );
     const previewThemeStyle = useMemo(
-    () => buildCustomerThemeStyle(myStore?.onlineStore?.selected_theme),
+    () => buildStorefrontThemeStyle(myStore?.onlineStore?.selected_theme),
     [myStore?.onlineStore?.selected_theme]
     );
     const previewProductCollections = useMemo(() => {

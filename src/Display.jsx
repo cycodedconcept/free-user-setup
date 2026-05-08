@@ -3,7 +3,6 @@ import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from "r
 import WhatsAppConnectSuccess from "./pages/WhatsAppConnectSuccess";
 import NotFound from "./pages/NotFound";
 import VendorRoutes from "./routes/VendorRoutes";
-import CustomerRoutes from "./routes/CustomerRoutes";
 import { readWhatsappOauthSession } from "./vendors/pages/settings/whatsappPlanPayment";
 
 const RootRedirect = () => {
@@ -26,11 +25,9 @@ const Display = () => {
         <Route path="/" element={<RootRedirect />} />
         <Route path="/whatsapp-connect-success" element={<WhatsAppConnectSuccess />} />
         <Route path="/vendor/*" element={<VendorRoutes />} />
-        <Route path="/customer/*" element={<CustomerRoutes />} />
 
         {/* Legacy routes to avoid breaking existing links */}
         <Route path="/vendors/*" element={<Navigate to="/vendor" replace />} />
-        <Route path="/customers/*" element={<Navigate to="/customer" replace />} />
         <Route path="/welcome" element={<Navigate to="/vendor/welcome" replace />} />
         <Route path="/login" element={<Navigate to="/vendor/login" replace />} />
         <Route path="/store" element={<Navigate to="/vendor/store" replace />} />

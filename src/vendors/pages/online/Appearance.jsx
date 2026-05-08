@@ -1,6 +1,12 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { deleteBannerImage, updateStoreImages, resetStatus, getMyOnlineStore, storeUpdateColors } from '../../../slice/onlineStoreSlice';
-import { getOnlineStoreThemes } from '../../../slice/customerFacingSlice';
+import {
+  deleteBannerImage,
+  updateStoreImages,
+  resetStatus,
+  getMyOnlineStore,
+  storeUpdateColors,
+  getOnlineStoreThemes
+} from '../../../slice/onlineStoreSlice';
 import { useDispatch, useSelector } from 'react-redux';
 import { Ac } from '../../../assets';
 import Swal from 'sweetalert2';
@@ -30,8 +36,9 @@ const Appearance = () => {
   const dispatch = useDispatch();
   const token = localStorage.getItem('token');
   const getId = localStorage.getItem('itemId');
-  const { loading, myStore } = useSelector((state) => state.store);
-  const { storeThemes, storeThemesLoading, storeThemesError } = useSelector((state) => state.customer);
+  const { loading, myStore, storeThemes, storeThemesLoading, storeThemesError } = useSelector(
+    (state) => state.store
+  );
 
   const [activeStep, setActiveStep] = useState(0);
   const [uploadingKey, setUploadingKey] = useState(null);

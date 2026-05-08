@@ -75,6 +75,25 @@ const extractStoreId = (payload) =>
     payload?.store_id ??
     null;
 
+const extractThemeList = (payload) => {
+    const candidates = [
+        payload?.data?.themes,
+        payload?.data?.suggested_themes,
+        payload?.data?.store?.themes,
+        payload?.data?.store?.suggested_themes,
+        payload?.data?.onlineStore?.themes,
+        payload?.data?.onlineStore?.suggested_themes,
+        payload?.themes,
+        payload?.suggested_themes,
+        payload?.store?.themes,
+        payload?.store?.suggested_themes,
+        payload?.onlineStore?.themes,
+        payload?.onlineStore?.suggested_themes
+    ];
+
+    return candidates.find(Array.isArray) || [];
+};
+
 const initialState = {
     loading: false,
     error: null,
@@ -91,6 +110,9 @@ const initialState = {
     previewDetails: {},
     available: {},
     singleProductDetails: {},
+    storeThemes: [],
+    storeThemesLoading: false,
+    storeThemesError: null,
     collectionProducts: {
         data: [],
         pagination: {
@@ -197,6 +219,26 @@ export const storeUpdateColors = createAsyncThunk(
                 }
             })
 
+            return response.data;
+        } catch (error) {
+            if (error.response && error.response.data) {
+                return rejectWithValue(error.response.data);
+            }
+            return rejectWithValue(error.message || "Something went wrong");
+        }
+    }
+);
+
+export const getOnlineStoreThemes = createAsyncThunk(
+    'store/getOnlineStoreThemes',
+    async ({ token, id }, { rejectWithValue }) => {
+        try {
+            if (!id) {
+                return rejectWithValue('Store id is required');
+            }
+
+            const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
+            const response = await axios.get(`${API_URL}/stores/online/${id}`, { headers });
             return response.data;
         } catch (error) {
             if (error.response && error.response.data) {
@@ -1574,6 +1616,18 @@ const storeSlice = createSlice({
             state.loading = false;
             state.success = false;
             state.error = action.payload;
+        })
+        .addCase(getOnlineStoreThemes.pending, (state) => {
+            state.storeThemesLoading = true;
+            state.storeThemesError = null;
+        })
+        .addCase(getOnlineStoreThemes.fulfilled, (state, action) => {
+            state.storeThemesLoading = false;
+            state.storeThemes = extractThemeList(action.payload);
+        })
+        .addCase(getOnlineStoreThemes.rejected, (state, action) => {
+            state.storeThemesLoading = false;
+            state.storeThemesError = action.payload;
         })
         .addCase(updateStoreImages.pending, (state) => {
             state.loading = true;
