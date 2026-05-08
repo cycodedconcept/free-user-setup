@@ -1,5 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { FaBars } from "react-icons/fa";
+import { useDispatch, useSelector } from 'react-redux';
+import { getMyOnlineStore } from '../../../slice/onlineStoreSlice'
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faChevronDown,
@@ -21,6 +23,18 @@ import { Logo, El } from "../../../assets";
 import "./sidebar.css";
 
 const Sidebar = ({ activeTab, setActiveTab, onClose, onNavigate }) => {
+  const dispatch = useDispatch();
+  let token = localStorage.getItem("token");
+  let getId = localStorage.getItem("itemId");
+  const { loading, error, success, myStore } = useSelector((state) => state.store);
+
+  useEffect(() => {
+    if (token) {
+        dispatch(getMyOnlineStore({ token, id: getId || '7'}))
+    }
+  }, [token, dispatch])
+
+
   const [expandedItems, setExpandedItems] = useState({});
   const [userName] = useState(() => {
     if (typeof window === "undefined") return "";
@@ -208,7 +222,7 @@ const Sidebar = ({ activeTab, setActiveTab, onClose, onNavigate }) => {
         {/* Profile Section */}
         <div className="profile mb-3" style={{ borderBottom: "1px solid var(--app-border)", paddingBottom: "15px" }}>
           <div className="d-flex align-items-center" style={{ cursor: "pointer" }}>
-            <img src={El} alt="" style={{ width: "40px", height: "40px", borderRadius: "50%" }} />
+            <img src={myStore?.onlineStore?.profile_logo_url} alt="" style={{ width: "40px", height: "40px", borderRadius: "50%" }} />
             <span className="mx-2" style={{ fontSize: "14px", fontWeight: "500", color: "var(--app-text)" }}>{userName}</span>
             <FontAwesomeIcon icon={faChevronDown} style={{ marginLeft: "auto", fontSize: "12px", color: "var(--app-text-muted)" }} />
           </div>
