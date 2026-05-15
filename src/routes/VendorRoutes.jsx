@@ -16,6 +16,7 @@ const VendorRoutes = () => {
       <Route path="welcome" element={<AuthWelcome />} />
       <Route path="login" element={<Login />} />
       <Route path="store" element={<OnlineStore />} />
+      <Route path="ai/sales-agent" element={<OnlineStore initialActiveTab="sales-agent" />} />
       <Route path="store-set-up" element={<OnlineStoreSingle />} />
       <Route path="my-store" element={<ViewStore />} />
       <Route path="whatsapp-link" element={<WhatsappLinkPage />} />

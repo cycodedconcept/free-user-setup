@@ -18,11 +18,24 @@ const RootRedirect = () => {
   return <Navigate to="/vendor" replace />;
 };
 
+const SalesAgentRedirect = () => {
+  const location = useLocation();
+  const token =
+    typeof window !== "undefined" ? localStorage.getItem("token") || "" : "";
+
+  if (!token) {
+    return <Navigate to="/vendor/login" replace />;
+  }
+
+  return <Navigate to={`/vendor/ai/sales-agent${location.search || ""}`} replace />;
+};
+
 const Display = () => {
   return (
     <Router>
       <Routes>
         <Route path="/" element={<RootRedirect />} />
+        <Route path="/ai/sales-agent" element={<SalesAgentRedirect />} />
         <Route path="/whatsapp-connect-success" element={<WhatsAppConnectSuccess />} />
         <Route path="/vendor/*" element={<VendorRoutes />} />
 

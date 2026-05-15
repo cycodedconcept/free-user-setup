@@ -10,10 +10,11 @@ import Product from "../product/Product";
 import InventoryProduct from "../product/Product";
 import InventoryCollection from "../inventory/Collection";
 import ShippingRates from "../shipping/ShippingRates";
+import SalesAgent from "../ai/SalesAgent"
 import styles from "../../../styles.module.css";
 
 const MainContent = ({ activeTab, setActiveTab }) => {
-  const noPaddingTabs = ["crm-ai-assistant"];
+  const noPaddingTabs = ["crm-ai-assistant", "sales-agent", "sales"];
   return (
     <>
       <div className={`${styles.vendorOnlineContent} ${!noPaddingTabs.includes(activeTab) ? "p-2 p-lg-4" : ""}`}>
@@ -54,6 +55,9 @@ const MainContent = ({ activeTab, setActiveTab }) => {
 
         {/* Invoices */}
         {activeTab === "invoices" && <AllInvoices setActiveTab={setActiveTab} />}
+        {(activeTab === "sales-agent" || activeTab === "sales") && (
+          <SalesAgent setActiveTab={setActiveTab} />
+        )}
 
 
         {/* Admin Users */}

@@ -42,7 +42,7 @@ export const getWhatsappPlans = createAsyncThunk(
 
 export const subscribeWhatsappPlan = createAsyncThunk(
   "whatsappPlan/subscribeWhatsappPlan",
-  async ({ token, plan_id, email, callback_url }, { rejectWithValue }) => {
+  async ({ token, plan_id, email, months, callback_url }, { rejectWithValue }) => {
     const endpoint = `${API_URL}/whatsapp-plans/subscribe`;
     const requestConfig = {
       headers: {
@@ -56,6 +56,10 @@ export const subscribeWhatsappPlan = createAsyncThunk(
         email,
       };
 
+      if (months) {
+        payload.months = months;
+      }
+
       if (callback_url) {
         payload.callback_url = callback_url;
       }
@@ -68,7 +72,11 @@ export const subscribeWhatsappPlan = createAsyncThunk(
         try {
           const fallbackResponse = await axios.post(
             endpoint,
-            { plan_id, email },
+            {
+              plan_id,
+              email,
+              ...(months ? { months } : {}),
+            },
             requestConfig
           );
           return fallbackResponse.data;

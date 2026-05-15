@@ -2,12 +2,21 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="./src/assets/logoj.jpeg" />
+    <link rel="icon" type="image/svg+xml" href="/ice.enc" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>mycroshop-free-user</title>
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
+    <script>
+      window.fbAsyncInit = function() {
+        FB.init({
+          appId: '3719265874876590',
+          version: 'v18.0'
+        });
+      };
+    </script>
+    <script async defer src="https://connect.facebook.net/en_US/sdk.js"></script>
   </body>
 </html>

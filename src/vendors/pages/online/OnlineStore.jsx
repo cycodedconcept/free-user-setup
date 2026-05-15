@@ -16,7 +16,8 @@ import {
   faUserShield,
   faCog,
   faGlobe,
-  faShip
+  faShip,
+  faWandMagicSparkles
 } from "@fortawesome/free-solid-svg-icons";
 
 const VENDOR_ACTIVE_TAB_KEY = "mycroshop.vendorActiveTab";
@@ -86,6 +87,12 @@ const sidebarButtons = [
       visible: true,
     },
     {
+      label: "AI Sales Agent",
+      key: "sales-agent",
+      icon: faWandMagicSparkles,
+      visible: true,
+    },
+    {
       label: "Orders",
       key: "orders",
       icon: faReceipt,
@@ -138,15 +145,15 @@ const sidebarButtons = [
     },
   ];
 
-const OnlineStore = () => {
+const OnlineStore = ({ initialActiveTab = "" }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [activeTab, setActiveTab] = useState(() => {
-    if (typeof window === "undefined") return "dashboard";
+    if (typeof window === "undefined") return initialActiveTab || "dashboard";
     try {
-      return localStorage.getItem(VENDOR_ACTIVE_TAB_KEY) || "dashboard";
+      return initialActiveTab || localStorage.getItem(VENDOR_ACTIVE_TAB_KEY) || "dashboard";
     } catch {
-      return "dashboard";
+      return initialActiveTab || "dashboard";
     }
   });
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -160,9 +167,18 @@ const OnlineStore = () => {
   }, [activeTab]);
 
   useEffect(() => {
-    const pendingWhatsappPlanPayment = readPendingWhatsappPlanPayment();
+    if (!initialActiveTab) {
+      return;
+    }
 
-    if (!pendingWhatsappPlanPayment) {
+    setActiveTab(initialActiveTab);
+  }, [initialActiveTab]);
+
+  useEffect(() => {
+    const pendingWhatsappPlanPayment = readPendingWhatsappPlanPayment();
+    const isSalesAgentRoute = location.pathname.endsWith("/ai/sales-agent");
+
+    if (!pendingWhatsappPlanPayment || isSalesAgentRoute) {
       return;
     }
 
@@ -170,7 +186,7 @@ const OnlineStore = () => {
       `/vendor/whatsapp-link${location.search ? location.search : ""}`,
       { replace: true }
     );
-  }, [location.search, navigate]);
+  }, [location.pathname, location.search, navigate]);
 
   useEffect(() => {
     if (!isSidebarOpen || typeof document === "undefined") return undefined;

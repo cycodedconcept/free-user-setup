@@ -8,6 +8,7 @@ import domainReducer from "../slice/domainSlice"
 import orderReducer from "../slice/order"
 import inventoryReducer from "../slice/inventory"
 import whatsappPlanReducer from "../slice/whatsappPlanSlice"
+import dashboardReducer from "../slice/dashboard"
 
 const store = configureStore({
   reducer: {
@@ -19,7 +20,8 @@ const store = configureStore({
     domain: domainReducer,
     order: orderReducer,
     inventory: inventoryReducer,
-    whatsappPlan: whatsappPlanReducer
+    whatsappPlan: whatsappPlanReducer,
+    dashboard: dashboardReducer
   },
 });
 

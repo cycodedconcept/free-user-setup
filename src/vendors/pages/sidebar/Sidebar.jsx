@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { FaBars } from "react-icons/fa";
 import { useDispatch, useSelector } from 'react-redux';
+import { useLocation, useNavigate } from "react-router-dom";
 import { getMyOnlineStore } from '../../../slice/onlineStoreSlice'
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -17,13 +18,18 @@ import {
   faUserShield,
   faCog,
   faGlobe,
-  faShip
+  faShip,
+  faWandMagicSparkles
 } from "@fortawesome/free-solid-svg-icons";
 import { Logo, El } from "../../../assets";
 import "./sidebar.css";
 
+const VENDOR_ACTIVE_TAB_KEY = "mycroshop.vendorActiveTab";
+
 const Sidebar = ({ activeTab, setActiveTab, onClose, onNavigate }) => {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const location = useLocation();
   let token = localStorage.getItem("token");
   let getId = localStorage.getItem("itemId");
   const { loading, error, success, myStore } = useSelector((state) => state.store);
@@ -126,6 +132,12 @@ const Sidebar = ({ activeTab, setActiveTab, onClose, onNavigate }) => {
       visible: true,
     },
     {
+      label: "AI Sales Agent",
+      key: "sales-agent",
+      icon: faWandMagicSparkles,
+      visible: true,
+    },
+    {
       label: "CRM",
       key: "crm",
       icon: faUsers,
@@ -176,13 +188,39 @@ const Sidebar = ({ activeTab, setActiveTab, onClose, onNavigate }) => {
     if (btn.hasSubmenu) {
       toggleExpanded(btn.key);
     } else {
+      try {
+        localStorage.setItem(VENDOR_ACTIVE_TAB_KEY, btn.key);
+      } catch {
+        // Ignore storage errors
+      }
+
       setActiveTab(btn.key);
+
+      if (btn.key === "sales-agent") {
+        navigate("/vendor/ai/sales-agent");
+      } else if (location.pathname.endsWith("/ai/sales-agent")) {
+        navigate("/vendor/store");
+      }
+
       onNavigate?.();
     }
   };
 
   const handleSubmenuClick = (parentKey, submenuKey) => {
-    setActiveTab(`${parentKey}-${submenuKey}`);
+    const nextTab = `${parentKey}-${submenuKey}`;
+
+    try {
+      localStorage.setItem(VENDOR_ACTIVE_TAB_KEY, nextTab);
+    } catch {
+      // Ignore storage errors
+    }
+
+    setActiveTab(nextTab);
+
+    if (location.pathname.endsWith("/ai/sales-agent")) {
+      navigate("/vendor/store");
+    }
+
     onNavigate?.();
   };
 

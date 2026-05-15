@@ -155,19 +155,8 @@ const Signup = () => {
               </button>
             </form>
 
-            <p style={{ color: '#78716C' }} className="mt-2">Or sign up with</p>
-
-            <button className={`${styles['g-btn']} mx-3`}>
-              <img src={Gs} alt="" className={`mx-3 ${styles.im}`} />
-              Google
-            </button>
-            <button className={`${styles['g-btn']}`}>
-              <img src={G12} alt="" className={`mx-3 ${styles.im}`} />
-              Facebook
-            </button>
-
             <small className="d-block mt-3" style={{ color: '#78716C' }}>
-              By signing up you agree to Mycroshop Terms & Policies
+              By signing in you agree to Mycroshop<br className='d-block d-lg-none'/> <span className={`${styles.tc}`}>Terms</span> & <span className={`${styles.tc}`}>Policies</span>
             </small>
           </div>
         </div>
