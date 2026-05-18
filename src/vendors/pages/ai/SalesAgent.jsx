@@ -395,6 +395,9 @@ const SalesAgent = () => {
   const [paymentLoadingPlanId, setPaymentLoadingPlanId] = useState("");
   const [connectError, setConnectError] = useState("");
   const [connecting, setConnecting] = useState(false);
+  const [fbReady, setFbReady] = useState(
+    () => typeof window !== "undefined" && Boolean(window.FB)
+  );
 
   const refreshStatusPlan = () => {
     setStatusPlanState(readStatusPlanSnapshot());
@@ -531,6 +534,26 @@ const SalesAgent = () => {
     } catch {
       // Ignore storage errors
     }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return undefined;
+    }
+
+    if (window.FB) {
+      setFbReady(true);
+      return undefined;
+    }
+
+    const checkFB = window.setInterval(() => {
+      if (window.FB) {
+        setFbReady(true);
+        window.clearInterval(checkFB);
+      }
+    }, 300);
+
+    return () => window.clearInterval(checkFB);
   }, []);
 
   useEffect(() => {
@@ -1160,9 +1183,11 @@ const SalesAgent = () => {
                 type="button"
                 className="cbt cbt-o"
                 onClick={launchSignup}
-                disabled={connecting}
+                disabled={connecting || !fbReady}
               >
-                {connecting ? (
+                {!fbReady ? (
+                  "Loading..."
+                ) : connecting ? (
                   <>
                     <span
                       className="spinner-border spinner-border-sm"
@@ -1197,9 +1222,11 @@ const SalesAgent = () => {
               type="button"
               className="cbt cbt-p"
               onClick={launchSignup}
-              disabled={connecting}
+              disabled={connecting || !fbReady}
             >
-              {connecting ? (
+              {!fbReady ? (
+                "Loading..."
+              ) : connecting ? (
                 <>
                   <span
                     className="spinner-border spinner-border-sm"
@@ -1715,9 +1742,11 @@ const SalesAgent = () => {
             type="button"
             className="pb pb-primary modal-primary-button"
             onClick={handleHowItWorksConfirm}
-            disabled={connecting}
+            disabled={connecting || !fbReady}
           >
-            {connecting ? (
+            {!fbReady ? (
+              "Loading..."
+            ) : connecting ? (
               <>
                 <span
                   className="spinner-border spinner-border-sm"

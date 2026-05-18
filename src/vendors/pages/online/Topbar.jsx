@@ -1,6 +1,6 @@
 import React from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faBell, faStore, faChevronDown, faBars, faRightFromBracket } from '@fortawesome/free-solid-svg-icons';
+import { faBell, faStore, faChevronDown, faBars, faRightFromBracket, faSignOut } from '@fortawesome/free-solid-svg-icons';
 import { useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import '../sidebar/sidebar.css';
@@ -95,8 +95,9 @@ for (const btn of sidebarButtons) {
               </button>
               <button className="vendor-topbar-logout" type="button" onClick={logOut}>
                 <FontAwesomeIcon className="vendor-topbar-logoutIcon" icon={faRightFromBracket} />
-                <span>Log Out</span>
+                <span style={{fontSize: '14px'}}>Log Out</span>
               </button>
+              
           </div>
 
       </div>

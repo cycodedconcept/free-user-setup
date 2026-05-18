@@ -1,9 +1,9 @@
-import React, {useState, useEffect, useMemo} from 'react'
+import React, {useState, useEffect, useMemo, useRef} from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { getCountries } from '../../../slice/countriesSlice';
 import { useDispatch, useSelector } from 'react-redux';
 import { createOnlineStore, resetStatus, updateStoreLinks, getAllServices, getAllCollection, getServiceCollection, getCollectionForProduct, productImageForCollection, getMyOnlineStore } from '../../../slice/onlineStoreSlice';
-import { faInfoCircle, faLink, faStore, faCube, faDatabase, faExternalLinkAlt, faEllipsisV } from '@fortawesome/free-solid-svg-icons';
+import { faInfoCircle, faLink, faStore, faCube, faDatabase, faEllipsisV, faArrowLeft, faCartShopping, faMagnifyingGlass, faMinus, faPlus } from '@fortawesome/free-solid-svg-icons';
 import { Flash, F, X, In, In2, Owi, Smc } from '../../../assets';
 import Service from './Service';
 import Appearance from './Appearance';
@@ -39,6 +39,192 @@ const getActionErrorMessage = (actionError, fallback) => {
     return fallback;
 };
 
+const parsePreviewMaybeJson = (value) => {
+    if (typeof value !== 'string') {
+        return value;
+    }
+
+    try {
+        return JSON.parse(value);
+    } catch {
+        return value;
+    }
+};
+
+const formatPreviewPriceLabel = (value, fallback = 'Contact for price') => {
+    const numericValue = Number(value);
+
+    if (Number.isFinite(numericValue)) {
+        return formatPreviewPrice(numericValue);
+    }
+
+    if (typeof value === 'string' && value.trim()) {
+        return value;
+    }
+
+    return fallback;
+};
+
+const PREVIEW_COLOR_FALLBACKS = {
+    black: '#111827',
+    blue: '#3B82F6',
+    brown: '#8B5E3C',
+    cream: '#F5F5DC',
+    gold: '#D4A017',
+    gray: '#9CA3AF',
+    green: '#22C55E',
+    grey: '#9CA3AF',
+    navy: '#1D4ED8',
+    orange: '#FB923C',
+    pink: '#EC4899',
+    purple: '#8B5CF6',
+    red: '#EF4444',
+    silver: '#B8C0CC',
+    tan: '#C19A6B',
+    white: '#F8FAFC',
+    yellow: '#FACC15'
+};
+
+const normalizePreviewVariationType = (value = '') => {
+    const normalizedValue = String(value).trim().toLowerCase();
+
+    if (normalizedValue === 'colour') return 'color';
+    if (normalizedValue.includes('color') || normalizedValue.includes('colour')) return 'color';
+    if (normalizedValue.includes('size')) return 'size';
+
+    return normalizedValue || 'other';
+};
+
+const normalizePreviewOption = (option = {}) => ({
+    displayName:
+        option?.display_name ??
+        option?.option_display_name ??
+        option?.value ??
+        option?.option_value ??
+        '',
+    image:
+        option?.image_url ??
+        option?.image ??
+        option?.preview_image ??
+        option?.option_image ??
+        '',
+    isDefault:
+        option?.is_default === true ||
+        option?.is_default === 1 ||
+        option?.is_default === '1' ||
+        option?.is_default === 'true',
+    price: option?.price ?? option?.price_adjustment ?? '',
+    raw: option,
+    value: option?.value ?? option?.option_value ?? option?.display_name ?? ''
+});
+
+const normalizePreviewVariation = (variation = {}) => {
+    const optionSource = parsePreviewMaybeJson(
+        variation?.options ??
+            variation?.variation_options ??
+            variation?.values ??
+            variation?.items ??
+            []
+    );
+
+    return {
+        name: variation?.variation_name ?? variation?.name ?? variation?.title ?? '',
+        options: Array.isArray(optionSource)
+            ? optionSource
+                  .map(normalizePreviewOption)
+                  .filter((option) => String(option?.displayName || option?.value || '').trim())
+            : [],
+        type: normalizePreviewVariationType(
+            variation?.variation_type ?? variation?.type ?? variation?.variation_name ?? variation?.name ?? ''
+        )
+    };
+};
+
+const getPreviewVariations = (product = {}) => {
+    const variationSourceCandidates = [
+        product?.variations,
+        product?.variation,
+        product?.variation_options,
+        product?.values,
+        product?.options,
+        product?.raw?.variations,
+        product?.raw?.variation,
+        product?.raw?.variation_options,
+        product?.raw?.values
+    ];
+
+    for (const source of variationSourceCandidates) {
+        const parsedSource = parsePreviewMaybeJson(source);
+
+        if (Array.isArray(parsedSource) && parsedSource.length) {
+            return parsedSource
+                .map(normalizePreviewVariation)
+                .filter((variation) => variation.options.length > 0);
+        }
+    }
+
+    return [];
+};
+
+const resolvePreviewOptionColor = (option = {}) => {
+    const rawOption = option?.raw || {};
+    const colorCandidate =
+        rawOption?.hex ??
+        rawOption?.color_hex ??
+        rawOption?.hex_code ??
+        rawOption?.color ??
+        rawOption?.value ??
+        option?.displayName ??
+        option?.value;
+
+    if (typeof colorCandidate !== 'string') {
+        return '#D4D4D8';
+    }
+
+    const trimmedColor = colorCandidate.trim();
+
+    if (/^(#|rgb|hsl)/i.test(trimmedColor)) {
+        return trimmedColor;
+    }
+
+    return PREVIEW_COLOR_FALLBACKS[trimmedColor.toLowerCase()] || '#D4D4D8';
+};
+
+const dedupePreviewItems = (items = []) => {
+    const previewMap = new Map();
+
+    items.forEach((item, index) => {
+        if (!item) return;
+
+        const itemKey =
+            item?.id ??
+            item?.slug ??
+            `${item?.title || item?.name || 'preview-item'}-${index}`;
+
+        if (!previewMap.has(itemKey)) {
+            previewMap.set(itemKey, item);
+        }
+    });
+
+    return [...previewMap.values()];
+};
+
+const buildInitialPreviewVariationSelections = (product = {}) => {
+    const nextSelections = {};
+
+    getPreviewVariations(product).forEach((variation, index) => {
+        const variationKey = variation?.name || variation?.type || `variation-${index}`;
+        const defaultOption =
+            variation?.options?.find((option) => option?.isDefault) || variation?.options?.[0];
+
+        if (defaultOption) {
+            nextSelections[variationKey] = defaultOption;
+        }
+    });
+
+    return nextSelections;
+};
+
 const StorefrontMobilePreview = ({
     themeStyle,
     storeLogo,
@@ -46,101 +232,913 @@ const StorefrontMobilePreview = ({
     storeDescription,
     storeBannerImage,
     previewTab,
-    onPreviewTabChange,
     productCollections,
     serviceCollections
 }) => {
-    const [searchTerm, setSearchTerm] = useState('');
-    const [activeProductCollection, setActiveProductCollection] = useState('all');
-    const [activeServiceCollection, setActiveServiceCollection] = useState('all');
+    const [previewView, setPreviewView] = useState('home');
+    const [activeNav, setActiveNav] = useState(previewTab === 'Services' ? 'services' : 'home');
+    const [activeCategory, setActiveCategory] = useState('all');
+    const [viewMode, setViewMode] = useState(previewTab === 'Services' ? 'services' : 'products');
+    const [searchQuery, setSearchQuery] = useState('');
+    const [selectedProduct, setSelectedProduct] = useState(null);
+    const [selectedService, setSelectedService] = useState(null);
+    const [selectedCollection, setSelectedCollection] = useState(null);
+    const [cartItems, setCartItems] = useState([]);
+    const [descriptionExpanded, setDescriptionExpanded] = useState(false);
+    const [productQuantity, setProductQuantity] = useState(1);
+    const [selectedVariationOptions, setSelectedVariationOptions] = useState({});
+    const [justAddedProductId, setJustAddedProductId] = useState(null);
+    const [pendingScrollRequest, setPendingScrollRequest] = useState(null);
+    const frameRef = useRef(null);
+    const productSectionRef = useRef(null);
+    const addFeedbackTimerRef = useRef(null);
 
-    const hasBothTabs = productCollections.length > 0 && serviceCollections.length > 0;
-    const sectionTitle = previewTab === 'Shop' ? 'Collections' : 'Service Collections';
-    const heroActionLabel = previewTab === 'Shop' ? 'Shop collection' : 'View services';
-    const activeCollections = previewTab === 'Shop' ? productCollections : serviceCollections;
-    const activeCollectionId = previewTab === 'Shop' ? activeProductCollection : activeServiceCollection;
-    const setActiveCollectionId =
-        previewTab === 'Shop' ? setActiveProductCollection : setActiveServiceCollection;
+    const requestPreviewScroll = (type) => {
+        setPendingScrollRequest((previous) => ({
+            type,
+            sequence: (previous?.sequence || 0) + 1
+        }));
+    };
 
-    useEffect(() => {
-        setSearchTerm('');
-    }, [previewTab]);
+    const goTo = (view, data = null) => {
+        const nextSelectedProduct = view === 'product-detail' ? data : null;
 
-    useEffect(() => {
-        if (activeCollectionId === 'all') return;
-
-        const collectionStillExists = activeCollections.some(
-            (collection) => (collection.id || collection.title) === activeCollectionId
+        setSelectedProduct(nextSelectedProduct);
+        setSelectedService(view === 'service-detail' ? data : null);
+        setSelectedCollection(view === 'collection-detail' ? data : null);
+        setSelectedVariationOptions(
+            nextSelectedProduct ? buildInitialPreviewVariationSelections(nextSelectedProduct) : {}
         );
+        setProductQuantity(1);
+        setPreviewView(view);
+        requestPreviewScroll('top');
+    };
 
-        if (!collectionStillExists) {
-            setActiveCollectionId('all');
+    const goBack = () => {
+        setSelectedProduct(null);
+        setSelectedService(null);
+        setSelectedCollection(null);
+        setSelectedVariationOptions({});
+        setPreviewView('home');
+        requestPreviewScroll('top');
+    };
+
+    useEffect(() => {
+        if (!pendingScrollRequest) return;
+
+        if (pendingScrollRequest.type === 'top') {
+            frameRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+            return;
         }
-    }, [activeCollectionId, activeCollections, setActiveCollectionId]);
 
-    const collectionFilters = useMemo(
-        () => [
-            { id: 'all', label: 'All' },
-            ...activeCollections.map((collection) => ({
-                id: collection.id || collection.title,
-                label: collection.title
-            }))
-        ],
-        [activeCollections]
+        if (pendingScrollRequest.type === 'products') {
+            productSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    }, [pendingScrollRequest]);
+
+    useEffect(() => {
+        return () => {
+            if (addFeedbackTimerRef.current) {
+                window.clearTimeout(addFeedbackTimerRef.current);
+            }
+        };
+    }, []);
+
+    const previewCollections = useMemo(
+        () =>
+            (productCollections || []).map((collection, index) => ({
+                ...collection,
+                countValue: collection?.countValue ?? collection?.items?.length ?? 0,
+                id: collection?.id ?? `collection-${index}`,
+                image: collection?.image || collection?.items?.[0]?.image || storeLogo
+            })),
+        [productCollections, storeLogo]
     );
 
-    const visibleCollections = useMemo(() => {
-        const normalizedQuery = searchTerm.trim().toLowerCase();
+    const allProducts = useMemo(
+        () =>
+            dedupePreviewItems(
+                previewCollections.flatMap((collection) => collection?.items || [])
+            ),
+        [previewCollections]
+    );
 
-        return activeCollections
-            .filter((collection) =>
-                activeCollectionId === 'all'
-                    ? true
-                    : (collection.id || collection.title) === activeCollectionId
-            )
-            .map((collection) => {
-                const matchingItems = (collection.items || []).filter((item) => {
-                    if (!normalizedQuery) return true;
+    const allServices = useMemo(
+        () =>
+            dedupePreviewItems(
+                (serviceCollections || []).flatMap((collection) => collection?.items || [])
+            ),
+        [serviceCollections]
+    );
 
-                    const searchableText = [
-                        item?.title,
-                        item?.name,
-                        item?.description,
-                        item?.price,
-                        item?.priceLabel,
-                        item?.cta
-                    ]
-                        .filter(Boolean)
-                        .join(' ')
-                        .toLowerCase();
+    const categories = useMemo(() => {
+        const categoryMap = new Map();
 
-                    return searchableText.includes(normalizedQuery);
-                });
+        allProducts.forEach((product) => {
+            const categoryLabel = previewText(product?.category, '').trim();
 
-                return {
-                    ...collection,
-                    previewItems: matchingItems.slice(0, 4),
-                    countLabel: `${matchingItems.length} ${
-                        matchingItems.length === 1
-                            ? previewTab === 'Shop' ? 'Product' : 'Service'
-                            : previewTab === 'Shop' ? 'Products' : 'Services'
-                    }`
-                };
-            })
-            .filter((collection) => collection.previewItems.length);
-    }, [activeCollectionId, activeCollections, previewTab, searchTerm]);
+            if (!categoryLabel) return;
+
+            const normalizedKey = categoryLabel.toLowerCase();
+
+            if (!categoryMap.has(normalizedKey)) {
+                categoryMap.set(normalizedKey, categoryLabel);
+            }
+        });
+
+        return [
+            { key: 'all', label: 'All' },
+            ...[...categoryMap.entries()].map(([key, label]) => ({
+                key,
+                label
+            }))
+        ];
+    }, [allProducts]);
+
+    const resolvedActiveCategory = categories.some((category) => category.key === activeCategory)
+        ? activeCategory
+        : 'all';
+
+    const normalizedSearchQuery = searchQuery.trim().toLowerCase();
+
+    const filteredProducts = useMemo(
+        () =>
+            allProducts.filter((product) => {
+                const matchesCategory =
+                    resolvedActiveCategory === 'all'
+                        ? true
+                        : product?.categoryKey === resolvedActiveCategory;
+                const searchableText = [
+                    product?.title,
+                    product?.name,
+                    product?.description,
+                    product?.category
+                ]
+                    .filter(Boolean)
+                    .join(' ')
+                    .toLowerCase();
+                const matchesSearch = !normalizedSearchQuery || searchableText.includes(normalizedSearchQuery);
+
+                return matchesCategory && matchesSearch;
+            }),
+        [allProducts, normalizedSearchQuery, resolvedActiveCategory]
+    );
+
+    const filteredServices = useMemo(
+        () =>
+            allServices.filter((service) => {
+                const searchableText = [service?.title, service?.description, service?.duration]
+                    .filter(Boolean)
+                    .join(' ')
+                    .toLowerCase();
+
+                return !normalizedSearchQuery || searchableText.includes(normalizedSearchQuery);
+            }),
+        [allServices, normalizedSearchQuery]
+    );
 
     const heroDescription = previewText(
         storeDescription,
-        previewTab === 'Shop'
-            ? 'Discover curated products from this store.'
-            : 'Book services and explore every collection from one place.'
+        'Discover curated products and services from this store.'
+    );
+    const truncatedDescription =
+        heroDescription.length > 180 ? `${heroDescription.slice(0, 180).trim()}...` : heroDescription;
+    const showDescriptionToggle = heroDescription.length > 180;
+    const displayedHeroDescription = descriptionExpanded ? heroDescription : truncatedDescription;
+    const bannerStyle = storeBannerImage
+        ? {
+              backgroundImage: `linear-gradient(135deg, rgba(77, 81, 91, 0.94) 0%, rgba(194, 197, 203, 0.78) 100%), url("${storeBannerImage}")`
+          }
+        : undefined;
+
+    const cartCount = useMemo(
+        () => cartItems.reduce((total, item) => total + (Number(item?.qty) || 0), 0),
+        [cartItems]
     );
 
-    const heroStyle = storeBannerImage
-        ? { '--customer-home-banner-image': `url(${JSON.stringify(storeBannerImage)})` }
-        : undefined;
-    const previewHasBanner = Boolean(storeBannerImage);
+    const selectedProductVariations = useMemo(
+        () => (selectedProduct ? getPreviewVariations(selectedProduct) : []),
+        [selectedProduct]
+    );
+
+    const selectedOptionList = useMemo(
+        () => Object.values(selectedVariationOptions).filter(Boolean),
+        [selectedVariationOptions]
+    );
+
+    const selectedProductPriceValue = useMemo(() => {
+        if (!selectedProduct) {
+            return null;
+        }
+
+        const basePriceValue = Number(selectedProduct?.priceValue);
+        const normalizedBasePrice = Number.isFinite(basePriceValue) ? basePriceValue : null;
+        const optionAdjustments = selectedOptionList.reduce((total, option) => {
+            const optionPrice = Number(option?.price);
+            return total + (Number.isFinite(optionPrice) ? optionPrice : 0);
+        }, 0);
+
+        if (normalizedBasePrice === null) {
+            return optionAdjustments || null;
+        }
+
+        return normalizedBasePrice + optionAdjustments;
+    }, [selectedOptionList, selectedProduct]);
+
+    const selectedProductDisplayPrice = formatPreviewPriceLabel(
+        selectedProductPriceValue ?? selectedProduct?.priceValue ?? selectedProduct?.price
+    );
+
+    const selectedProductImage = useMemo(() => {
+        const optionImage = [...selectedOptionList]
+            .reverse()
+            .map((option) => option?.image)
+            .find(Boolean);
+
+        return optionImage || selectedProduct?.image || storeLogo;
+    }, [selectedOptionList, selectedProduct, storeLogo]);
+
+    const cartSubtotal = useMemo(
+        () =>
+            cartItems.reduce((total, item) => {
+                const itemPrice = Number(item?.unitPrice ?? item?.priceValue);
+                const itemQuantity = Number(item?.qty) || 0;
+
+                if (!Number.isFinite(itemPrice)) {
+                    return total;
+                }
+
+                return total + itemPrice * itemQuantity;
+            }, 0),
+        [cartItems]
+    );
+
+    const updateCartQuantity = (itemId, delta) => {
+        setCartItems((previousItems) =>
+            previousItems
+                .map((item) => {
+                    if (item?.id !== itemId) return item;
+
+                    return {
+                        ...item,
+                        qty: Math.max(0, (Number(item?.qty) || 0) + delta)
+                    };
+                })
+                .filter((item) => (Number(item?.qty) || 0) > 0)
+        );
+    };
+
+    const removeCartItem = (itemId) => {
+        setCartItems((previousItems) => previousItems.filter((item) => item?.id !== itemId));
+    };
+
+    const handleAddToCart = (product, qty = 1) => {
+        const unitPriceValue = Number(selectedProductPriceValue ?? product?.priceValue);
+        const selectedOptionsSummary = selectedProductVariations
+            .map((variation, index) => {
+                const variationKey = variation?.name || variation?.type || `variation-${index}`;
+                const selectedOption = selectedVariationOptions[variationKey];
+
+                if (!selectedOption) return null;
+
+                return {
+                    label: variation?.name || variation?.type || 'Option',
+                    value: selectedOption?.displayName || selectedOption?.value
+                };
+            })
+            .filter(Boolean);
+
+        setCartItems((previousItems) => {
+            const existingItem = previousItems.find((item) => item?.id === product?.id);
+
+            if (existingItem) {
+                return previousItems.map((item) =>
+                    item?.id === product?.id
+                        ? { ...item, qty: (Number(item?.qty) || 0) + qty }
+                        : item
+                );
+            }
+
+            return [
+                ...previousItems,
+                {
+                    ...product,
+                    qty,
+                    selectedOptions: selectedOptionsSummary,
+                    unitPrice: Number.isFinite(unitPriceValue) ? unitPriceValue : product?.priceValue ?? null
+                }
+            ];
+        });
+
+        setJustAddedProductId(product?.id);
+
+        if (addFeedbackTimerRef.current) {
+            window.clearTimeout(addFeedbackTimerRef.current);
+        }
+
+        addFeedbackTimerRef.current = window.setTimeout(() => {
+            setJustAddedProductId(null);
+        }, 1400);
+    };
+
+    const openHome = () => {
+        setActiveNav('home');
+        setPreviewView('home');
+        setSelectedProduct(null);
+        setSelectedService(null);
+        setSelectedCollection(null);
+        requestPreviewScroll('top');
+    };
+
+    const openShop = () => {
+        setActiveNav('shop');
+        setViewMode('products');
+        setPreviewView('home');
+        setSelectedProduct(null);
+        setSelectedService(null);
+        setSelectedCollection(null);
+        setSelectedVariationOptions({});
+        requestPreviewScroll('products');
+    };
+
+    const openCollections = () => {
+        setActiveNav('collections');
+        goTo('collection-list');
+    };
+
+    const openServices = () => {
+        setActiveNav('services');
+        setViewMode('services');
+        setPreviewView('home');
+        setSelectedProduct(null);
+        setSelectedService(null);
+        setSelectedCollection(null);
+        setSelectedVariationOptions({});
+        requestPreviewScroll('products');
+    };
+
+    const handleViewModeChange = (nextViewMode) => {
+        setViewMode(nextViewMode);
+
+        if (nextViewMode === 'services' && previewView !== 'home') {
+            setPreviewView('home');
+        }
+
+        if (nextViewMode === 'products' && activeNav === 'services') {
+            setActiveNav('shop');
+        }
+    };
+
+    const renderViewHeader = (title, onBack) => (
+        <div className={styles.previewViewHeader}>
+            <button className={styles.previewBackButton} type="button" onClick={onBack}>
+                <FontAwesomeIcon icon={faArrowLeft} />
+            </button>
+            <h3 className={styles.previewViewTitle}>{title}</h3>
+            <span className={styles.previewViewSpacer} />
+        </div>
+    );
+
+    const renderProductGrid = (items) => {
+        if (!items.length) {
+            return (
+                <div className={styles.previewEmptyState}>
+                    <p className={styles.previewEmptyTitle}>No products found</p>
+                    <p className={styles.previewEmptyText}>Try another category or search term.</p>
+                </div>
+            );
+        }
+
+        return (
+            <div className={styles.previewProductGrid}>
+                {items.map((product, index) => (
+                    <button
+                        className={styles.previewProductCard}
+                        key={product?.id || `${product?.title || 'product'}-${index}`}
+                        type="button"
+                        onClick={() => goTo('product-detail', product)}
+                    >
+                        <div className={styles.previewProductImageWrap}>
+                            <img
+                                className={styles.previewProductImage}
+                                src={product?.image || storeLogo}
+                                alt={product?.title || product?.name || 'Product'}
+                            />
+                        </div>
+                        <div className={styles.previewProductBody}>
+                            <span className={styles.previewProductName}>
+                                {product?.title || product?.name || 'Product'}
+                            </span>
+                            <span className={styles.previewProductPrice}>
+                                {formatPreviewPriceLabel(product?.priceValue ?? product?.price)}
+                            </span>
+                        </div>
+                    </button>
+                ))}
+            </div>
+        );
+    };
+
+    const renderServiceGrid = (items) => {
+        if (!items.length) {
+            return (
+                <div className={styles.previewEmptyState}>
+                    <p className={styles.previewEmptyTitle}>No services found</p>
+                    <p className={styles.previewEmptyText}>Services added to this store will appear here.</p>
+                </div>
+            );
+        }
+
+        return (
+            <div className={styles.previewServiceGrid}>
+                {items.map((service, index) => (
+                    <button
+                        className={styles.previewServiceCard}
+                        key={service?.id || `${service?.title || 'service'}-${index}`}
+                        type="button"
+                        onClick={() => goTo('service-detail', service)}
+                    >
+                        <img
+                            className={styles.previewServiceImage}
+                            src={service?.image || storeLogo}
+                            alt={service?.title || 'Service'}
+                        />
+                        <div className={styles.previewServiceBody}>
+                            <span className={styles.previewServiceName}>{service?.title || 'Service'}</span>
+                            <span className={styles.previewServiceMeta}>
+                                {formatPreviewPriceLabel(service?.priceValue ?? service?.price)}
+                            </span>
+                            <span className={styles.previewServiceMeta}>{service?.duration || 'Duration not set'}</span>
+                        </div>
+                    </button>
+                ))}
+            </div>
+        );
+    };
+
+    const renderHomeView = () => (
+        <div className={styles.previewHome}>
+            <div className={styles.previewHeader}>
+                <div className={styles.previewBrand}>
+                    <img className={styles.previewBrandLogo} src={storeLogo} alt={storeName} />
+                    <h2 className={styles.previewBrandName}>{storeName}</h2>
+                </div>
+
+                <button
+                    className={styles.previewCartButton}
+                    type="button"
+                    onClick={() => goTo('cart')}
+                    aria-label="Open cart preview"
+                >
+                    <FontAwesomeIcon icon={faCartShopping} />
+                    <span className={styles.previewCartBadge}>{cartCount}</span>
+                </button>
+            </div>
+
+            <div className={styles.previewNav}>
+                <button
+                    className={`${styles.previewNavButton} ${
+                        activeNav === 'home' ? styles.previewNavButtonActive : ''
+                    }`}
+                    type="button"
+                    onClick={openHome}
+                >
+                    Home
+                </button>
+                <button
+                    className={`${styles.previewNavButton} ${
+                        activeNav === 'shop' ? styles.previewNavButtonActive : ''
+                    }`}
+                    type="button"
+                    onClick={openShop}
+                >
+                    Shop
+                </button>
+                <button
+                    className={`${styles.previewNavButton} ${
+                        activeNav === 'collections' ? styles.previewNavButtonActive : ''
+                    }`}
+                    type="button"
+                    onClick={openCollections}
+                >
+                    Collections
+                </button>
+                <button
+                    className={`${styles.previewNavButton} ${
+                        activeNav === 'services' ? styles.previewNavButtonActive : ''
+                    }`}
+                    type="button"
+                    onClick={openServices}
+                >
+                    Services
+                </button>
+            </div>
+
+            <label className={styles.previewSearchBar}>
+                <FontAwesomeIcon className={styles.previewSearchIcon} icon={faMagnifyingGlass} />
+                <input
+                    className={styles.previewSearchInput}
+                    type="text"
+                    placeholder="Search products"
+                    value={searchQuery}
+                    onChange={(event) => setSearchQuery(event.target.value)}
+                />
+            </label>
+
+            <section className={styles.previewBanner} style={bannerStyle}>
+                <h3 className={styles.previewBannerTitle}>{storeName}</h3>
+                <p className={styles.previewBannerText}>
+                    {displayedHeroDescription}{' '}
+                    {showDescriptionToggle ? (
+                        <button
+                            className={styles.previewBannerLink}
+                            type="button"
+                            onClick={() => setDescriptionExpanded((previous) => !previous)}
+                        >
+                            {descriptionExpanded ? 'Read less' : 'Read more'}
+                        </button>
+                    ) : null}
+                </p>
+                <button className={styles.previewBannerAction} type="button" onClick={openShop}>
+                    Shop collection
+                </button>
+            </section>
+
+            <section className={styles.previewSectionBlock}>
+                <p className={styles.previewSectionLabel}>CATEGORIES</p>
+                <div className={styles.previewPillScroller}>
+                    {categories.map((category) => (
+                        <button
+                            className={`${styles.previewPillButton} ${
+                                resolvedActiveCategory === category.key ? styles.previewPillButtonActive : ''
+                            }`}
+                            key={category.key}
+                            type="button"
+                            onClick={() => setActiveCategory(category.key)}
+                        >
+                            {category.label}
+                        </button>
+                    ))}
+                </div>
+            </section>
+
+            <section className={styles.previewSectionBlock} ref={productSectionRef}>
+                <p className={styles.previewSectionLabel}>VIEW</p>
+                <div className={styles.previewToggleRow}>
+                    <button
+                        className={`${styles.previewToggleButton} ${
+                            viewMode === 'products' ? styles.previewToggleButtonActive : ''
+                        }`}
+                        type="button"
+                        onClick={() => handleViewModeChange('products')}
+                    >
+                        Products
+                    </button>
+                    <button
+                        className={`${styles.previewToggleButton} ${
+                            viewMode === 'services' ? styles.previewToggleButtonActive : ''
+                        }`}
+                        type="button"
+                        onClick={() => handleViewModeChange('services')}
+                    >
+                        Services
+                    </button>
+                </div>
+            </section>
+
+            {viewMode === 'services' ? renderServiceGrid(filteredServices) : renderProductGrid(filteredProducts)}
+        </div>
+    );
+
+    const renderCollectionListView = () => (
+        <div className={styles.previewView}>
+            {renderViewHeader('Collections', goBack)}
+            {previewCollections.length ? (
+                <div className={styles.previewCollectionGrid}>
+                    {previewCollections.map((collection, index) => (
+                        <button
+                            className={styles.previewCollectionCard}
+                            key={collection?.id || `${collection?.title || 'collection'}-${index}`}
+                            type="button"
+                            onClick={() => goTo('collection-detail', collection)}
+                        >
+                            <img
+                                className={styles.previewCollectionImage}
+                                src={collection?.image || storeLogo}
+                                alt={collection?.title || 'Collection'}
+                            />
+                            <div className={styles.previewCollectionBody}>
+                                <span className={styles.previewCollectionTitle}>
+                                    {collection?.title || 'Collection'}
+                                </span>
+                                <span className={styles.previewCollectionCount}>
+                                    {(collection?.countValue ?? collection?.items?.length ?? 0).toLocaleString()} item
+                                    {(collection?.countValue ?? collection?.items?.length ?? 0) === 1 ? '' : 's'}
+                                </span>
+                            </div>
+                        </button>
+                    ))}
+                </div>
+            ) : (
+                <div className={styles.previewEmptyState}>
+                    <p className={styles.previewEmptyTitle}>No collections available</p>
+                    <p className={styles.previewEmptyText}>Add product collections to preview them here.</p>
+                </div>
+            )}
+        </div>
+    );
+
+    const renderCollectionDetailView = () => (
+        <div className={styles.previewView}>
+            {renderViewHeader(selectedCollection?.title || 'Collection', () => {
+                setSelectedCollection(null);
+                setPreviewView('collection-list');
+                requestPreviewScroll('top');
+            })}
+            {renderProductGrid(selectedCollection?.items || [])}
+        </div>
+    );
+
+    const renderProductDetailView = () => (
+        <div className={styles.previewView}>
+            {renderViewHeader('Product details', goBack)}
+
+            <div className={styles.previewDetailCard}>
+                <img
+                    className={styles.previewDetailImage}
+                    src={selectedProductImage || storeLogo}
+                    alt={selectedProduct?.title || selectedProduct?.name || 'Product'}
+                />
+
+                <div className={styles.previewDetailBody}>
+                    <h3 className={styles.previewDetailTitle}>
+                        {selectedProduct?.title || selectedProduct?.name || 'Product'}
+                    </h3>
+                    <p className={styles.previewDetailPrice}>{selectedProductDisplayPrice}</p>
+                    <p className={styles.previewDetailText}>
+                        {previewText(selectedProduct?.description, 'No product description available.')}
+                    </p>
+
+                    {selectedProductVariations.length ? (
+                        <div className={styles.previewVariationList}>
+                            {selectedProductVariations.map((variation, index) => {
+                                const variationKey = variation?.name || variation?.type || `variation-${index}`;
+                                const activeOption = selectedVariationOptions[variationKey];
+                                const isColorVariation = variation?.type === 'color';
+
+                                return (
+                                    <div className={styles.previewVariationGroup} key={variationKey}>
+                                        <span className={styles.previewVariationLabel}>
+                                            {(variation?.name || variation?.type || 'Option')
+                                                .toString()
+                                                .replace(/^\w/, (value) => value.toUpperCase())}
+                                            {activeOption?.displayName || activeOption?.value
+                                                ? `: ${activeOption?.displayName || activeOption?.value}`
+                                                : ''}
+                                        </span>
+
+                                        <div className={styles.previewVariationOptions}>
+                                            {variation?.options?.map((option, optionIndex) => {
+                                                const optionLabel = option?.displayName || option?.value || 'Option';
+                                                const isActive =
+                                                    (activeOption?.displayName || activeOption?.value) === optionLabel;
+
+                                                if (isColorVariation) {
+                                                    return (
+                                                        <button
+                                                            aria-label={optionLabel}
+                                                            className={`${styles.previewColorSwatch} ${
+                                                                isActive ? styles.previewColorSwatchActive : ''
+                                                            }`}
+                                                            key={`${variationKey}-${optionLabel}-${optionIndex}`}
+                                                            style={{
+                                                                '--preview-swatch-color': resolvePreviewOptionColor(option)
+                                                            }}
+                                                            type="button"
+                                                            onClick={() =>
+                                                                setSelectedVariationOptions((previous) => ({
+                                                                    ...previous,
+                                                                    [variationKey]: option
+                                                                }))
+                                                            }
+                                                        >
+                                                            <span className={styles.previewColorSwatchDot} />
+                                                        </button>
+                                                    );
+                                                }
+
+                                                return (
+                                                    <button
+                                                        className={`${styles.previewChoicePill} ${
+                                                            isActive ? styles.previewChoicePillActive : ''
+                                                        }`}
+                                                        key={`${variationKey}-${optionLabel}-${optionIndex}`}
+                                                        type="button"
+                                                        onClick={() =>
+                                                            setSelectedVariationOptions((previous) => ({
+                                                                ...previous,
+                                                                [variationKey]: option
+                                                            }))
+                                                        }
+                                                    >
+                                                        {optionLabel}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    ) : null}
+
+                    <div className={styles.previewQuantityRow}>
+                        <span className={styles.previewVariationLabel}>Quantity</span>
+                        <div className={styles.previewQuantityControl}>
+                            <button
+                                className={styles.previewQuantityButton}
+                                type="button"
+                                onClick={() => setProductQuantity((previous) => Math.max(1, previous - 1))}
+                            >
+                                <FontAwesomeIcon icon={faMinus} />
+                            </button>
+                            <span className={styles.previewQuantityValue}>{productQuantity}</span>
+                            <button
+                                className={styles.previewQuantityButton}
+                                type="button"
+                                onClick={() => setProductQuantity((previous) => previous + 1)}
+                            >
+                                <FontAwesomeIcon icon={faPlus} />
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className={styles.previewActionRow}>
+                        <button
+                            className={styles.previewPrimaryButton}
+                            type="button"
+                            onClick={() => handleAddToCart(selectedProduct, productQuantity)}
+                        >
+                            {justAddedProductId === selectedProduct?.id ? 'Added ✓' : 'Add to Cart'}
+                        </button>
+                        <button className={styles.previewDisabledButton} type="button" disabled>
+                            Not available in preview
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+
+    const renderServiceDetailView = () => (
+        <div className={styles.previewView}>
+            {renderViewHeader('Service details', goBack)}
+            <div className={styles.previewDetailCard}>
+                <img
+                    className={styles.previewDetailImage}
+                    src={selectedService?.image || storeLogo}
+                    alt={selectedService?.title || 'Service'}
+                />
+
+                <div className={styles.previewDetailBody}>
+                    <h3 className={styles.previewDetailTitle}>{selectedService?.title || 'Service'}</h3>
+                    <p className={styles.previewDetailPrice}>
+                        {formatPreviewPriceLabel(selectedService?.priceValue ?? selectedService?.price)}
+                    </p>
+                    <p className={styles.previewDetailText}>
+                        {previewText(selectedService?.description, 'No service description available.')}
+                    </p>
+                    <div className={styles.previewMetaStack}>
+                        <span className={styles.previewMetaText}>{selectedService?.duration || 'Duration not set'}</span>
+                    </div>
+
+                    <div className={styles.previewActionRow}>
+                        <button
+                            className={styles.previewDisabledButton}
+                            type="button"
+                            disabled
+                            style={{ gridColumn: '1 / -1' }}
+                        >
+                            Not available in preview
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+
+    const renderCartView = () => (
+        <div className={styles.previewView}>
+            {renderViewHeader('Cart', goBack)}
+            {cartItems.length ? (
+                <>
+                    <div className={styles.previewCartList}>
+                        {cartItems.map((item, index) => {
+                            const unitPrice = Number(item?.unitPrice ?? item?.priceValue);
+                            const linePrice =
+                                Number.isFinite(unitPrice) && Number.isFinite(Number(item?.qty))
+                                    ? unitPrice * Number(item?.qty)
+                                    : item?.price;
+
+                            return (
+                                <div
+                                    className={styles.previewCartRow}
+                                    key={item?.id || `${item?.title || item?.name || 'cart-item'}-${index}`}
+                                >
+                                    <img
+                                        className={styles.previewCartImage}
+                                        src={item?.image || storeLogo}
+                                        alt={item?.title || item?.name || 'Cart item'}
+                                    />
+
+                                    <div className={styles.previewCartBody}>
+                                        <div>
+                                            <p className={styles.previewCartTitle}>
+                                                {item?.title || item?.name || 'Product'}
+                                            </p>
+                                            {item?.selectedOptions?.length ? (
+                                                <p className={styles.previewCartMeta}>
+                                                    {item.selectedOptions
+                                                        .map((option) => `${option.label}: ${option.value}`)
+                                                        .join(' · ')}
+                                                </p>
+                                            ) : null}
+                                        </div>
+
+                                        <div className={styles.previewCartFooter}>
+                                            <div className={styles.previewQuantityControl}>
+                                                <button
+                                                    className={styles.previewQuantityButton}
+                                                    type="button"
+                                                    onClick={() => updateCartQuantity(item?.id, -1)}
+                                                >
+                                                    <FontAwesomeIcon icon={faMinus} />
+                                                </button>
+                                                <span className={styles.previewQuantityValue}>{item?.qty || 1}</span>
+                                                <button
+                                                    className={styles.previewQuantityButton}
+                                                    type="button"
+                                                    onClick={() => updateCartQuantity(item?.id, 1)}
+                                                >
+                                                    <FontAwesomeIcon icon={faPlus} />
+                                                </button>
+                                            </div>
+
+                                            <span className={styles.previewCartLinePrice}>
+                                                {formatPreviewPriceLabel(linePrice)}
+                                            </span>
+                                        </div>
+
+                                        <button
+                                            className={styles.previewRemoveButton}
+                                            type="button"
+                                            onClick={() => removeCartItem(item?.id)}
+                                        >
+                                            Remove item
+                                        </button>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+
+                    <div className={styles.previewCartSummary}>
+                        <div className={styles.previewSummaryRow}>
+                            <span>Subtotal</span>
+                            <strong>{formatPreviewPriceLabel(cartSubtotal)}</strong>
+                        </div>
+                        <button className={styles.previewDisabledButton} type="button" disabled>
+                            Checkout not available in preview
+                        </button>
+                        <button className={styles.previewSecondaryButton} type="button" onClick={openHome}>
+                            Continue Shopping
+                        </button>
+                    </div>
+                </>
+            ) : (
+                <div className={styles.previewEmptyState}>
+                    <p className={styles.previewEmptyTitle}>Your cart is empty</p>
+                    <button className={styles.previewSecondaryButton} type="button" onClick={openHome}>
+                        Continue Shopping
+                    </button>
+                </div>
+            )}
+        </div>
+    );
+
+    let frameContent = renderHomeView();
+
+    if (previewView === 'collection-list') {
+        frameContent = renderCollectionListView();
+    } else if (previewView === 'collection-detail') {
+        frameContent = renderCollectionDetailView();
+    } else if (previewView === 'product-detail') {
+        frameContent = renderProductDetailView();
+    } else if (previewView === 'service-detail') {
+        frameContent = renderServiceDetailView();
+    } else if (previewView === 'cart') {
+        frameContent = renderCartView();
+    }
 
     return (
         <div
@@ -161,272 +1159,35 @@ const StorefrontMobilePreview = ({
                             ...themeStyle,
                             background: 'var(--customer-home-background)',
                             borderRadius: '20px',
-                            overflowY: 'auto',
-                            height: '454px'
+                            overflow: 'hidden',
+                            height: '454px',
+                            position: 'relative'
                         }}
                     >
                         <div
-                            className={styles.customerHomePage}
+                            className={styles.previewStoreInner}
                             style={{
                                 ...themeStyle,
-                                minHeight: '100%',
-                                background: 'var(--customer-home-background)',
-                                justifyContent: 'stretch',
-                                display: 'block'
+                                background: 'var(--customer-home-background)'
                             }}
                         >
-                            <div
-                                className={styles.customerHomeContent}
-                                style={{ maxWidth: '100%', width: '100%', padding: '12px 12px 20px' }}
-                            >
+                            <div className={styles.previewModeBanner}>
+                                👁 Preview Mode — purchases and bookings are disabled
+                            </div>
+
+                            <div className={styles.previewFrameScrollShell}>
                                 <div
-                                    className={styles.customerHomeTopbar}
+                                    ref={frameRef}
+                                    className={styles.previewFrameBody}
                                     style={{
-                                        flexDirection: 'column',
-                                        alignItems: 'flex-start',
-                                        justifyContent: 'flex-start',
-                                        gap: '10px',
-                                        marginBottom: '12px'
+                                        overflowY: 'auto',
+                                        overflowX: 'hidden',
+                                        height: '100%',
+                                        WebkitOverflowScrolling: 'touch'
                                     }}
                                 >
-                                    <div
-                                        className={`${styles.customerHomeShopBrand} ${styles.customerHomeTopBrand}`}
-                                        style={{ margin: '0 0 14px', justifyContent: 'flex-start' }}
-                                    >
-                                        <img
-                                            className={styles.customerHomeShopBrandLogo}
-                                            src={storeLogo}
-                                            alt={storeName}
-                                        />
-                                        <div className={styles.customerHomeShopBrandText}>
-                                            <span className={styles.customerHomeShopBrandName}>{storeName}</span>
-                                            <span className={styles.customerHomeShopBrandMeta}>{sectionTitle}</span>
-                                        </div>
-                                    </div>
-
-                                    {hasBothTabs ? (
-                                        <div
-                                            className={styles.customerHomeSegment}
-                                            role="tablist"
-                                            aria-label="Store preview sections"
-                                            style={{
-                                                width: '100%',
-                                                margin: 0,
-                                                padding: '4px',
-                                                borderRadius: '12px',
-                                                background: 'var(--customer-home-primary-muted)'
-                                            }}
-                                        >
-                                            <Button
-                                                className={`${styles.customerHomeSegmentButton} ${
-                                                    previewTab === 'Shop' ? styles.customerHomeSegmentActive : ''
-                                                }`}
-                                                type="button"
-                                                onClick={() => onPreviewTabChange('Shop')}
-                                                style={{ minWidth: 0, minHeight: '38px', borderRadius: '10px' }}
-                                                unstyled
-                                            >
-                                                Shop
-                                            </Button>
-                                            <Button
-                                                className={`${styles.customerHomeSegmentButton} ${
-                                                    previewTab === 'Services' ? styles.customerHomeSegmentActive : ''
-                                                }`}
-                                                type="button"
-                                                onClick={() => onPreviewTabChange('Services')}
-                                                style={{ minWidth: 0, minHeight: '38px', borderRadius: '10px' }}
-                                                unstyled
-                                            >
-                                                Services
-                                            </Button>
-                                        </div>
-                                    ) : null}
+                                    {frameContent}
                                 </div>
-
-                                <section className={styles.customerHomeShopShell}>
-                                    <section
-                                        className={`${styles.customerHomeShopHero} ${
-                                            storeBannerImage ? styles.customerHomeShopHeroWithBanner : ''
-                                        }`}
-                                        style={{
-                                            ...heroStyle,
-                                            gridTemplateColumns: 'minmax(0, 1fr)',
-                                            alignItems: previewHasBanner ? 'end' : 'start',
-                                            padding: '18px'
-                                        }}
-                                    >
-                                        <div className={styles.customerHomeShopHeroCopy}>
-                                            <span className={styles.customerHomeShopHeroEyebrow}>Store banner</span>
-                                            <h2 className={styles.customerHomeShopHeroTitle}>{storeName}</h2>
-                                            <p className={styles.customerHomeShopHeroText}>{heroDescription}</p>
-                                            <Button
-                                                className={styles.customerHomeShopHeroButton}
-                                                type="button"
-                                                unstyled
-                                            >
-                                                {heroActionLabel}
-                                            </Button>
-                                        </div>
-
-                                        {!storeBannerImage ? (
-                                            <div
-                                                className={styles.customerHomeShopHeroMedia}
-                                                style={{ display: 'none' }}
-                                            >
-                                                <img src={storeLogo} alt={storeName} />
-                                            </div>
-                                        ) : null}
-                                    </section>
-
-                                    <div
-                                        className={styles.customerHomeShopLayout}
-                                        style={{ gridTemplateColumns: 'minmax(0, 1fr)', gap: '18px' }}
-                                    >
-                                        <aside className={styles.customerHomeShopSidebar}>
-                                            <div
-                                                className={styles.customerHomeShopSidebarCard}
-                                                style={{
-                                                    position: 'static',
-                                                    top: 'auto',
-                                                    border: 'none',
-                                                    borderRadius: 0,
-                                                    background: 'transparent',
-                                                    padding: 0
-                                                }}
-                                            >
-                                                <p className={styles.customerHomeShopSidebarTitle}>Categories</p>
-                                                <div
-                                                    className={styles.customerHomeShopCategoryList}
-                                                    style={{
-                                                        flexDirection: 'row',
-                                                        overflowX: 'auto',
-                                                        paddingBottom: '4px'
-                                                    }}
-                                                >
-                                                    {collectionFilters.map((item) => (
-                                                        <Button
-                                                            className={`${styles.customerHomeShopCategoryButton} ${
-                                                                activeCollectionId === item.id
-                                                                    ? styles.customerHomeShopCategoryButtonActive
-                                                                    : ''
-                                                            }`}
-                                                            key={item.id}
-                                                            type="button"
-                                                            onClick={() => setActiveCollectionId(item.id)}
-                                                            style={{
-                                                                width: 'auto',
-                                                                justifyContent: 'center',
-                                                                flex: '0 0 auto'
-                                                            }}
-                                                            unstyled
-                                                        >
-                                                            {item.label}
-                                                        </Button>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        </aside>
-
-                                        <div className={styles.customerHomeCollectionLanding}>
-                                            <div className={styles.customerHomeCollectionLandingHeader}>
-                                                <h2 className={styles.customerHomeSectionTitle}>{sectionTitle}</h2>
-                                                {searchTerm ? (
-                                                    <span className={styles.customerHomeCollectionLandingMeta}>
-                                                        Search results for "{searchTerm}"
-                                                    </span>
-                                                ) : null}
-                                            </div>
-
-                                            <div className={styles.customerHomeCollectionList}>
-                                                {visibleCollections.length ? (
-                                                    visibleCollections.map((collection) => (
-                                                        <section
-                                                            className={styles.customerHomeCollectionPreviewSection}
-                                                            key={collection.id || collection.title}
-                                                        >
-                                                            <div className={styles.customerHomeCollectionPreviewHeader}>
-                                                                <div className={styles.customerHomeCollectionPreviewHeading}>
-                                                                    <h3 className={styles.customerHomeCollectionPreviewTitle}>
-                                                                        {collection.title}
-                                                                    </h3>
-                                                                    <span className={styles.customerHomeCollectionPreviewCount}>
-                                                                        {collection.countLabel}
-                                                                    </span>
-                                                                </div>
-
-                                                                <Button
-                                                                    className={styles.customerHomeCollectionPreviewAction}
-                                                                    type="button"
-                                                                    unstyled
-                                                                >
-                                                                    See all
-                                                                </Button>
-                                                            </div>
-
-                                                            <div
-                                                                className={styles.customerHomeCollectionPreviewGrid}
-                                                                style={{
-                                                                    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-                                                                    gap: '12px'
-                                                                }}
-                                                            >
-                                                                {collection.previewItems.map((item, index) => (
-                                                                    <Button
-                                                                        className={`${styles.customerHomeCollectionPreviewCard} ${
-                                                                            previewTab === 'Services'
-                                                                                ? styles.customerHomeCollectionPreviewCardService
-                                                                                : ''
-                                                                        }`}
-                                                                        key={item.id || `${collection.id}-${index}`}
-                                                                        type="button"
-                                                                        unstyled
-                                                                    >
-                                                                        <div className={styles.customerHomeCollectionPreviewImageWrap}>
-                                                                            <img
-                                                                                className={styles.customerHomeCollectionPreviewImage}
-                                                                                src={item.image}
-                                                                                alt={item.title || item.name}
-                                                                            />
-                                                                        </div>
-
-                                                                        <div className={styles.customerHomeCollectionPreviewBody}>
-                                                                            <h4 className={styles.customerHomeCollectionPreviewProductTitle}>
-                                                                                {item.title || item.name}
-                                                                            </h4>
-                                                                            <p className={styles.customerHomeCollectionPreviewProductDesc}>
-                                                                                {item.description}
-                                                                            </p>
-                                                                            {previewTab === 'Shop' ? (
-                                                                                <span className={styles.customerHomeCollectionPreviewPrice}>
-                                                                                    {item.price}
-                                                                                </span>
-                                                                            ) : (
-                                                                                <span className={styles.customerHomeCollectionPreviewServiceCta}>
-                                                                                    {item.cta}
-                                                                                </span>
-                                                                            )}
-                                                                        </div>
-                                                                    </Button>
-                                                                ))}
-                                                            </div>
-                                                        </section>
-                                                    ))
-                                                ) : (
-                                                    <div className={styles.customerHomeEmptyState}>
-                                                        <p className={styles.customerHomeEmptyTitle}>
-                                                            {previewTab === 'Shop'
-                                                                ? 'No matching products'
-                                                                : 'No matching services'}
-                                                        </p>
-                                                        <p className={styles.customerHomeEmptyText}>
-                                                            Try another collection or search term.
-                                                        </p>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </section>
                             </div>
                         </div>
                     </div>
@@ -498,12 +1259,12 @@ const SetupStoreMain = () => {
 
     useEffect(() => {
     const itemValue = JSON.parse(localStorage.getItem('products')) || [];
-    setProductItem(itemValue.slice(0, 4));
+    setProductItem(Array.isArray(itemValue) ? itemValue : []);
     }, [])
 
     useEffect(() => {
     const itemValue = JSON.parse(localStorage.getItem('services')) || [];
-    setServiceItem(itemValue.slice(0, 4));
+    setServiceItem(Array.isArray(itemValue) ? itemValue : []);
     }, [])
 
     const readHasCollections = () => {
@@ -1000,7 +1761,10 @@ const SetupStoreMain = () => {
     return `${hours % 1 === 0 ? hours : hours.toFixed(1)} hrs`;
     };
 
-    const storeLogo = myStore?.onlineStore?.profile_logo_url || Owi;
+    const storeLogo =
+    getImageUrl(myStore?.onlineStore?.profile_logo_url) ||
+    getImageUrl(myStore?.onlineStore?.profile_logo) ||
+    Owi;
     const storeBannerImage =
     getImageUrl(myStore?.onlineStore?.banner_image_url) ||
     getImageUrl(myStore?.onlineStore?.banner_url) ||
@@ -1019,25 +1783,56 @@ const SetupStoreMain = () => {
     [myStore?.onlineStore?.selected_theme]
     );
     const previewProductCollections = useMemo(() => {
+    const createPreviewProductItem = (sourceProduct, fallbackId) => {
+        const product = sourceProduct?.Product || sourceProduct?.product || sourceProduct || {};
+        const resolvedCategory = previewText(
+            product?.category_name || product?.category?.name || product?.category,
+            ''
+        );
+        const resolvedPriceValue = Number(product?.price);
+
+        return {
+            category: resolvedCategory,
+            categoryKey: resolvedCategory.trim().toLowerCase(),
+            description: previewText(
+                product?.description,
+                resolvedCategory || 'Discover this product in the store preview.'
+            ),
+            id: product?.id || sourceProduct?.id || fallbackId,
+            image:
+                getImageUrl(
+                    product?.image_url ||
+                        product?.image ||
+                        product?.product_image ||
+                        product?.images ||
+                        product?.gallery
+                ) || storeLogo,
+            name: previewText(product?.name || product?.product_name || product?.title, 'Product'),
+            price: formatPreviewPriceLabel(product?.price),
+            priceValue: Number.isFinite(resolvedPriceValue) ? resolvedPriceValue : null,
+            raw: product,
+            title: previewText(product?.name || product?.product_name || product?.title, 'Product'),
+            variations:
+                product?.variations ||
+                product?.variation ||
+                product?.variation_options ||
+                product?.values ||
+                []
+        };
+    };
+
     const mappedCollections = (collectionProduct?.data?.collections || [])
         .map((collection, collectionIndex) => {
-            const items = (collectionProducts[collection.id] || []).map((entry, itemIndex) => {
-                const product = entry?.Product || entry?.product || entry || {};
-
-                return {
-                    id: product?.id || entry?.id || `${collection.id}-${itemIndex}`,
-                    title: previewText(product?.name || product?.product_name || product?.title, 'Product'),
-                    description: previewText(product?.category || product?.description, 'New arrival'),
-                    price: formatPreviewPrice(product?.price),
-                    image: getImageUrl(product?.image_url || product?.image) || storeLogo
-                };
-            });
+            const items = (collectionProducts[collection.id] || []).map((entry, itemIndex) =>
+                createPreviewProductItem(entry, `${collection.id}-${itemIndex}`)
+            );
 
             return {
-                id: collection?.id || `product-collection-${collectionIndex}`,
-                title: previewText(collection?.collection_name, `Collection ${collectionIndex + 1}`),
                 countValue: items.length,
-                items
+                id: collection?.id || `product-collection-${collectionIndex}`,
+                image: items[0]?.image || storeLogo,
+                items,
+                title: previewText(collection?.collection_name, `Collection ${collectionIndex + 1}`),
             };
         })
         .filter((collection) => collection.items.length > 0);
@@ -1050,50 +1845,57 @@ const SetupStoreMain = () => {
         return [];
     }
 
-    return [
+        return [
         {
-            id: 'all-products',
-            title: 'All Products',
             countValue: productItem.length,
-            items: productItem.map((product, index) => ({
-                id: product?.id || `product-item-${index}`,
-                title: previewText(product?.name || product?.product_name || product?.title, 'Product'),
-                description: previewText(product?.category || product?.description, 'New arrival'),
-                price: formatPreviewPrice(product?.price),
-                image: getImageUrl(product?.image_url || product?.image) || storeLogo
-            }))
+            id: 'all-products',
+            image: productItem[0] ? createPreviewProductItem(productItem[0], 'all-products-cover').image : storeLogo,
+            items: productItem.map((product, index) =>
+                createPreviewProductItem(product, `product-item-${index}`)
+            ),
+            title: 'All Products',
         }
     ];
     }, [collectionProduct?.data?.collections, collectionProducts, productItem, storeLogo]);
     const previewServiceCollections = useMemo(() => {
+    const createPreviewServiceItem = (sourceService, fallbackId) => {
+        const serviceData = sourceService?.StoreService || sourceService || {};
+        const durationLabel = formatDuration(serviceData?.duration_minutes);
+        const resolvedPriceValue = Number(serviceData?.price);
+        const serviceTitle = previewText(
+            serviceData?.service_title || serviceData?.title,
+            'Service'
+        );
+
+        return {
+            cta: 'Book Now',
+            description: previewText(
+                serviceData?.description,
+                durationLabel ? `Duration ${durationLabel}` : 'Book this service from the store.'
+            ),
+            duration: durationLabel,
+            id: sourceService?.id || serviceData?.id || fallbackId,
+            image: getServiceImage(serviceData),
+            name: serviceTitle,
+            price: formatPreviewPriceLabel(serviceData?.price),
+            priceValue: Number.isFinite(resolvedPriceValue) ? resolvedPriceValue : null,
+            raw: serviceData,
+            title: serviceTitle
+        };
+    };
+
     const mappedCollections = (collections?.data?.collections || [])
         .map((collection, collectionIndex) => {
-            const items = (serviceCollectionsPreview[collection.id] || []).map((service, itemIndex) => {
-                const serviceData = service?.StoreService || service || {};
-                const serviceTitle = previewText(
-                    serviceData?.service_title || serviceData?.title,
-                    'Service'
-                );
-                const durationLabel = formatDuration(serviceData?.duration_minutes);
-
-                return {
-                    id: service?.id || serviceData?.id || `${collection.id}-${itemIndex}`,
-                    title: serviceTitle,
-                    name: serviceTitle,
-                    description: previewText(
-                        serviceData?.description,
-                        durationLabel ? `Duration ${durationLabel}` : 'Book this service from the store.'
-                    ),
-                    cta: 'Book Now',
-                    image: getServiceImage(serviceData)
-                };
-            });
+            const items = (serviceCollectionsPreview[collection.id] || []).map((service, itemIndex) =>
+                createPreviewServiceItem(service, `${collection.id}-${itemIndex}`)
+            );
 
             return {
-                id: collection?.id || `service-collection-${collectionIndex}`,
-                title: previewText(collection?.collection_name, `Collection ${collectionIndex + 1}`),
                 countValue: items.length,
-                items
+                id: collection?.id || `service-collection-${collectionIndex}`,
+                image: items[0]?.image || storeLogo,
+                items,
+                title: previewText(collection?.collection_name, `Collection ${collectionIndex + 1}`),
             };
         })
         .filter((collection) => collection.items.length > 0);
@@ -1106,33 +1908,18 @@ const SetupStoreMain = () => {
         return [];
     }
 
-    return [
+        return [
         {
-            id: 'all-services',
-            title: 'All Services',
             countValue: serviceItem.length,
-            items: serviceItem.map((service, index) => {
-                const serviceTitle = previewText(
-                    service?.service_title || service?.title,
-                    'Service'
-                );
-                const durationLabel = formatDuration(service?.duration_minutes);
-
-                return {
-                    id: service?.id || `service-item-${index}`,
-                    title: serviceTitle,
-                    name: serviceTitle,
-                    description: previewText(
-                        service?.description,
-                        durationLabel ? `Duration ${durationLabel}` : 'Book this service from the store.'
-                    ),
-                    cta: 'Book Now',
-                    image: getServiceImage(service)
-                };
-            })
+            id: 'all-services',
+            image: serviceItem[0] ? createPreviewServiceItem(serviceItem[0], 'all-services-cover').image : storeLogo,
+            items: serviceItem.map((service, index) =>
+                createPreviewServiceItem(service, `service-item-${index}`)
+            ),
+            title: 'All Services',
         }
     ];
-    }, [collections?.data?.collections, serviceCollectionsPreview, serviceItem]);
+    }, [collections?.data?.collections, formatDuration, getServiceImage, serviceCollectionsPreview, serviceItem, storeLogo]);
 
     const buildStoreUsername = (storeName) =>
     storeName
@@ -1526,6 +2313,7 @@ const SetupStoreMain = () => {
                 <h5 className={`${styles.vendorStoreSetupPreviewTitle} text-center mt-3 mb-4`}>Preview</h5>
 
                 <StorefrontMobilePreview
+                    key={`storefront-preview-${change}`}
                     themeStyle={previewThemeStyle}
                     storeLogo={storeLogo}
                     storeName={previewStoreName}
